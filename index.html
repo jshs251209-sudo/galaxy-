@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YSC 대회 프로젝트 — 통합 포털 & 사용 설명서</title>
+    <style>
+        /* ─── Reset & Global ─── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+            background: #080c1a;
+            color: #dce3ed;
+            line-height: 1.7;
+        }
+
+        /* ─── Background Stars ─── */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(60, 80, 180, .18) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(130, 60, 200, .12) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, #0b1024 0%, #060812 100%);
+        }
+
+        /* ─── Utility ─── */
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+        a { color: #7ec8f0; text-decoration: none; transition: color .2s; }
+        a:hover { color: #b8e0ff; text-decoration: underline; }
+        h1, h2, h3 { color: #fff; }
+
+        /* ─── Hero ─── */
+        .hero {
+            text-align: center;
+            padding: 5rem 1rem 3rem;
+        }
+        .hero-icon { font-size: 4.5rem; margin-bottom: .5rem; }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60b3f7, #a873e8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: .6rem;
+        }
+        .hero .subtitle {
+            color: #8a9cc0;
+            font-size: 1.15rem;
+            max-width: 640px;
+            margin: 0 auto 2rem;
+        }
+        .hero .badge {
+            display: inline-block;
+            background: rgba(120, 200, 240, .12);
+            border: 1px solid rgba(120, 200, 240, .3);
+            padding: .3rem .9rem;
+            border-radius: 20px;
+            font-size: .85rem;
+            color: #90c8e8;
+        }
+
+        /* ─── Nav ─── */
+        .nav-bar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(8, 12, 26, .92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(100, 140, 200, .15);
+            padding: .65rem 0;
+        }
+        .nav-inner {
+            display: flex; gap: .5rem; flex-wrap: wrap;
+            justify-content: center;
+        }
+        .nav-inner a {
+            padding: .45rem 1rem;
+            border-radius: 20px;
+            font-size: .9rem;
+            font-weight: 600;
+            color: #98afc8;
+            border: 1px solid transparent;
+            transition: all .25s;
+        }
+        .nav-inner a:hover {
+            color: #fff;
+            background: rgba(100, 180, 255, .12);
+            border-color: rgba(100, 180, 255, .25);
+            text-decoration: none;
+        }
+
+        /* ─── Sections ─── */
+        section { padding: 3rem 0; }
+        section:nth-of-type(even) { background: rgba(255,255,255,.015); }
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: .4rem;
+        }
+        .section-desc {
+            color: #7e8faa;
+            margin-bottom: 2rem;
+            max-width: 700px;
+        }
+
+        /* ─── Cards Grid ─── */
+        .cards { display: grid; gap: 1.5rem; }
+        .cards-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .cards-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .card {
+            background: rgba(16, 24, 56, .55);
+            border: 1px solid rgba(90, 140, 220, .18);
+            border-radius: 16px;
+            padding: 1.8rem;
+            transition: transform .3s, box-shadow .3s, border-color .3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 36px rgba(60, 120, 220, .12);
+            border-color: rgba(100, 180, 255, .4);
+        }
+        .card-icon { font-size: 2.8rem; margin-bottom: .8rem; }
+        .card h3 { font-size: 1.2rem; margin-bottom: .5rem; }
+        .card p { color: #8fa0b8; font-size: .95rem; }
+        a.card { display: block; }
+        a.card:hover { text-decoration: none; }
+
+        /* ─── Link Button ─── */
+        .link-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: .5rem 1.2rem;
+            border-radius: 8px;
+            font-size: .9rem;
+            font-weight: 600;
+            color: #000;
+            transition: all .2s;
+        }
+        .link-btn.blue { background: #60b3f7; }
+        .link-btn.purple { background: #b388ff; }
+        .link-btn.gold { background: #ffd54f; }
+        .link-btn.green { background: #66d9a0; }
+        .link-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.3); text-decoration: none; }
+
+        /* ─── Steps ─── */
+        .steps { counter-reset: step; }
+        .step {
+            display: flex; gap: 1.4rem;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+        .step:last-child { border-bottom: none; }
+        .step-num {
+            flex-shrink: 0;
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #4a90e2, #7c4dff);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.1rem; color: #fff;
+        }
+        .step-body h3 { font-size: 1.1rem; margin-bottom: .3rem; }
+        .step-body p { color: #8a9cb5; font-size: .95rem; }
+        .step-body code {
+            background: rgba(255,255,255,.08);
+            padding: .15rem .5rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: .88rem;
+            color: #a0d8f0;
+        }
+
+        /* ─── Accordion (FAQ) ─── */
+        .faq-item { border-bottom: 1px solid rgba(255,255,255,.06); }
+        .faq-q {
+            width: 100%; text-align: left;
+            background: none; border: none; color: #d0d8e8;
+            font-size: 1.05rem; font-weight: 600;
+            padding: 1.2rem 0; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: inherit;
+        }
+        .faq-q::after { content: '+'; font-size: 1.4rem; color: #60b3f7; transition: transform .3s; }
+        .faq-q.open::after { transform: rotate(45deg); }
+        .faq-a {
+            max-height: 0; overflow: hidden;
+            transition: max-height .35s ease, padding .35s ease;
+            color: #8a9cb5; font-size: .95rem;
+        }
+        .faq-a.open { max-height: 500px; padding-bottom: 1.2rem; }
+
+        /* ─── Table ─── */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .info-table th, .info-table td {
+            text-align: left;
+            padding: .7rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            font-size: .92rem;
+        }
+        .info-table th {
+            color: #60b3f7;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .info-table td { color: #99a8be; }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: #445;
+            font-size: .85rem;
+            border-top: 1px solid rgba(255,255,255,.04);
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2rem; }
+            .section-title { font-size: 1.4rem; }
+            .step { flex-direction: column; gap: .8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<div class="hero">
+    <div class="hero-icon">&#127756;</div>
+    <h1>YSC 통합 분석 플랫폼</h1>
+    <p class="subtitle">
+        은하 진화 다차원 분석 및 관측 소프트웨어 (v2.0)<br>
+        SDSS DR18 기반 10만 개 은하 데이터를 활용한 물리·화학적 은하 분류 체계 연구
+    </p>
+    <span class="badge">YSC 2026 과학탐구 대회 프로젝트</span>
+</div>
+
+<!-- ═══════════════════════ NAV ═══════════════════════ -->
+<nav class="nav-bar">
+    <div class="nav-inner">
+        <a href="#quick-start">빠른 시작</a>
+        <a href="#tools">분석 도구</a>
+        <a href="#plots">인터랙티브 그래프</a>
+        <a href="#pipeline">파이프라인 안내</a>
+        <a href="#files">파일 구조</a>
+        <a href="#faq">FAQ</a>
+    </div>
+</nav>
+
+<!-- ═══════════════════════ 1. QUICK START ═══════════════════════ -->
+<section id="quick-start">
+    <div class="container">
+        <h2 class="section-title">&#128640; 빠른 시작 가이드</h2>
+        <p class="section-desc">처음 사용하시나요? 아래 3단계만 따라하시면 됩니다.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h3>배치 파일 실행</h3>
+                    <p>
+                        프로젝트 폴더에서 <code>run_project.bat</code> 파일을 <strong>더블클릭</strong>하세요.<br>
+                        필요한 패키지 설치 → 데이터 분석 → 서버 구동까지 <strong>모두 자동</strong>으로 진행됩니다.<br>
+                        <em>(첫 실행 시 약 2~3분 소요, 이후 재실행은 약 1분 30초)</em>
+                    </p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h3>브라우저에서 결과 확인</h3>
+                    <p>
+                        실행이 완료되면 이 페이지가 자동으로 열립니다.<br>
+                        아래 <a href="#tools">분석 도구</a> 섹션의 카드를 클릭하여 대시보드와 스펙트럼 분석기에 접근하세요.
+                    </p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h3>서버 종료</h3>
+                    <p>
+                        분석을 마친 후에는, <code>run_project.bat</code> 실행 시 함께 뜬 <strong>검은색 터미널 창 2개</strong>를 닫아주세요.<br>
+                        (대시보드 서버 + 스펙트럼 분석기 서버)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════ 2. TOOLS ═══════════════════════ -->
+<section id="tools">
+    <div class="container">
+        <h2 class="section-title">&#128295; 분석 도구 바로가기</h2>
+        <p class="section-desc">
+            카드를 클릭하면 해당 도구가 새 탭에서 열립니다.
+        </p>
+        <div class="cards cards-2">
+            <a href="dashboard_real_data.html" target="_blank" class="card">
+                <div class="card-icon">&#127756;</div>
+                <h3>은하 진화 대시보드 <span style="font-size:0.75rem; background:#60b3f7; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">웹 버전</span></h3>
+                <p>
+                    10만 개 은하의 물리·화학적 데이터를 인터랙티브 산점도로 탐색합니다.<br>
+                    X/Y/색상 축을 자유롭게 바꾸고, 프리셋(주계열·BPT·색-질량 등)으로 주요 관계를 즉시 확인할 수 있습니다.<br>
+                    <strong>(서버 없이 언제나 작동합니다)</strong>
+                </p>
+                <span class="link-btn blue">대시보드 열기 →</span>
+            </a>
+            <a href="http://localhost:8501" target="_blank" class="card">
+                <div class="card-icon">&#128200;</div>
+                <h3>천체 스펙트럼 분석기 <span style="font-size:0.75rem; background:#445; color:#fff; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">로컬 전용</span></h3>
+                <p>
+                    관측한 1D CSV 스펙트럼 데이터 또는 <strong>촬영한 스펙트럼 사진</strong>을 업로드하면,<br>
+                    방출선(Hα, [OIII] 등)을 자동 검출하고 적색편이와 은하 유형을 추정합니다.<br>
+                    <strong>(PC에서 run_project.bat을 실행해야 접속 가능)</strong>
+                </p>
+                <span class="link-btn purple">분석기 열기 →</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════ 3. INTERACTIVE PLOTS ═══════════════════════ -->
+<section id="plots">
+    <div class="container">
+        <h2 class="section-title">&#128202; 인터랙티브 그래프 (오프라인 열기)</h2>
+        <p class="section-desc">
+            아래 그래프들은 <strong>서버 없이도</strong> HTML 파일을 더블클릭하여 바로 열 수 있습니다.<br>
+            마우스를 올리면 개별 은하 정보를 확인하고, 드래그로 확대/축소가 가능합니다.
+        </p>
+        <div class="cards cards-3">
+            <a href="output/plots/interactive/main_sequence_interactive.html" target="_blank" class="card">
+                <div class="card-icon">&#11088;</div>
+                <h3>은하 주계열 다이어그램</h3>
+                <p>항성 질량(log M) vs 별 생성률(log SFR). 은하가 활발하게 별을 만들고 있는지, 별 생성이 멈춘 상태인지 한눈에 파악합니다.</p>
+                <span class="link-btn gold">열기</span>
+            </a>
+            <a href="output/plots/interactive/bpt_interactive.html" target="_blank" class="card">
+                <div class="card-icon">&#128308;</div>
+                <h3>BPT 진단 다이어그램</h3>
+                <p>방출선 비율([NII]/Hα vs [OIII]/Hβ)로 은하의 에너지원을 분류합니다. Kauffmann·Kewley 경계선이 함께 표시됩니다.</p>
+                <span class="link-btn gold">열기</span>
+            </a>
+            <a href="output/plots/interactive/color_mass_interactive.html" target="_blank" class="card">
+                <div class="card-icon">&#127912;</div>
+                <h3>색-질량 다이어그램</h3>
+                <p>항성 질량 vs g-r 색지수. 붉은색(늙은 은하)과 푸른색(젊은 은하) 사이의 분포와 "그린 밸리"를 탐색합니다.</p>
+                <span class="link-btn gold">열기</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════ 4. PIPELINE ═══════════════════════ -->
+<section id="pipeline">
+    <div class="container">
+        <h2 class="section-title">&#9881;&#65039; 파이프라인 작동 원리</h2>
+        <p class="section-desc">
+            <code>run_project.bat</code> 실행 시, 내부적으로 다음 6단계가 순서대로 수행됩니다.
+        </p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h3>데이터 수집 (data_fetcher.py)</h3>
+                    <p>SDSS DR18 SkyServer API에 SQL 쿼리를 보내 은하 10만 개의 원시 관측 데이터를 수집합니다. 이미 데이터가 있으면 건너뜁니다.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h3>데이터 처리 (data_processor.py)</h3>
+                    <p>색상 지수(g-r, u-g), 집중도(Concentration Index), 표면 밝기, Balmer Decrement를 통한 먼지 소광, BPT 라인 비율, 동역학적 질량 및 암흑물질 비율을 계산합니다.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h3>시각화 생성 (plot_generators.py + plot_interactive.py)</h3>
+                    <p>16개의 정적 상관 다이어그램(PNG)과 3개의 대화형 HTML 그래프를 자동 생성합니다.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h3>머신러닝 분류 (run_ml_pipeline.py)</h3>
+                    <p>K-Means 군집화로 은하를 4개 진화 그룹으로 분류하고, Random Forest로 은하 유형(타원/나선) 분류 모델을 학습합니다.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                    <h3>요약 & 대시보드 갱신</h3>
+                    <p>최종 마스터 데이터셋의 크기와 저장 위치를 출력합니다.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">6</div>
+                <div class="step-body">
+                    <h3>외부 검증 (validation_tool.py)</h3>
+                    <p>M82(폭발적 별생성), M87(타원/AGN), M31(나선) 등 실제 유명 은하의 관측값과 비교하여 분석 결과의 타당성을 검증합니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════ 5. FILES ═══════════════════════ -->
+<section id="files">
+    <div class="container">
+        <h2 class="section-title">&#128193; 프로젝트 파일 구조</h2>
+        <p class="section-desc">주요 파일과 폴더의 역할을 안내합니다.</p>
+
+        <table class="info-table">
+            <tr><th>파일/폴더</th><th>설명</th></tr>
+            <tr><td><code>run_project.bat</code></td><td>통합 실행 파일 — 더블클릭으로 전체 파이프라인 + 서버 구동</td></tr>
+            <tr><td><code>launcher.html</code></td><td>이 페이지. 프로젝트 포털 및 사용 설명서</td></tr>
+            <tr><td><code>run_pipeline.py</code></td><td>파이프라인 오케스트레이터 (단계 1~6 순차 실행)</td></tr>
+            <tr><td><code>config.py</code></td><td>전역 경로·상수 설정 파일</td></tr>
+            <tr><td><code>data_fetcher.py</code></td><td>SDSS API 데이터 수집</td></tr>
+            <tr><td><code>data_processor.py</code></td><td>물리·화학적 특성 계산 및 마스터 데이터셋 생성</td></tr>
+            <tr><td><code>plot_generators.py</code></td><td>정적 산점도(PNG) 16장 자동 생성</td></tr>
+            <tr><td><code>plot_interactive.py</code></td><td>대화형 Plotly HTML 그래프 3종 생성</td></tr>
+            <tr><td><code>run_ml_pipeline.py</code></td><td>K-Means 군집화 + Random Forest 분류 학습</td></tr>
+            <tr><td><code>galaxy_classifier.py</code></td><td>머신러닝 모델 정의 및 학습 로직</td></tr>
+            <tr><td><code>spectrum_analyzer.py</code></td><td>Streamlit 기반 스펙트럼 분석 웹앱</td></tr>
+            <tr><td><code>validation_tool.py</code></td><td>실제 은하 데이터 기반 타당성 검증</td></tr>
+            <tr><td><code>dashboard/</code></td><td>웹 대시보드 (index.html + app.js + style.css)</td></tr>
+            <tr><td><code>data/raw/</code></td><td>SDSS 원시 CSV 데이터</td></tr>
+            <tr><td><code>data/processed/</code></td><td>가공된 마스터 데이터셋 (galaxy_100k_master.csv)</td></tr>
+            <tr><td><code>data/excel_exports/</code></td><td>물리/화학 분리 내보내기 (CSV 또는 Excel)</td></tr>
+            <tr><td><code>output/plots/</code></td><td>정적 다이어그램 PNG + interactive/ HTML</td></tr>
+            <tr><td><code>output/models/</code></td><td>학습된 ML 모델 파일 (.joblib)</td></tr>
+        </table>
+    </div>
+</section>
+
+<!-- ═══════════════════════ 6. FAQ ═══════════════════════ -->
+<section id="faq">
+    <div class="container">
+        <h2 class="section-title">&#10067; 자주 묻는 질문 (FAQ)</h2>
+        <p class="section-desc">문제가 생겼을 때 아래를 먼저 확인해 보세요.</p>
+
+        <div class="faq-item">
+            <button class="faq-q">bat 파일을 더블클릭했는데 창이 바로 닫혀요</button>
+            <div class="faq-a">
+                Python이 설치되어 있지 않거나, 환경 변수(PATH)에 등록되지 않은 경우입니다.<br>
+                <a href="https://www.python.org/downloads/" target="_blank">python.org</a>에서 Python 3.12 이상을 설치하고,
+                설치 시 <strong>"Add Python to PATH"</strong> 체크박스를 반드시 선택해 주세요.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">대시보드(localhost:8000)에 접속이 안 돼요</button>
+            <div class="faq-a">
+                <code>run_project.bat</code>을 실행한 후 나타나는 검은색 터미널 창이 아직 살아있는지 확인하세요.<br>
+                터미널을 닫으면 서버도 종료됩니다. bat 파일을 다시 실행해 주세요.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">인터랙티브 HTML 그래프를 서버 없이 볼 수 있나요?</button>
+            <div class="faq-a">
+                네! <code>output/plots/interactive/</code> 폴더 안의 HTML 파일을 직접 더블클릭하시면 브라우저에서 바로 열립니다.<br>
+                이 페이지의 <a href="#plots">인터랙티브 그래프</a> 섹션에서도 직접 링크를 클릭하여 열 수 있습니다.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">데이터를 다시 다운로드하고 싶어요</button>
+            <div class="faq-a">
+                <code>data/raw/sdss_100k_raw.csv</code> 파일을 삭제한 후 bat 파일을 다시 실행하면,
+                SDSS에서 최신 데이터를 다시 받아옵니다. (인터넷 속도에 따라 5~15분 소요)
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">Excel로 내보내고 싶어요</button>
+            <div class="faq-a">
+                <code>config.py</code> 파일을 열어 <code>EXPORT_EXCEL = False</code>를 <code>EXPORT_EXCEL = True</code>로 변경한 후 파이프라인을 재실행하세요.<br>
+                약 10만 행의 Excel 변환에는 다소 시간이 걸릴 수 있습니다.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">스펙트럼 분석기(Streamlit)가 실행되지 않아요</button>
+            <div class="faq-a">
+                Streamlit이 설치되어 있지 않을 수 있습니다. 터미널에서 <code>pip install streamlit</code>을 실행한 후 다시 시도하세요.<br>
+                (Streamlit은 선택 사항이므로, 없어도 나머지 기능은 모두 정상 작동합니다.)
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q">프로젝트의 과학적 배경이 궁금해요</button>
+            <div class="faq-a">
+                대시보드의 <strong>"교육 (Education)"</strong> 탭에서 허블 분류 체계의 한계, BPT 다이어그램의 원리, 다차원 분류 체계에 대한 설명을 확인하실 수 있습니다.
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer>
+    <div class="container">
+        YSC 2026 과학탐구 대회 — 은하 진화 다차원 분석 프로젝트<br>
+        이 페이지는 오프라인에서도 열 수 있습니다. 서버 없이도 프로젝트 안내와 그래프 접근이 가능합니다.
+    </div>
+</footer>
+
+<!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
+<script>
+    // FAQ Accordion
+    document.querySelectorAll('.faq-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const answer = btn.nextElementSibling;
+            const isOpen = answer.classList.contains('open');
+
+            // close all
+            document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+            document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+
+            if (!isOpen) {
+                answer.classList.add('open');
+                btn.classList.add('open');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

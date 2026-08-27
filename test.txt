@@ -1,0 +1,28 @@
+은하 진화 다차원 분석 및 통합 분류 체계 구축
+- 종합 프로젝트 보고서
+본 보고서는 해당 프로젝트의 모든 파일 정보, 소스 코드, 문서 내용 및 구조를 빠짐없이 포함
+하는 종합 보고서입니다.
+1. 프로젝트 핵심 문서
+README.md
+은하 진화 다차원 분석 및 통합 분류 체계 구축
+(Multidimensional Analysis of Galaxy
+Evolution and Construction of an
+Integrated Classiﬁcation System)
+프로젝트 개요 (Project Overview & Objectives)
+본 프로젝트는 기존 허블 분류 체계(형태 중심)의 한계를 극복하고, 은하의 물리적/화학적 특
+성에 기반한 다차원적이고 객관적인 새로운 은하 분류 체계를 구축하기 위해 시작되었습니다.
+SDSS(Sloan Digital Sky Survey) DR18 데이터 및 MPA-JHU 카탈로그를 활용하여 은하의 질량,
+별 생성률(SFR), 금속량(Metallicity), 그리고 BPT 방출선 비율 등을 종합적으로 분석합니다. 최
+종적으로 머신러닝 기법(K-Means, Random Forest)을 적용하여 새로운 은하 군집을 정의하고,
+이를 시각적으로 탐구할 수 있는 웹 대시보드를 제공합니다.
+설치 방법 (Installation)
+Python 3.8 이상이 필요합니다. 아래 명령어를 통해 필요한 패키지를 설치하십시오.
+pip install -r requirements.txt
+빠른 시작 (Quick Start)
+전체 데이터 수집, 전처리, 분석 및 모델 학습 파이프라인을 한 번에 실행하려면 다음 명령어를
+실행합니다.
+python run_pipeline.py
+파이프라인이 완료되면 output/ 디렉토리에 시각화 도표와 모델이 생성되며, 웹 대시보드를
+통해 결과를 확인할 수 있습니다.
+프로젝트 구조 (Project Structure)
+YSC_대회/

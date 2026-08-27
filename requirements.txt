@@ -1,0 +1,33 @@
+# ============================================
+# 은하 진화 다차원 분석 프로젝트 - 종속성 파일
+# Galaxy Evolution Multi-Dimensional Analysis
+# ============================================
+
+# Core Scientific Computing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Astronomy
+astropy>=5.3.0
+astroquery>=0.4.6
+
+# Machine Learning
+scikit-learn>=1.3.0
+joblib>=1.3.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# HTTP & Data Fetching
+requests>=2.31.0
+
+# Web Dashboard (Optional - Streamlit)
+# streamlit>=1.28.0
+
+# Utilities
+
+tqdm>=4.65.0
+Pillow>=10.0.0
