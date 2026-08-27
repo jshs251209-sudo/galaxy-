@@ -5,223 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YSC 대회 프로젝트 — 통합 포털 & 사용 설명서</title>
     <style>
-        /* ─── Reset & Global ─── */
+        /* ─── Retro Analog Horror CSS ─── */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @font-face {
+            font-family: 'DungGeunMo';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+            font-weight: normal; font-style: normal;
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         body {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
-            background: #080c1a;
-            color: #dce3ed;
-            line-height: 1.7;
+            font-family: 'DungGeunMo', 'VT323', monospace;
+            background: #000;
+            color: #d0d0d0;
+            line-height: 1.6;
+            overflow-x: hidden;
         }
-
-        /* ─── Background Stars ─── */
         body::before {
-            content: '';
-            position: fixed; inset: 0; z-index: -1;
-            background:
-                radial-gradient(ellipse at 20% 80%, rgba(60, 80, 180, .18) 0%, transparent 60%),
-                radial-gradient(ellipse at 80% 20%, rgba(130, 60, 200, .12) 0%, transparent 60%),
-                radial-gradient(circle at 50% 50%, #0b1024 0%, #060812 100%);
+            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.08), rgba(0, 255, 0, 0.03), rgba(0, 0, 255, 0.08));
+            z-index: 999; background-size: 100% 4px, 4px 100%; pointer-events: none;
         }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 10; }
+        a { color: #ffff00; text-decoration: none; border-bottom: 1px dashed #ffff00; transition: color .2s; }
+        a:hover { color: #fff; border-bottom-style: solid; text-shadow: 2px 0 0 rgba(255,0,0,0.8), -2px 0 0 rgba(0,0,255,0.8); }
+        h1, h2, h3 { color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+        h1 { text-shadow: 3px 3px 0px #f00, -2px -2px 0px #00f; }
+        
+        .hero { text-align: center; padding: 5rem 1rem 3rem; border-bottom: 2px solid #f00; background: #050505; }
+        .hero-icon { font-size: 4.5rem; margin-bottom: .5rem; filter: grayscale(1) contrast(3); }
+        .hero h1 { font-size: 3rem; margin-bottom: .6rem; }
+        .hero .subtitle { color: #aaa; font-size: 1.3rem; max-width: 640px; margin: 0 auto 2rem; }
+        .hero .badge { display: inline-block; background: #f00; color: #000; padding: .3rem .9rem; border: 2px solid #fff; font-size: 1rem; font-weight: bold; text-transform: uppercase; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
-        /* ─── Utility ─── */
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
-        a { color: #7ec8f0; text-decoration: none; transition: color .2s; }
-        a:hover { color: #b8e0ff; text-decoration: underline; }
-        h1, h2, h3 { color: #fff; }
+        .nav-bar { position: sticky; top: 0; z-index: 100; background: #000; border-bottom: 2px solid #f00; padding: .65rem 0; }
+        .nav-inner { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+        .nav-inner a { padding: .45rem 1rem; font-size: 1.1rem; color: #fff; border: 1px solid #fff; background: #111; text-decoration: none; text-transform: uppercase; border-bottom: 1px solid #fff; }
+        .nav-inner a:hover { background: #f00; color: #000; font-weight: bold; }
 
-        /* ─── Hero ─── */
-        .hero {
-            text-align: center;
-            padding: 5rem 1rem 3rem;
-        }
-        .hero-icon { font-size: 4.5rem; margin-bottom: .5rem; }
-        .hero h1 {
-            font-size: 2.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #60b3f7, #a873e8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: .6rem;
-        }
-        .hero .subtitle {
-            color: #8a9cc0;
-            font-size: 1.15rem;
-            max-width: 640px;
-            margin: 0 auto 2rem;
-        }
-        .hero .badge {
-            display: inline-block;
-            background: rgba(120, 200, 240, .12);
-            border: 1px solid rgba(120, 200, 240, .3);
-            padding: .3rem .9rem;
-            border-radius: 20px;
-            font-size: .85rem;
-            color: #90c8e8;
-        }
+        section { padding: 3rem 0; border-bottom: 2px dashed #444; }
+        .section-title { font-size: 2rem; margin-bottom: 1rem; color: #ffff00; }
+        .section-desc { color: #aaa; margin-bottom: 2rem; font-size: 1.2rem; }
 
-        /* ─── Nav ─── */
-        .nav-bar {
-            position: sticky; top: 0; z-index: 100;
-            background: rgba(8, 12, 26, .92);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(100, 140, 200, .15);
-            padding: .65rem 0;
-        }
-        .nav-inner {
-            display: flex; gap: .5rem; flex-wrap: wrap;
-            justify-content: center;
-        }
-        .nav-inner a {
-            padding: .45rem 1rem;
-            border-radius: 20px;
-            font-size: .9rem;
-            font-weight: 600;
-            color: #98afc8;
-            border: 1px solid transparent;
-            transition: all .25s;
-        }
-        .nav-inner a:hover {
-            color: #fff;
-            background: rgba(100, 180, 255, .12);
-            border-color: rgba(100, 180, 255, .25);
-            text-decoration: none;
-        }
-
-        /* ─── Sections ─── */
-        section { padding: 3rem 0; }
-        section:nth-of-type(even) { background: rgba(255,255,255,.015); }
-        .section-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: .4rem;
-        }
-        .section-desc {
-            color: #7e8faa;
-            margin-bottom: 2rem;
-            max-width: 700px;
-        }
-
-        /* ─── Cards Grid ─── */
         .cards { display: grid; gap: 1.5rem; }
         .cards-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
         .cards-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        .card {
-            background: rgba(16, 24, 56, .55);
-            border: 1px solid rgba(90, 140, 220, .18);
-            border-radius: 16px;
-            padding: 1.8rem;
-            transition: transform .3s, box-shadow .3s, border-color .3s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 36px rgba(60, 120, 220, .12);
-            border-color: rgba(100, 180, 255, .4);
-        }
-        .card-icon { font-size: 2.8rem; margin-bottom: .8rem; }
-        .card h3 { font-size: 1.2rem; margin-bottom: .5rem; }
-        .card p { color: #8fa0b8; font-size: .95rem; }
-        a.card { display: block; }
-        a.card:hover { text-decoration: none; }
+        .card { background: #000; border: 2px solid #f00; padding: 1.8rem; transition: background .1s; }
+        .card:hover { background: #111; border-color: #fff; }
+        .card-icon { font-size: 2.8rem; margin-bottom: .8rem; filter: grayscale(1); }
+        .card h3 { font-size: 1.5rem; margin-bottom: .5rem; color: #fff; }
+        .card p { color: #888; font-size: 1.1rem; border-bottom: none; }
+        a.card { display: block; color: inherit; text-decoration: none; border-bottom: 2px solid #f00; }
+        a.card:hover { text-decoration: none; border-bottom: 2px solid #fff; }
 
-        /* ─── Link Button ─── */
-        .link-btn {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: .5rem 1.2rem;
-            border-radius: 8px;
-            font-size: .9rem;
-            font-weight: 600;
-            color: #000;
-            transition: all .2s;
-        }
-        .link-btn.blue { background: #60b3f7; }
-        .link-btn.purple { background: #b388ff; }
-        .link-btn.gold { background: #ffd54f; }
-        .link-btn.green { background: #66d9a0; }
-        .link-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.3); text-decoration: none; }
+        .link-btn { display: inline-block; margin-top: 1rem; padding: .5rem 1.2rem; border: 2px solid #fff; font-size: 1.1rem; font-weight: bold; color: #000; background: #ccc; text-transform: uppercase; }
+        .link-btn.blue, .link-btn.purple, .link-btn.gold, .link-btn.green { background: #fff; color: #000; border-color: #f00; }
+        .link-btn:hover { background: #f00; color: #fff; }
 
-        /* ─── Steps ─── */
-        .steps { counter-reset: step; }
-        .step {
-            display: flex; gap: 1.4rem;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid rgba(255,255,255,.05);
-        }
-        .step:last-child { border-bottom: none; }
-        .step-num {
-            flex-shrink: 0;
-            width: 44px; height: 44px;
-            background: linear-gradient(135deg, #4a90e2, #7c4dff);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 1.1rem; color: #fff;
-        }
-        .step-body h3 { font-size: 1.1rem; margin-bottom: .3rem; }
-        .step-body p { color: #8a9cb5; font-size: .95rem; }
-        .step-body code {
-            background: rgba(255,255,255,.08);
-            padding: .15rem .5rem;
-            border-radius: 4px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: .88rem;
-            color: #a0d8f0;
-        }
+        .steps { counter-reset: step; border-left: 2px solid #f00; margin-left: 1.5rem; }
+        .step { display: flex; gap: 1.4rem; padding: 1.5rem 0 1.5rem 1.5rem; position: relative; border-bottom: 1px dashed #444; }
+        .step-num { position: absolute; left: -1.2rem; top: 1.5rem; width: 35px; height: 35px; background: #000; border: 2px solid #f00; color: #f00; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+        .step-body h3 { font-size: 1.4rem; color: #ffff00; }
+        .step-body p { color: #aaa; font-size: 1.1rem; }
+        .step-body code { background: #222; padding: .2rem .5rem; border: 1px solid #f00; color: #ff5555; font-family: 'VT323', monospace; font-size: 1.1rem; }
 
-        /* ─── Accordion (FAQ) ─── */
-        .faq-item { border-bottom: 1px solid rgba(255,255,255,.06); }
-        .faq-q {
-            width: 100%; text-align: left;
-            background: none; border: none; color: #d0d8e8;
-            font-size: 1.05rem; font-weight: 600;
-            padding: 1.2rem 0; cursor: pointer;
-            display: flex; justify-content: space-between; align-items: center;
-            font-family: inherit;
-        }
-        .faq-q::after { content: '+'; font-size: 1.4rem; color: #60b3f7; transition: transform .3s; }
-        .faq-q.open::after { transform: rotate(45deg); }
-        .faq-a {
-            max-height: 0; overflow: hidden;
-            transition: max-height .35s ease, padding .35s ease;
-            color: #8a9cb5; font-size: .95rem;
-        }
-        .faq-a.open { max-height: 500px; padding-bottom: 1.2rem; }
-
-        /* ─── Table ─── */
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-        .info-table th, .info-table td {
-            text-align: left;
-            padding: .7rem 1rem;
-            border-bottom: 1px solid rgba(255,255,255,.06);
-            font-size: .92rem;
-        }
-        .info-table th {
-            color: #60b3f7;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .info-table td { color: #99a8be; }
-
-        /* ─── Footer ─── */
-        footer {
-            text-align: center;
-            padding: 2.5rem 1rem;
-            color: #445;
-            font-size: .85rem;
-            border-top: 1px solid rgba(255,255,255,.04);
-        }
-
-        /* ─── Responsive ─── */
-        @media (max-width: 640px) {
-            .hero h1 { font-size: 2rem; }
-            .section-title { font-size: 1.4rem; }
-            .step { flex-direction: column; gap: .8rem; }
-        }
+        .faq-item { border-bottom: 1px dashed #f00; }
+        .faq-q { width: 100%; text-align: left; background: none; border: none; color: #fff; font-size: 1.3rem; padding: 1.2rem 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: inherit; }
+        .faq-q:hover { color: #f00; }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height .2s ease-out; }
+        .faq-inner { padding-bottom: 1.5rem; color: #aaa; font-size: 1.1rem; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; background: #000; border: 2px solid #f00; }
+        th, td { text-align: left; padding: .8rem; border: 1px solid #444; font-size: 1.1rem; }
+        th { background: #111; color: #ffff00; border-bottom: 2px solid #f00; font-weight: bold; }
+        td { color: #ccc; }
+        
+        footer { text-align: center; padding: 3rem 1rem; border-top: 4px double #f00; font-size: 1rem; color: #666; }
+        
+        h2:hover, h3:hover { text-shadow: 2px 0 0 rgba(255,0,0,0.8), -2px 0 0 rgba(0,0,255,0.8); }
     </style>
 </head>
 <body>
