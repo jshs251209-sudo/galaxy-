@@ -115,38 +115,34 @@
 <!-- ═══════════════════════ 1. QUICK START ═══════════════════════ -->
 <section id="quick-start">
     <div class="container">
-        <h2 class="section-title">&#128640; 빠른 시작 가이드</h2>
-        <p class="section-desc">처음 사용하시나요? 아래 3단계만 따라하시면 됩니다.</p>
-
+        <h2 class="section-title">&#128640; 시스템 열람 지침</h2>
+        <p class="section-desc">인가된 연구원만 열람 가능합니다. 아래 보안 단계를 숙지하십시오.</p>
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
                 <div class="step-body">
-                    <h3>배치 파일 실행</h3>
+                    <h3>은하 진화 대시보드 접속</h3>
                     <p>
-                        프로젝트 폴더에서 <code>run_project.bat</code> 파일을 <strong>더블클릭</strong>하세요.<br>
-                        필요한 패키지 설치 → 데이터 분석 → 서버 구동까지 <strong>모두 자동</strong>으로 진행됩니다.<br>
-                        <em>(첫 실행 시 약 2~3분 소요, 이후 재실행은 약 1분 30초)</em>
+                        외부 서버 연동 없이 <strong>10만 개의 은하 기밀 데이터</strong>가 통째로 브라우저에 임베딩되어 있습니다.<br>
+                        아래 [분석 도구 바로가기]에서 대시보드 버튼을 눌러 즉시 열람하십시오.
                     </p>
                 </div>
             </div>
             <div class="step">
-                <div class="step-num">2</div>
                 <div class="step-body">
-                    <h3>브라우저에서 결과 확인</h3>
+                    <h3>상관관계 추적</h3>
                     <p>
-                        실행이 완료되면 이 페이지가 자동으로 열립니다.<br>
-                        아래 <a href="#tools">분석 도구</a> 섹션의 카드를 클릭하여 대시보드와 스펙트럼 분석기에 접근하세요.
+                        주계열, BPT, 색-질량 등 프리셋 버튼을 통해 은하의 물리·화학적 특성 변화를 시각적으로 추적합니다.<br>
+                        특이점이 관측되면 즉시 로그에 보고하십시오.
                     </p>
                 </div>
             </div>
             <div class="step">
-                <div class="step-num">3</div>
                 <div class="step-body">
-                    <h3>서버 종료</h3>
+                    <h3>실시간 판독기 가동</h3>
                     <p>
-                        분석을 마친 후에는, <code>run_project.bat</code> 실행 시 함께 뜬 <strong>검은색 터미널 창 2개</strong>를 닫아주세요.<br>
-                        (대시보드 서버 + 스펙트럼 분석기 서버)
+                        대시보드의 [판독기] 탭에서 미확인 타겟 은하의 방출선 플럭스를 직접 입력하십시오.<br>
+                        백그라운드 데이터 위에서 실시간으로 타겟의 은하 유형, 금속성, 먼지 소광값을 즉시 연산합니다.
                     </p>
                 </div>
             </div>
@@ -172,7 +168,7 @@
                 </p>
                 <span class="link-btn blue">대시보드 열기 →</span>
             </a>
-            <a href="http://localhost:8501" target="_blank" class="card">
+            <a href="#" onclick="alert('[접근 거부] 이 도구는 연구소 로컬 환경에서 run_project.bat을 통해서만 접근할 수 있는 1급 기밀 시스템입니다.'); return false;" class="card">
                 <div class="card-icon">&#128200;</div>
                 <h3>천체 스펙트럼 분석기 <span style="font-size:0.75rem; background:#445; color:#fff; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">로컬 전용</span></h3>
                 <p>
@@ -222,7 +218,7 @@
     <div class="container">
         <h2 class="section-title">&#9881;&#65039; 파이프라인 작동 원리</h2>
         <p class="section-desc">
-            <code>run_project.bat</code> 실행 시, 내부적으로 다음 6단계가 순서대로 수행됩니다.
+            연구소 내부망(로컬)에서 <code>run_project.bat</code> 실행 시, 다음 보안 파이프라인 6단계가 순차 가동됩니다.
         </p>
 
         <div class="steps">
@@ -305,56 +301,42 @@
 <!-- ═══════════════════════ 6. FAQ ═══════════════════════ -->
 <section id="faq">
     <div class="container">
-        <h2 class="section-title">&#10067; 자주 묻는 질문 (FAQ)</h2>
-        <p class="section-desc">문제가 생겼을 때 아래를 먼저 확인해 보세요.</p>
+        <h2 class="section-title">&#10067; 비상 연락망 (FAQ)</h2>
+        <p class="section-desc">오류 발생 시 다음 보안 지침을 따르십시오.</p>
 
         <div class="faq-item">
-            <button class="faq-q">bat 파일을 더블클릭했는데 창이 바로 닫혀요</button>
+            <button class="faq-q">웹 대시보드에 접속이 안 됩니다.</button>
             <div class="faq-a">
-                Python이 설치되어 있지 않거나, 환경 변수(PATH)에 등록되지 않은 경우입니다.<br>
-                <a href="https://www.python.org/downloads/" target="_blank">python.org</a>에서 Python 3.12 이상을 설치하고,
-                설치 시 <strong>"Add Python to PATH"</strong> 체크박스를 반드시 선택해 주세요.
+                <div class="faq-inner">
+                본 웹페이지는 자급식 오프라인 렌더링 시스템을 사용하므로 외부 서버가 필요하지 않습니다.<br>
+                화면이 보이지 않는다면 브라우저의 보안 캐시를 지우고 새로고침을 시도하십시오.
+                </div>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-q">대시보드(localhost:8000)에 접속이 안 돼요</button>
+            <button class="faq-q">천체 스펙트럼 분석기를 웹에서 실행할 수 있습니까?</button>
             <div class="faq-a">
-                <code>run_project.bat</code>을 실행한 후 나타나는 검은색 터미널 창이 아직 살아있는지 확인하세요.<br>
-                터미널을 닫으면 서버도 종료됩니다. bat 파일을 다시 실행해 주세요.
+                <div class="faq-inner">
+                <strong>[접근 거부]</strong> 해당 시스템은 파이썬 연산 코어가 필요한 로컬망 전용입니다.<br>
+                GitHub에서 전체 코드를 다운로드 받아 오프라인 PC에서 <code>run_project.bat</code>을 실행해야만 접근이 허가됩니다.
+                </div>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-q">인터랙티브 HTML 그래프를 서버 없이 볼 수 있나요?</button>
+            <button class="faq-q">인터랙티브 HTML 그래프 카드들은 작동합니까?</button>
             <div class="faq-a">
-                네! <code>output/plots/interactive/</code> 폴더 안의 HTML 파일을 직접 더블클릭하시면 브라우저에서 바로 열립니다.<br>
-                이 페이지의 <a href="#plots">인터랙티브 그래프</a> 섹션에서도 직접 링크를 클릭하여 열 수 있습니다.
+                <div class="faq-inner">
+                네. 하단의 <code>인터랙티브 그래프</code> 카드 3종은 웹에서도 즉시 렌더링되도록 모두 정적(Static) 파일 형식으로 동기화되어 있습니다. 안심하고 열람하십시오.
+                </div>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-q">데이터를 다시 다운로드하고 싶어요</button>
+            <button class="faq-q">PC(로컬)에서 데이터를 재분석하고 싶습니다.</button>
             <div class="faq-a">
-                <code>data/raw/sdss_100k_raw.csv</code> 파일을 삭제한 후 bat 파일을 다시 실행하면,
-                SDSS에서 최신 데이터를 다시 받아옵니다. (인터넷 속도에 따라 5~15분 소요)
-            </div>
-        </div>
-        <div class="faq-item">
-            <button class="faq-q">Excel로 내보내고 싶어요</button>
-            <div class="faq-a">
-                <code>config.py</code> 파일을 열어 <code>EXPORT_EXCEL = False</code>를 <code>EXPORT_EXCEL = True</code>로 변경한 후 파이프라인을 재실행하세요.<br>
-                약 10만 행의 Excel 변환에는 다소 시간이 걸릴 수 있습니다.
-            </div>
-        </div>
-        <div class="faq-item">
-            <button class="faq-q">스펙트럼 분석기(Streamlit)가 실행되지 않아요</button>
-            <div class="faq-a">
-                Streamlit이 설치되어 있지 않을 수 있습니다. 터미널에서 <code>pip install streamlit</code>을 실행한 후 다시 시도하세요.<br>
-                (Streamlit은 선택 사항이므로, 없어도 나머지 기능은 모두 정상 작동합니다.)
-            </div>
-        </div>
-        <div class="faq-item">
-            <button class="faq-q">프로젝트의 과학적 배경이 궁금해요</button>
-            <div class="faq-a">
-                대시보드의 <strong>"교육 (Education)"</strong> 탭에서 허블 분류 체계의 한계, BPT 다이어그램의 원리, 다차원 분류 체계에 대한 설명을 확인하실 수 있습니다.
+                <div class="faq-inner">
+                로컬 환경에서 <code>data/raw/sdss_100k_raw.csv</code> 파일을 파기한 후 배치 파일을 재실행하십시오.<br>
+                SDSS 관측소 서버에서 최신 기밀 데이터를 재수신하여 파이프라인을 처음부터 재가동합니다.
+                </div>
             </div>
         </div>
     </div>
