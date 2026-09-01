@@ -1,217 +1,210 @@
-"""
-은하 진화 다차원 분석 및 관측 소프트웨어 (버전 2.0)
-plot_generators.py - 물리적/화학적 다이어그램 생성기
-
-D4000(은하 진화 지표)을 기준으로 각 2D 산점도의 진화 설명 적합도를 계산하고
-물리적/화학적 특성에 대한 방대한 플롯을 자동 생성합니다.
-"""
-
 import os
+import sys
+import io
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import itertools
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-import config
+import seaborn as sns
 
-# 한글 폰트 및 마이너스 기호 설정
+# UTF-8 설정 및 한글 폰트 설정
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+sns.set_theme(style="ticks")
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
-def calculate_evolution_metric(df, x_col, y_col, target_col='D4000'):
-    """
-    X, Y 변수가 D4000을 얼마나 잘 설명하는지 다중 선형 회귀의 R^2 점수로 평가합니다.
-    결과값은 진화 설명 적합도로 사용됩니다.
-    """
-    if target_col not in df.columns:
-        return 0.0
+sys.path.append(r"c:\Users\neato\Desktop\정현\03_과학탐구_대회\YSC_대회")
+import config
 
-    valid_data = df[[x_col, y_col, target_col]].replace([np.inf, -np.inf], np.nan).dropna()
-    if len(valid_data) < 10:
-        return 0.0
-    
-    X = valid_data[[x_col, y_col]]
-    y = valid_data[target_col]
-    
-    try:
-        model = LinearRegression()
-        model.fit(X, y)
-        predictions = model.predict(X)
-        score = r2_score(y, predictions)
-        return max(0.0, score) # 음수 점수는 0으로 처리
-    except Exception as e:
-        return 0.0
-
-def create_scatter_plot(df, x_col, y_col, x_label, y_label, output_dir, filename_prefix, target_col='D4000'):
-    """
-    주어진 X, Y 컬럼에 대한 산점도를 그리고 D4000을 기준으로 색상을 매핑합니다.
-    진화 설명 적합도를 계산하여 제목에 포함합니다.
-    """
-    if target_col not in df.columns:
-        target_col_use = None
-        plot_df = df[[x_col, y_col]].replace([np.inf, -np.inf], np.nan).dropna()
-        score = 0.0
-    else:
-        target_col_use = target_col
-        plot_df = df[[x_col, y_col, target_col]].replace([np.inf, -np.inf], np.nan).dropna()
-        score = calculate_evolution_metric(df, x_col, y_col, target_col)
-
-    if len(plot_df) == 0:
-        print(f"데이터가 부족하여 {x_col} vs {y_col} 플롯을 생성할 수 없습니다.")
-        return
-    
-    plt.figure(figsize=(10, 8))
-    
-    if target_col_use:
-        scatter = plt.scatter(plot_df[x_col], plot_df[y_col], c=plot_df[target_col_use], cmap='viridis', s=2, alpha=0.6)
-        cbar = plt.colorbar(scatter)
-        cbar.set_label('D4000 (은하 연령 지표)')
-    else:
-        plt.scatter(plot_df[x_col], plot_df[y_col], s=2, alpha=0.6, color='blue')
-    
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    
-    if target_col_use:
-        plt.title(f"{x_label} vs {y_label}\n진화 설명 적합도: {score:.4f}")
-    else:
-        plt.title(f"{x_label} vs {y_label}")
-        
-    plt.grid(True, linestyle='--', alpha=0.5)
-    
-    # 이상치에 의해 축이 너무 넓어지는 것을 방지하기 위해 1% ~ 99% 백분위수로 제한
-    x_min, x_max = np.percentile(plot_df[x_col], [1, 99])
-    y_min, y_max = np.percentile(plot_df[y_col], [1, 99])
-    
-    if x_min < x_max: plt.xlim(x_min, x_max)
-    if y_min < y_max: plt.ylim(y_min, y_max)
-    
-    plt.tight_layout()
-    filename = f"{filename_prefix}_{x_col}_vs_{y_col}.png"
-    filepath = os.path.join(output_dir, filename)
-    plt.savefig(filepath, dpi=300)
-    plt.close()
-    
-    print(f"생성 완료: {filename} (적합도: {score:.4f})")
-
-def generate_physical_diagrams(df):
-    """
-    물리적 특성에 대한 다이어그램 생성 (약 30개 조합)
-    """
-    print("--- 물리적 다이어그램 생성 시작 ---")
-    
-    physical_features = {
-        'Mass': '항성 질량 (log M/M_sun)',
-        'petroRad_r': '크기 (Petrosian Radius r-band)',
-        'Concentration': '집중도 (R90/R50)',
-        'SurfaceBrightness': '표면 밝기',
-        'velDisp': '속도 분산 (km/s)',
-        'SFR': '별 생성률 (log SFR)',
-        'u_r': 'u-r 색상',
-        'g_r': 'g-r 색상',
-        'z': '적색편이 (Redshift)'
-    }
-    
-    available_features = {k: v for k, v in physical_features.items() if k in df.columns}
-    combinations = list(itertools.combinations(available_features.keys(), 2))
-    
-    count = 0
-    for x_col, y_col in combinations:
-        if count >= 35:
-            break
-        create_scatter_plot(
-            df, 
-            x_col, 
-            y_col, 
-            available_features[x_col], 
-            available_features[y_col], 
-            config.PHYSICAL_PLOT_DIR,
-            "phys"
-        )
-        count += 1
-        
-    print(f"물리적 다이어그램 {count}개 생성 완료.\n")
-
-def generate_chemical_diagrams(df):
-    """
-    화학적 특성에 대한 다이어그램 생성 (약 20개 조합)
-    """
-    print("--- 화학적 다이어그램 생성 시작 ---")
-    
-    chemical_features = {
-        'Mass': '항성 질량 (log M/M_sun)',
-        'Metallicity': '금속함량 (12 + log(O/H))',
-        'D4000': 'D4000 (4000Å Break)',
-        'NII_Ha': 'BPT: log([NII]/Hα)',
-        'OIII_Hb': 'BPT: log([OIII]/Hβ)',
-        'SII_Ha': 'log([SII]/Hα)',
-        'OII_OIII': 'log([OII]/[OIII])',
-        'E_B_V': '먼지 소광 E(B-V)'
-    }
-    
-    available_features = {k: v for k, v in chemical_features.items() if k in df.columns}
-    combinations = list(itertools.combinations(available_features.keys(), 2))
-    
-    count = 0
-    for x_col, y_col in combinations:
-        if count >= 25:
-            break
-        create_scatter_plot(
-            df, 
-            x_col, 
-            y_col, 
-            available_features[x_col], 
-            available_features[y_col], 
-            config.CHEMICAL_PLOT_DIR,
-            "chem"
-        )
-        count += 1
-        
-    print(f"화학적 다이어그램 {count}개 생성 완료.\n")
+# 11대 은하 분류별 고유 색상 팔레트
+CLASS_COLORS = {
+    "나선은하 (Spiral Galaxy)": "#2563eb",
+    "막대나선은하 (Barred Spiral Galaxy)": "#0284c7",
+    "타원은하 (Elliptical Galaxy)": "#dc2626",
+    "렌즈형은하 (Lenticular Galaxy)": "#ea580c",
+    "마젤란형 은하 (Magellanic Galaxy)": "#10b981",
+    "고리은하 (Ring Galaxy)": "#8b5cf6",
+    "전파은하 (Radio Galaxy)": "#b91c1c",
+    "퀘이사 (Quasar)": "#d97706",
+    "세이퍼트은하 (Seyfert Galaxy)": "#9333ea",
+    "불규칙은하 (Irregular Galaxy)": "#059669",
+    "병합은하 (Merger Galaxy)": "#db2777"
+}
 
 def generate_all_plots():
-    """
-    모든 물리적, 화학적 플롯을 일괄 생성합니다.
-    """
+    print("="*60)
+    print("--- 200개 물리량 & 11대 은하 분류 기반 시각화 생성 시작 ---")
+    print("="*60)
+    
     if not os.path.exists(config.MASTER_DATASET_FILE):
-        print(f"데이터 파일이 존재하지 않습니다: {config.MASTER_DATASET_FILE}")
-        print("먼저 데이터 수집/전처리 작업이 완료되어야 합니다.")
+        print(f"데이터 파일이 없습니다: {config.MASTER_DATASET_FILE}")
         return
-
-    print(f"데이터 로딩 중... ({config.MASTER_DATASET_FILE})")
-    df = pd.read_csv(config.MASTER_DATASET_FILE)
-    
-    # --- 유도 변수 계산 (만약 존재하지 않을 경우를 대비) ---
-    if 'Concentration' not in df.columns and 'petroR90_r' in df.columns and 'petroR50_r' in df.columns:
-        df['Concentration'] = df['petroR90_r'] / df['petroR50_r']
-    if 'u_r' not in df.columns and 'u' in df.columns and 'r' in df.columns:
-        df['u_r'] = df['u'] - df['r']
-    if 'g_r' not in df.columns and 'g' in df.columns and 'r' in df.columns:
-        df['g_r'] = df['g'] - df['r']
         
-    # 방출선 기반 화학적 특성 방어 코드 (로그 비율)
-    def calc_log_ratio(num_col, den_col):
-        if num_col in df.columns and den_col in df.columns:
-            # 0 또는 음수 값은 np.nan 처리하여 로그 연산 오류 방지
-            num = np.where(df[num_col] > 0, df[num_col], np.nan)
-            den = np.where(df[den_col] > 0, df[den_col], np.nan)
-            return np.log10(num / den)
-        return np.nan
+    df = pd.read_csv(config.MASTER_DATASET_FILE)
+    os.makedirs(config.PLOT_DIR, exist_ok=True)
+    os.makedirs(config.PHYSICAL_PLOT_DIR, exist_ok=True)
+    os.makedirs(config.CHEMICAL_PLOT_DIR, exist_ok=True)
 
-    if 'NII_Ha' not in df.columns:
-        df['NII_Ha'] = calc_log_ratio('nii_6584_flux', 'h_alpha_flux')
-    if 'OIII_Hb' not in df.columns:
-        df['OIII_Hb'] = calc_log_ratio('oiii_5007_flux', 'h_beta_flux')
-    if 'SII_Ha' not in df.columns:
-        df['SII_Ha'] = calc_log_ratio('sii_6717_flux', 'h_alpha_flux')
-    if 'OII_OIII' not in df.columns:
-        df['OII_OIII'] = calc_log_ratio('oii_3726_flux', 'oiii_5007_flux')
-
-    generate_physical_diagrams(df)
-    generate_chemical_diagrams(df)
+    # 1. BPT 다이어그램 (이온화 기원 및 11개 은하 분포)
+    print("[1/6] BPT 다이어그램 생성 중...")
+    plt.figure(figsize=(10, 8))
     
-    print("모든 다이어그램 생성이 완료되었습니다.")
+    x_kauff = np.linspace(-2.0, 0.0, 200)
+    y_kauff = 0.61 / (x_kauff - 0.05) + 1.3
+    x_kewley = np.linspace(-2.0, 0.4, 200)
+    y_kewley = 0.61 / (x_kewley - 0.47) + 1.19
+    
+    plt.plot(x_kauff, y_kauff, 'k--', lw=2, label='Kauffmann et al. (2003) SF 경계')
+    plt.plot(x_kewley, y_kewley, 'r-', lw=2, label='Kewley et al. (2001) 극대 광이온화')
+    
+    sample_df = df.sample(min(len(df), 15000), random_state=42)
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0:
+            short_name = gtype.split(" (")[0]
+            plt.scatter(sub['log_nii_ha'], sub['log_oiii_hb'], s=12, alpha=0.5, color=color, label=short_name)
+            
+    plt.xlim(-1.8, 0.8)
+    plt.ylim(-1.5, 1.6)
+    plt.xlabel(r'$\log([\mathrm{N\,II}]\lambda6584 / \mathrm{H}\alpha)$', fontsize=13)
+    plt.ylabel(r'$\log([\mathrm{O\,III}]\lambda5007 / \mathrm{H}\beta)$', fontsize=13)
+    plt.title('SDSS 11대 은하 분류 BPT 이온화 진단도 (BPT Diagram)', fontsize=15, pad=12)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "bpt_diagram.png"), dpi=300)
+    plt.close()
+
+    # 2. 은하 주계열 (Main Sequence: Mass vs SFR)
+    print("[2/6] 은하 주계열 (Main Sequence) 생성 중...")
+    plt.figure(figsize=(10, 8))
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0:
+            short_name = gtype.split(" (")[0]
+            plt.scatter(sub['log_stellar_mass'], sub['log_sfr'], s=12, alpha=0.5, color=color, label=short_name)
+            
+    plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
+    plt.ylabel(r'별 생성률 $\log(\mathrm{SFR}\,[M_\odot/\mathrm{yr}])$', fontsize=13)
+    plt.title('SDSS 11대 은하 주계열 (Galaxy Star-Forming Main Sequence)', fontsize=15, pad=12)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "main_sequence.png"), dpi=300)
+    plt.close()
+
+    # 3. 질량-금속량 관계 (MZR: Mass vs Metallicity)
+    print("[3/6] 질량-금속량 관계 (MZR) 생성 중...")
+    plt.figure(figsize=(10, 8))
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0:
+            short_name = gtype.split(" (")[0]
+            plt.scatter(sub['log_stellar_mass'], sub['metallicity_oh'], s=12, alpha=0.5, color=color, label=short_name)
+            
+    plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
+    plt.ylabel(r'기체 산소 풍부도 $12 + \log(\mathrm{O/H})$', fontsize=13)
+    plt.title('SDSS 11대 은하 질량-금속량 관계 (Mass-Metallicity Relation)', fontsize=15, pad=12)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "mass_metallicity.png"), dpi=300)
+    plt.close()
+
+    # 4. 색-질량 도표 (Color-Mass Diagram & Bimodality)
+    print("[4/6] 색-질량 도표 (Color-Mass Diagram) 생성 중...")
+    plt.figure(figsize=(10, 8))
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0:
+            short_name = gtype.split(" (")[0]
+            plt.scatter(sub['log_stellar_mass'], sub['color_u_r'], s=12, alpha=0.5, color=color, label=short_name)
+            
+    plt.axhline(y=2.2, color='red', linestyle='--', alpha=0.7, label='Red Sequence 하한')
+    plt.axhline(y=1.8, color='blue', linestyle='--', alpha=0.7, label='Blue Cloud 상한')
+    plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
+    plt.ylabel(r'색지수 $(u - r)\,\mathrm{[mag]}$', fontsize=13)
+    plt.title('SDSS 11대 은하 색-질량 도표 (Color-Mass Diagram & Bimodality)', fontsize=15, pad=12)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "color_mass_diagram.png"), dpi=300)
+    plt.close()
+
+    # 5. 동역학-구조 관계 (Tully-Fisher / Faber-Jackson: Mass vs Velocity Dispersion)
+    print("[5/6] 동역학-구조 관계 도표 생성 중...")
+    plt.figure(figsize=(10, 8))
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0:
+            short_name = gtype.split(" (")[0]
+            plt.scatter(sub['log_stellar_mass'], np.log10(np.maximum(10.0, sub['velDisp'])), s=12, alpha=0.5, color=color, label=short_name)
+            
+    plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
+    plt.ylabel(r'속도 분산 로그 $\log(\sigma_v\,[\mathrm{km/s}])$', fontsize=13)
+    plt.title('SDSS 11대 은하 질량-속도분산 동역학 관계 (Faber-Jackson / Dynamics)', fontsize=15, pad=12)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "tully_fisher.png"), dpi=300)
+    plt.close()
+
+    # 6. 통합 4분할 진화 패널 (Integrated Evolution Panel)
+    print("[6/6] 통합 진화 4분할 패널 생성 중...")
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    
+    # Panel 1: BPT
+    ax = axes[0, 0]
+    ax.plot(x_kauff, y_kauff, 'k--', lw=1.5)
+    ax.plot(x_kewley, y_kewley, 'r-', lw=1.5)
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0: ax.scatter(sub['log_nii_ha'], sub['log_oiii_hb'], s=8, alpha=0.4, color=color)
+    ax.set_xlim(-1.8, 0.8); ax.set_ylim(-1.5, 1.6)
+    ax.set_xlabel(r'$\log([\mathrm{N\,II}]/\mathrm{H}\alpha)$')
+    ax.set_ylabel(r'$\log([\mathrm{O\,III}]/\mathrm{H}\beta)$')
+    ax.set_title('(A) BPT 이온화 진단')
+    ax.grid(True, linestyle=':', alpha=0.5)
+
+    # Panel 2: MS
+    ax = axes[0, 1]
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['log_sfr'], s=8, alpha=0.4, color=color)
+    ax.set_xlabel(r'$\log(M_* / M_\odot)$')
+    ax.set_ylabel(r'$\log(\mathrm{SFR})$')
+    ax.set_title('(B) 은하 주계열 (Star-Formation Main Sequence)')
+    ax.grid(True, linestyle=':', alpha=0.5)
+
+    # Panel 3: Color-Mass
+    ax = axes[1, 0]
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['color_u_r'], s=8, alpha=0.4, color=color)
+    ax.set_xlabel(r'$\log(M_* / M_\odot)$')
+    ax.set_ylabel(r'$(u - r)\,\mathrm{[mag]}$')
+    ax.set_title('(C) 색-질량 이분성 (Color-Mass Bimodality)')
+    ax.grid(True, linestyle=':', alpha=0.5)
+
+    # Panel 4: Age vs Mass
+    ax = axes[1, 1]
+    for gtype, color in CLASS_COLORS.items():
+        sub = sample_df[sample_df['galaxy_type'] == gtype]
+        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['d4000_n'], s=8, alpha=0.4, color=color, label=gtype.split(" (")[0])
+    ax.set_xlabel(r'$\log(M_* / M_\odot)$')
+    ax.set_ylabel(r'$D_n(4000)$ (항성 연령)')
+    ax.set_title('(D) 항성 종족 연령-질량 진화 관계')
+    ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
+    ax.grid(True, linestyle=':', alpha=0.5)
+
+    plt.suptitle('SDSS DR18 11대 은하 다차원 물리/화학 진화 종합 다이어그램', fontsize=18, y=1.02)
+    plt.tight_layout()
+    plt.savefig(os.path.join(config.PLOT_DIR, "integrated_evolution.png"), dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print("[완료] 모든 200개 물리량 기반 다이어그램 생성 완료!")
+    print("="*60)
 
 if __name__ == "__main__":
     generate_all_plots()

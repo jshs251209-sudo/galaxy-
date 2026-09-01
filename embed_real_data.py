@@ -17,9 +17,7 @@ def main():
     # ── 통계 요약 ──
     print("[2/4] 통계 요약 계산 중...")
     stats = {}
-    for col in ['log_stellar_mass', 'log_sfr', 'metallicity_oh', 'g_r', 'u_g',
-                'veldisp', 'z', 'concentration_index', 'dust_ebv',
-                'dark_matter_fraction', 'log_dyn_mass']:
+    for col in ['log_sfr', 'log_stellar_mass', 'metallicity_oh', 'veldisp']:
         if col in df.columns:
             s = df[col].dropna()
             stats[col] = {
@@ -48,12 +46,9 @@ def main():
 
     # 필요한 컬럼만 추출 & NaN을 null로
     plot_cols = [
-        'log_stellar_mass', 'log_sfr', 'metallicity_oh',
-        'g_r', 'u_g', 'veldisp', 'z',
-        'log_nii_ha', 'log_oiii_hb',
-        'concentration_index', 'dust_ebv',
-        'dark_matter_fraction', 'log_dyn_mass',
-        'galaxy_type'
+        'ra', 'dec', 'z', 'log_stellar_mass', 'log_sfr', 'metallicity_oh',
+        'veldisp', 'log_nii_ha', 'log_oiii_hb', 'galaxy_type', 'bptclass',
+        'gz_p_el', 'gz_p_cs', 'gz_spiral', 'gz_elliptical'
     ]
     if 'cluster_name' in sample.columns:
         plot_cols.append('cluster_name')
@@ -129,6 +124,7 @@ footer{{text-align:center;padding:2rem 1rem;color:#334;font-size:.82rem;border-t
 <button class="tab-btn" onclick="openTab('explore')">탐색</button>
 <button class="tab-btn" onclick="openTab('stats')">통계</button>
 <button class="tab-btn" onclick="openTab('validate')">판독기</button>
+    <button class="tab-btn" onclick="openTab('data_table')">데이터 표</button>
 </div>
 
 <!-- ══ TAB: 개요 ══ -->
@@ -210,6 +206,30 @@ footer{{text-align:center;padding:2rem 1rem;color:#334;font-size:.82rem;border-t
 
     html += """</table></div></div></div>
 
+
+<!-- ▒▒ TAB: 데이터 표 ▒▒ -->
+<div id="data_table" class="tab">
+<div class="glass">
+<h3 style="color:#fff;margin-bottom:1rem">관측 데이터 목록</h3>
+<div style="overflow-x:auto; max-height: 600px; overflow-y: auto;">
+<table id="galaxy_table">
+<thead>
+<tr>
+<th>은하 형태</th>
+<th>적색편이 (z)</th>
+<th>log별질량</th>
+<th>BPT 분류</th>
+<th>항성형성률(log)</th>
+<th>속도분산(veldisp)</th>
+<th>금속량(OH)</th>
+</tr>
+</thead>
+<tbody id="galaxy_table_body">
+</tbody>
+</table>
+</div>
+</div>
+</div>
 <!-- ══ TAB: 판독기 ══ -->
 <div id="validate" class="tab">
 <div class="glass">

@@ -40,7 +40,10 @@ SNR_THRESHOLD = 3.0       # 방출선 신호대잡음비 임계값
 
 # ── 파일 경로 ──────────────────────────────────────
 RAW_SDSS_FILE = os.path.join(RAW_DATA_DIR, "sdss_100k_raw.csv")
-MASTER_DATASET_FILE = os.path.join(PROCESSED_DATA_DIR, "galaxy_100k_master.csv")
+MASTER_DATASET_FILE = os.path.join(PROCESSED_DATA_DIR, "galaxy_master_200params.csv")
+MASTER_JSON_FILE = os.path.join(PROCESSED_DATA_DIR, "galaxy_master_200params.json")
+MASTER_JSON_LEGACY = os.path.join(PROCESSED_DATA_DIR, "galaxy_master_dataset.json")
+MASTER_CSV_200_FILE = os.path.join(PROCESSED_DATA_DIR, "galaxy_master_200params.csv")
 PHYSICAL_EXCEL_FILE = os.path.join(EXCEL_DIR, "physical_100k.xlsx")
 CHEMICAL_EXCEL_FILE = os.path.join(EXCEL_DIR, "chemical_100k.xlsx")
 

@@ -34,23 +34,32 @@ def fetch_sdss_data() -> pd.DataFrame:
         
         sql_query = f"""
         SELECT TOP {limit}
-            s.specObjID, s.ra, s.dec, s.z, s.velDisp, s.velDispErr,
+            s.specObjID, s.ra, s.dec, s.z, s.zErr, s.velDisp, s.velDispErr,
             p.u, p.g, p.r, p.i, p.z as phot_z,
-            p.petroRad_r, p.petroR50_r, p.petroR90_r,
-            l.h_alpha_flux, l.h_alpha_flux_err,
-            l.h_beta_flux, l.h_beta_flux_err,
-            l.h_gamma_flux, l.h_gamma_flux_err,
-            l.oiii_5007_flux, l.oiii_5007_flux_err,
-            l.nii_6584_flux, l.nii_6584_flux_err,
+            p.err_u, p.err_g, p.err_r, p.err_i, p.err_z,
+            p.petroRad_u, p.petroRad_g, p.petroRad_r, p.petroRad_i, p.petroRad_z,
+            p.petroR50_u, p.petroR50_g, p.petroR50_r, p.petroR50_i, p.petroR50_z,
+            p.petroR90_u, p.petroR90_g, p.petroR90_r, p.petroR90_i, p.petroR90_z,
+            p.extinction_u, p.extinction_g, p.extinction_r, p.extinction_i, p.extinction_z,
+            l.h_alpha_flux, l.h_alpha_flux_err, l.h_alpha_eqw, l.h_alpha_eqw_err,
+            l.h_beta_flux, l.h_beta_flux_err, l.h_beta_eqw, l.h_beta_eqw_err,
+            l.oiii_5007_flux, l.oiii_5007_flux_err, l.oiii_5007_eqw, l.oiii_5007_eqw_err,
+            l.nii_6584_flux, l.nii_6584_flux_err, l.nii_6584_eqw, l.nii_6584_eqw_err,
             l.sii_6717_flux, l.sii_6717_flux_err,
             l.oii_3726_flux, l.oii_3726_flux_err,
-            e.lgm_tot_p50, e.sfr_tot_p50, e.oh_p50, e.bptclass,
-            indx.d4000_n
+            e.lgm_tot_p50, e.lgm_tot_p16, e.lgm_tot_p84,
+            e.sfr_tot_p50, e.sfr_tot_p16, e.sfr_tot_p84,
+            e.oh_p50, e.oh_p16, e.oh_p84,
+            e.bptclass,
+            indx.d4000_n, indx.d4000_n_err,
+            z_zoo.p_el as gz_p_el, z_zoo.p_cs as gz_p_cs, z_zoo.p_edge as gz_p_edge, z_zoo.p_mg as gz_p_mg,
+            z_zoo.spiral as gz_spiral, z_zoo.elliptical as gz_elliptical, z_zoo.uncertain as gz_uncertain
         FROM SpecObj s
         JOIN PhotoObj p ON s.bestObjID = p.objID
         JOIN galSpecLine l ON s.specObjID = l.specObjID
         JOIN galSpecExtra e ON s.specObjID = e.specObjID
         JOIN galSpecIndx indx ON s.specObjID = indx.specObjID
+        LEFT JOIN zooSpec z_zoo ON s.specObjID = z_zoo.specObjID
         WHERE s.class = 'GALAXY'
           AND s.zWarning = 0
           AND s.z >= {current_z_min:.4f} AND s.z < {current_z_max:.4f}

@@ -116,14 +116,14 @@
 <section id="quick-start">
     <div class="container">
         <h2 class="section-title">&#128640; 시스템 열람 지침</h2>
-        <p class="section-desc">인가된 연구원만 열람 가능합니다. 아래 보안 단계를 숙지하십시오.</p>
+        <p class="section-desc">효율적인 데이터 탐색을 위해 아래의 시스템 사용 단계를 숙지하십시오.</p>
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
                 <div class="step-body">
                     <h3>은하 진화 대시보드 접속</h3>
                     <p>
-                        외부 서버 연동 없이 <strong>10만 개의 은하 기밀 데이터</strong>가 통째로 브라우저에 임베딩되어 있습니다.<br>
+                        외부 서버 연동 없이 <strong>10만 개의 은하 관측 데이터</strong>가 통째로 브라우저에 임베딩되어 있습니다.<br>
                         아래 [분석 도구 바로가기]에서 대시보드 버튼을 눌러 즉시 열람하십시오.
                     </p>
                 </div>
@@ -133,7 +133,7 @@
                     <h3>상관관계 추적</h3>
                     <p>
                         주계열, BPT, 색-질량 등 프리셋 버튼을 통해 은하의 물리·화학적 특성 변화를 시각적으로 추적합니다.<br>
-                        특이점이 관측되면 즉시 로그에 보고하십시오.
+                        데이터 상의 특이점이 발견되면 세부 수치를 분석해 보십시오.
                     </p>
                 </div>
             </div>
@@ -168,7 +168,7 @@
                 </p>
                 <span class="link-btn blue">대시보드 열기 →</span>
             </a>
-            <a href="#" onclick="alert('[접근 거부] 이 도구는 연구소 로컬 환경에서 run_project.bat을 통해서만 접근할 수 있는 1급 기밀 시스템입니다.'); return false;" class="card">
+            <a href="#" onclick="alert('[시스템 안내] 이 도구는 파이썬 연산 코어가 필요하므로 로컬 환경에서 run_project.bat을 실행해야 접근할 수 있습니다.'); return false;" class="card">
                 <div class="card-icon">&#128200;</div>
                 <h3>천체 스펙트럼 분석기 <span style="font-size:0.75rem; background:#445; color:#fff; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">로컬 전용</span></h3>
                 <p>
@@ -218,7 +218,7 @@
     <div class="container">
         <h2 class="section-title">&#9881;&#65039; 파이프라인 작동 원리</h2>
         <p class="section-desc">
-            연구소 내부망(로컬)에서 <code>run_project.bat</code> 실행 시, 다음 보안 파이프라인 6단계가 순차 가동됩니다.
+            로컬 PC 환경에서 <code>run_project.bat</code> 실행 시, 다음 데이터 처리 파이프라인 6단계가 순차 가동됩니다.
         </p>
 
         <div class="steps">
@@ -301,15 +301,15 @@
 <!-- ═══════════════════════ 6. FAQ ═══════════════════════ -->
 <section id="faq">
     <div class="container">
-        <h2 class="section-title">&#10067; 비상 연락망 (FAQ)</h2>
-        <p class="section-desc">오류 발생 시 다음 보안 지침을 따르십시오.</p>
+        <h2 class="section-title">&#10067; FAQ 및 문제 해결 가이드</h2>
+        <p class="section-desc">오류 발생 시 다음 지침을 참고하십시오.</p>
 
         <div class="faq-item">
             <button class="faq-q">웹 대시보드에 접속이 안 됩니다.</button>
             <div class="faq-a">
                 <div class="faq-inner">
                 본 웹페이지는 자급식 오프라인 렌더링 시스템을 사용하므로 외부 서버가 필요하지 않습니다.<br>
-                화면이 보이지 않는다면 브라우저의 보안 캐시를 지우고 새로고침을 시도하십시오.
+                화면이 보이지 않는다면 브라우저의 캐시를 비우고 새로고침을 시도하십시오.
                 </div>
             </div>
         </div>
@@ -317,8 +317,8 @@
             <button class="faq-q">천체 스펙트럼 분석기를 웹에서 실행할 수 있습니까?</button>
             <div class="faq-a">
                 <div class="faq-inner">
-                <strong>[접근 거부]</strong> 해당 시스템은 파이썬 연산 코어가 필요한 로컬망 전용입니다.<br>
-                GitHub에서 전체 코드를 다운로드 받아 오프라인 PC에서 <code>run_project.bat</code>을 실행해야만 접근이 허가됩니다.
+                <strong>[시스템 안내]</strong> 해당 애플리케이션은 파이썬 연산 코어가 필요한 로컬 전용 도구입니다.<br>
+                로컬 PC에 코드를 다운로드 받아 <code>run_project.bat</code>을 실행해야 정상적으로 작동합니다.
                 </div>
             </div>
         </div>
@@ -334,8 +334,8 @@
             <button class="faq-q">PC(로컬)에서 데이터를 재분석하고 싶습니다.</button>
             <div class="faq-a">
                 <div class="faq-inner">
-                로컬 환경에서 <code>data/raw/sdss_100k_raw.csv</code> 파일을 파기한 후 배치 파일을 재실행하십시오.<br>
-                SDSS 관측소 서버에서 최신 기밀 데이터를 재수신하여 파이프라인을 처음부터 재가동합니다.
+                로컬 환경에서 <code>data/raw/sdss_100k_raw.csv</code> 파일을 삭제한 후 배치 파일을 재실행하십시오.<br>
+                SDSS 서버에서 최신 관측 데이터를 다시 수집하여 파이프라인을 처음부터 재가동합니다.
                 </div>
             </div>
         </div>
