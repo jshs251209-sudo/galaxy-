@@ -162,7 +162,7 @@
                 <div class="card-icon">&#127756;</div>
                 <h3>은하 진화 대시보드 <span style="font-size:0.75rem; background:#60b3f7; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">웹 버전</span></h3>
                 <p>
-                    10만 개 은하의 물리·화학적 데이터를 인터랙티브 산점도로 탐색합니다.<br>
+                    200개 핵심 물리량 및 11대 은하 분류 체계(55,000개 표본)를 인터랙티브 산점도로 탐색합니다.<br>
                     X/Y/색상 축을 자유롭게 바꾸고, 프리셋(주계열·BPT·색-질량 등)으로 주요 관계를 즉시 확인할 수 있습니다.<br>
                     <strong>(서버 없이 언제나 작동합니다)</strong>
                 </p>
@@ -206,7 +206,7 @@
             <a href="output/plots/interactive/color_mass_interactive.html" target="_blank" class="card">
                 <div class="card-icon">&#127912;</div>
                 <h3>색-질량 다이어그램</h3>
-                <p>항성 질량 vs g-r 색지수. 붉은색(늙은 은하)과 푸른색(젊은 은하) 사이의 분포와 "그린 밸리"를 탐색합니다.</p>
+                <p>항성 질량 vs u-r 색지수. 11대 은하 분류별 붉은 계열(Red Sequence)과 푸른 구름(Blue Cloud), 그린 밸리(Green Valley) 진화 경로를 탐색합니다.</p>
                 <span class="link-btn gold">열기</span>
             </a>
         </div>
@@ -232,8 +232,8 @@
             <div class="step">
                 <div class="step-num">2</div>
                 <div class="step-body">
-                    <h3>데이터 처리 (data_processor.py)</h3>
-                    <p>색상 지수(g-r, u-g), 집중도(Concentration Index), 표면 밝기, Balmer Decrement를 통한 먼지 소광, BPT 라인 비율, 동역학적 질량 및 암흑물질 비율을 계산합니다.</p>
+                    <h3>데이터 처리 및 스키마 정제 (data_processor.py)</h3>
+                    <p>SDSS 200개 핵심 물리량(측광 5밴드 등급, 유효반경, 축비, 방출선 플럭스, 등가폭, 성간 소광, D4000, 2MASS/WISE 적외선, FIRST 전파 플럭스 등)을 정제하고 11대 은하 분류 라벨을 통합 부여합니다.</p>
                 </div>
             </div>
             <div class="step">
@@ -290,7 +290,7 @@
             <tr><td><code>validation_tool.py</code></td><td>실제 은하 데이터 기반 타당성 검증</td></tr>
             <tr><td><code>dashboard/</code></td><td>웹 대시보드 (index.html + app.js + style.css)</td></tr>
             <tr><td><code>data/raw/</code></td><td>SDSS 원시 CSV 데이터</td></tr>
-            <tr><td><code>data/processed/</code></td><td>가공된 마스터 데이터셋 (galaxy_100k_master.csv)</td></tr>
+            <tr><td><code>data/processed/</code></td><td>가공된 마스터 데이터셋 (galaxy_master_200params.csv)</td></tr>
             <tr><td><code>data/excel_exports/</code></td><td>물리/화학 분리 내보내기 (CSV 또는 Excel)</td></tr>
             <tr><td><code>output/plots/</code></td><td>정적 다이어그램 PNG + interactive/ HTML</td></tr>
             <tr><td><code>output/models/</code></td><td>학습된 ML 모델 파일 (.joblib)</td></tr>
