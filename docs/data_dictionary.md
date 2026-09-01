@@ -1,117 +1,64 @@
-# SDSS 200개 핵심 물리량 및 11대 은하 분류 데이터 명세서 (Data Dictionary)
+# YSC 2026 청소년과학탐구반 — 은하 물리량 명세서 (Data Dictionary)
 
-본 문서는 `galaxy_master_200params.json` (및 `galaxy_master_dataset.json`)에 수록된 **11대 은하 분류(총 55,000개 표본)**와 **200개 핵심 물리량(Standard 200 Parameters)**의 정의, 단위, 물리적 의미 및 계산 방식을 설명합니다.
+본 문서는 프로젝트 마스터 데이터셋(`galaxy_master_200params.csv`) 및 대시보드에 탑재된 **신현승 지정 핵심 물리량 명세서**와 **11대 은하 분류 체계**의 정의 및 설명을 수록합니다.
 
 ---
 
-## 1. 11대 은하 분류 체계 (11 Galaxy Morphological & Spectral Classes)
+## 1. 11대 은하 형태 및 분광 분류 체계 (11 Galaxy Classes)
+- **불확실(Uncertain) 표본 0%** — 전 표본(55,000개)이 명확한 11대 클래스로 확정 분류되었습니다.
 
-각 분류마다 **5,000개**의 은하 표본이 수록되어 있습니다 (총 55,000개).
-
-| 번호 | 은하 분류명 (Class Name) | 영문 명칭 | 천문학적 정의 및 선별 기준 |
+| 번호 | 은하 분류명 | 영문 명칭 | 천문학적 정의 및 특징 |
 | :---: | :--- | :--- | :--- |
-| **1** | **나선은하** | Spiral Galaxy | `gz_spiral = 1`, 뚜렷한 나선팔과 원반 구조를 가진 만기형 은하 |
-| **2** | **막대나선은하** | Barred Spiral Galaxy | `gz2_bar_prob > 0.5`, 중심부를 가로지르는 막대 구조를 가진 나선은하 |
-| **3** | **타원은하** | Elliptical Galaxy | `gz_elliptical = 1`, 회전타원체 형태의 균일한 광도 분포 및 늙은 항성군 은하 |
+| **1** | **나선은하** | Spiral Galaxy | 뚜렷한 나선팔과 원반 구조를 가진 만기형 별 생성 은하 |
+| **2** | **막대나선은하** | Barred Spiral Galaxy | 중심부를 가로지르는 막대(Bar) 구조를 보유한 나선은하 |
+| **3** | **타원은하** | Elliptical Galaxy | 회전타원체 형태의 균일한 광도 분포 및 늙은 항성군 은하 |
 | **4** | **렌즈형은하** | Lenticular Galaxy (S0) | 원반과 팽대부는 존재하나 나선팔이 없고 별 생성이 억제된 중간형 은하 |
-| **5** | **마젤란형 은하** | Magellanic Galaxy | log M* <= 9.2, 저질량·고별생성 왜소 불규칙/나선 은하 |
-| **6** | **고리은하** | Ring Galaxy | `gz2_ring_prob > 0.3`, 외부 고리형 별 형성 영역을 가진 특이 은하 |
-| **7** | **전파은하** | Radio Galaxy | FIRST 1.4 GHz 전파 연속체 플럭스 검출 및 고속도 분산 거대 은하 |
-| **8** | **퀘이사** | Quasar (QSO) | `SpecObj.class = 'QSO'`, 초거대질량 블랙홀의 초고광도 활동은하핵 |
-| **9** | **세이퍼트은하** | Seyfert Galaxy | BPT 진단 Seyfert 영역에 위치하며 고에너지 방출선을 내는 활동은하 |
-| **10** | **불규칙은하** | Irregular Galaxy | `gz_uncertain = 1` 및 비대칭/특이 구조를 가진 왜소/불규칙 은하 |
-| **11** | **병합은하** | Merger Galaxy | `gz_p_mg > 0.35`, 충돌/상호작용으로 조석 꼬리 및 왜곡이 발생한 은하 |
+| **5** | **마젤란형 은하** | Magellanic Galaxy | 저질량(log M* <= 9.2) 왜소 불규칙/나선형 은하 |
+| **6** | **고리은하** | Ring Galaxy | 외부 고리형 별 형성 영역을 가진 특이 구조 은하 |
+| **7** | **전파은하** | Radio Galaxy | 1.4 GHz 전파 연속체 강한 플럭스를 방출하는 고속도 분산 거대 은하 |
+| **8** | **퀘이사** | Quasar (QSO) | 초거대질량 블랙홀 강착원반의 초고광도 활동은하핵 |
+| **9** | **세이퍼트은하** | Seyfert Galaxy | BPT 진단 Seyfert 영역에 위치하며 고에너지 방출선을 내는 AGN 은하 |
+| **10** | **불규칙은하** | Irregular Galaxy | 비대칭 구조 및 폭발적 별 생성 영역을 가진 왜소/불규칙 은하 (예: M82) |
+| **11** | **병합은하** | Merger Galaxy | 충돌 및 상호작용으로 조석 꼬리와 심한 왜곡이 발생한 은하 (예: NGC 4038) |
 
 ---
 
-## 2. 200개 핵심 물리량 스키마 상세 명세
+## 2. 신현승 지정 핵심 물리량 명세서 (Physical & Chemical Parameters)
 
-### ① 식별자 및 관측 메타데이터 (15개)
-- `objID`, `specObjID`: SDSS 측광/분광 고유 식별 번호
-- `ra`, `dec`: J2000 기준 천구 적경, 적위 [deg]
-- `run`, `rerun`, `camcol`, `field`: SDSS 측광 관측 스트립 메타데이터
-- `plate`, `mjd`, `fiberID`: 분광 관측 플레이트, 수정 율리우스일(MJD), 광섬유 번호
-- `bptclass`: BPT 진단 분류 코드 (1: SF, 2: Low-SNR SF, 3: Composite, 4: Seyfert, 5: LINER, -1: Unclassified)
-- `galaxy_type`: 은하의 11대 분류 명칭
-- `zWarning`: 분광 분석 품질 경고 플래그 (0: 정상)
-- `specClass`: 분광 1차 분류 (GALAXY, QSO)
+*(※ 적경 ra, 적위 dec, 고유식별번호 specObjID는 분석 사이트에서 제외)*
 
-### ② 분광학적 적색편이, 속도분산, 신호대잡음비 (10개)
-- `z`, `zErr`: 분광 적색편이 및 오차
-- `velDisp`, `velDispErr`, `vdispChi2`: 중심부 속도 분산 (sigma_v, [km/s]), 오차, 피팅 chi^2
-- `snMedian_u, g, r, i, z`: 5개 밴드별 스펙트럼 중앙 S/N 비
-
-### ③ 5종 측광 등급 시스템 (25개)
-5개 대역(u, g, r, i, z) 각각에 대한 5종 겉보기 등급 [mag]:
-- `psfMag_u/g/r/i/z`: 점광원 PSF 피팅 등급
-- `fiberMag_u/g/r/i/z`: 3인치 분광 광섬유 내부 등급
-- `petroMag_u/g/r/i/z`: 페트로시안(Petrosian) 총 등급
-- `modelMag_u/g/r/i/z`: de Vaucouleurs 또는 Exponential 최적 모델 등급
-- `cModelMag_u/g/r/i/z`: 복합(Composite) 모델 등급 (은하 색지수 표준)
-
-### ④ 5종 측광 등급 측정 오차 (25개)
-- `psfMagErr_u/g/r/i/z`, `fiberMagErr_u/g/r/i/z`, `petroMagErr_u/g/r/i/z`, `modelMagErr_u/g/r/i/z`, `cModelMagErr_u/g/r/i/z`
-
-### ⑤ 우리은하 성간 소광 (5개)
-- `extinction_u, extinction_g, extinction_r, extinction_i, extinction_z`: 파장별 소광량 [mag]
-
-### ⑥ 은하 크기 및 유효 반경 (20개)
-- `petroRad_u/g/r/i/z`: 페트로시안 반경 [arcsec]
-- `petroR50_u/g/r/i/z`: 50% 광도 반광 반경 (Half-light Radius, R_50) [arcsec]
-- `petroR90_u/g/r/i/z`: 90% 광도 반경 (R_90) [arcsec]
-- `deVRad_u/g/r/i/z`: de Vaucouleurs 프로파일 유효 반경 [arcsec]
-
-### ⑦ 은하 형상 프로파일 및 축비 (20개)
-- `expRad_u/g/r/i/z`: 지수형 원반 스케일 반경 [arcsec]
-- `deVAB_u/g/r/i/z`: de Vaucouleurs 모델의 단축/장축 축비 (b/a)
-- `expAB_u/g/r/i/z`: Exponential 모델의 단축/장축 축비 (b/a)
-- `fracDeV_u/g/r/i/z`: de Vaucouleurs 프로파일의 기여도 분율 (0 ~ 1)
-
-### ⑧ 스펙트럼 방출선 플럭스 (15개)
-단위: 10^-17 erg s^-1 cm^-2
-- 수소선: `h_alpha_flux` (6563A), `h_beta_flux` (4861A), `h_gamma_flux` (4340A), `h_delta_flux` (4101A)
-- 산소선: `oiii_5007_flux`, `oiii_4959_flux`, `oii_3726_flux`, `oii_3729_flux`, `oi_6300_flux`
-- 질소 및 황선: `nii_6584_flux`, `nii_6548_flux`, `sii_6717_flux`, `sii_6731_flux`
-- 헬륨선: `hei_5876_flux`, `heii_4686_flux`
-
-### ⑨ 방출선 플럭스 측정 오차 (15개)
-- 상기 15개 방출선별 `_err`
-
-### ⑩ 방출선 등가폭(EQW) 및 오차 (12개)
-단위: [A] (음수는 방출선을 의미)
-- `h_alpha_eqw`, `h_alpha_eqw_err`, `h_beta_eqw`, `h_beta_eqw_err`, `oiii_5007_eqw`, `oiii_5007_eqw_err`
-- `nii_6584_eqw`, `nii_6584_eqw_err`, `sii_6717_eqw`, `sii_6731_eqw_err`, `oii_3726_eqw`, `oii_3726_eqw_err`
-
-### ⑪ MPA-JHU 천체물리/화학 진화 파생량 (15개)
-- `log_stellar_mass`, `lgm_tot_p16`, `lgm_tot_p84`: 전체 항성 질량 (log M*/M_sun) 및 16%/84% 한계
-- `lgm_fib_p50`: 광섬유 내부 질량
-- `log_sfr`, `sfr_tot_p16`, `sfr_tot_p84`: 별 생성률 (log SFR [M_sun/yr]) 및 한계
-- `sfr_fib_p50`: 광섬유 내부 SFR
-- `log_ssfr`: 비별생성률 (log(SFR/M*) [yr^-1])
-- `metallicity_oh`, `oh_p16`, `oh_p84`: 기체 산소 풍부도 (12 + log(O/H))
-- `d4000_n`, `d4000_n_err`: 4000A 불연속 지표 (항성 종족 평균 연령)
-- `dust_ebv`: 성간 먼지로 인한 색 초과 E(B-V) [mag]
-
-### ⑫ Galaxy Zoo 1 & 2 형태학적 확률 (12개)
-- `gz_p_el`: 타원은하 판정 확률 (0 ~ 1)
-- `gz_p_cs`: 나선/원반은하 판정 확률 (0 ~ 1)
-- `gz_p_edge`: 측면(Edge-on) 나선은하 확률
-- `gz_p_mg`: 충돌/병합은하(Merger) 확률
-- `gz_spiral`, `gz_elliptical`, `gz_uncertain`: 1차 확정 플래그
-- `gz2_bar_prob`: 은하 중심 막대(Bar) 구조 확률
-- `gz2_ring_prob`: 고리(Ring) 구조 확률
-- `gz2_merger_prob`: 병합/상호작용 징후 확률
-- `gz2_irregular_prob`: 불규칙/특이 구조 확률
-- `gz2_bulge_prominence`: 팽대부(Bulge) 돌출도/우세도
-
-### ⑬ 다파장 서베이 연계 (2MASS, WISE, FIRST) (6개)
-- `mag_j_2mass`, `mag_h_2mass`, `mag_k_2mass`: 2MASS 근적외선 J, H, Ks 등급 [mag]
-- `mag_w1_wise`, `mag_w2_wise`: WISE 중적외선 3.4um, 4.6um 등급 [mag]
-- `first_radio_flux`: FIRST 1.4 GHz 전파 연속체 플럭스 밀도 [mJy]
-
-### ⑭ 파생 천체물리 진단 지수 (5개)
-- `log_nii_ha`: log10([NII]6584 / H_alpha) (BPT x축)
-- `log_oiii_hb`: log10([OIII]5007 / H_beta) (BPT y축)
-- `log_sii_ha`: log10([SII]6717 / H_alpha) (충격파/이온화 진단)
-- `color_u_r`: u - r 색지수 (u등급 - r등급)
-- `concentration_index_r`: 빛 집중도 지수 (C = R_90 / R_50)
+| 변수명 (Parameter) | 단위 / 형식 | 천문학적 정의 및 설명 |
+| :--- | :---: | :--- |
+| **`z`** | - | 스펙트럼 흡수 및 방출선 분석을 통해 직접 측정한 분광 적색편이 값 |
+| **`velDisp`** | $\text{km/s}$ | 은하 내부 별들의 무작위 운동 속도 편차를 나타내는 속도 분산 값 |
+| **`velDispErr`** | $\text{km/s}$ | 속도 분산 측정값에 대한 통계적 오차 |
+| **`u`** | $\text{mag}$ | 자외선 파장 대역에서 측정한 천체의 겉보기 등급 |
+| **`g`** | $\text{mag}$ | 녹색 파장 대역에서 측정한 천체의 겉보기 등급 |
+| **`r`** | $\text{mag}$ | 붉은색 파장 대역에서 측정한 천체의 겉보기 등급 |
+| **`i`** | $\text{mag}$ | 근적외선 파장 대역에서 측정한 천체의 겉보기 등급 |
+| **`phot_z`** | - | 스펙트럼 없이 여러 필터의 밝기 비율만으로 추정한 측광 적색편이 값 |
+| **`petroRad_r`** | $\text{arcsec}$ | r밴드 필터에서 측정한 은하의 빛 분포 기반 페트로시안 반지름 |
+| **`petroR50_r`** | $\text{arcsec}$ | r밴드에서 은하 전체 빛의 50%를 포함하는 영역의 반지름 (반광반경) |
+| **`petroR90_r`** | $\text{arcsec}$ | r밴드에서 은하 전체 빛의 90%를 포함하는 영역의 반지름 |
+| **`h_alpha_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 젊고 뜨거운 별 생성 활동을 보여주는 수소 H-alpha (6563Å) 방출선의 세기 |
+| **`h_alpha_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | H-alpha 방출선 세기 측정값의 오차 |
+| **`h_beta_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 성간 소광 및 별 생성을 분석할 때 쓰이는 수소 H-beta (4861Å) 방출선의 세기 |
+| **`h_beta_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | H-beta 방출선 세기 측정값의 오차 |
+| **`h_gamma_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 발머 계열 중 하나인 수소 H-gamma (4340Å) 방출선의 세기 |
+| **`h_gamma_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | H-gamma 방출선 세기 측정값의 오차 |
+| **`oiii_5007_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 중심부 블랙홀이나 고에너지 환경을 나타내는 5007 옹스트롬 산소[O III] 방출선의 세기 |
+| **`oiii_5007_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | 산소[O III] 5007 옹스트롬 방출선 세기 측정값의 오차 |
+| **`nii_6584_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 가스의 금속 함량을 파악하는 데 유용한 6584 옹스트롬 질소[N II] 방출선의 세기 |
+| **`nii_6584_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | 질소[N II] 6584 옹스트롬 방출선 세기 측정값의 오차 |
+| **`sii_6717_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 성간 가스의 전자 밀도를 추정할 때 쓰이는 6717 옹스트롬 황[S II] 방출선의 세기 |
+| **`sii_6717_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | 황[S II] 6717 옹스트롬 방출선 세기 측정값의 오차 |
+| **`oii_3726_flux`** | $10^{-17}\,\text{erg/s/cm}^2$ | 먼 은하의 별 생성률 측정에 자주 쓰이는 3726 옹스트롬 산소[O II] 방출선의 세기 |
+| **`oii_3726_flux_err`** | $10^{-17}\,\text{erg/s/cm}^2$ | 산소[O II] 3726 옹스트롬 방출선 세기 측정값의 오차 |
+| **`lgm_tot_p50`** | $\log(M_*/M_\odot)$ | 태양 질량 단위로 환산한 은하의 총 별 질량의 로그 중앙값 |
+| **`sfr_tot_p50`** | $\log(M_\odot/\text{yr})$ | 1년 동안 생성되는 별의 총 질량을 나타내는 별 생성률(SFR)의 로그 중앙값 |
+| **`oh_p50`** | $12+\log(\text{O/H})$ | 가스 내부의 산소 함유 비율로 표현한 금속성(Metallicity) 추정치의 중앙값 |
+| **`bptclass`** | Code | 주요 방출선 비율을 통해 별 생성 은하, 활동은하핵(AGN) 등으로 구분한 분류 결과 |
+| **`d4000_n`** | Index | 4000 옹스트롬 부근의 스펙트럼 감쇄 폭을 측정한 값으로, 늙은 별의 비율과 은하의 나이 |
+| **`log_nii_ha`** | - | BPT x축 진단비율 $\log([\text{N II}]\lambda6584 / \text{H}\alpha)$ |
+| **`log_oiii_hb`** | - | BPT y축 진단비율 $\log([\text{O III}]\lambda5007 / \text{H}\beta)$ |
+| **`color_u_r`** | $\text{mag}$ | $(u - r)$ 색지수 (자외선 등급 - 붉은색 등급) |
