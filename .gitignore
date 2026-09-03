@@ -15,3 +15,9 @@ output/models/*
 *.xlsx
 .vscode/
 .DS_Store
+
+# Whitelist complete release datasets
+!galaxy_master_complete_all.csv
+!galaxy_master_complete_all.json
+!galaxy_master_complete_all.xlsx
+!galaxy_master_complete_all.zip
