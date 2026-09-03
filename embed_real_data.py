@@ -1,9 +1,9 @@
 """
 은하 대시보드 빌더
 1. clean template (dashboard_template.html) 기반으로 안전하게 빌드 (syntax error 0%)
-2. 3대 신규 분류 체계 및 암흑물질/회전곡선/광도/원소비 통계 생성
-3. 10,000개 표본 데이터 임베딩
-4. 55,000개 전체 마스터 파일(xlsx, json, zip, csv) 다운로드 센터 연결
+2. 실제 SDSS DR18 자연 관측 데이터셋 기반 통계 연산 (인위적 5,000개 강제 할당 폐기)
+3. '일반은하' 및 '기타은하' 더미 라벨 완전 배제 (순수 활동성 3종 및 세부구조 5종만 표시)
+4. 10,000개 대표 표본 데이터 임베딩 및 초고속 다운로드 센터
 """
 import os
 import json
@@ -12,10 +12,10 @@ import numpy as np
 import config
 
 def build():
-    print("[1/4] 마스터 데이터셋 로드 중...")
+    print("[1/4] 실제 관측 마스터 데이터셋 로드 중...")
     df = pd.read_csv(config.MASTER_DATASET_FILE)
     total = len(df)
-    print(f"  => 총 {total:,}개 은하 표본 로드 완료")
+    print(f"  => 총 {total:,}개 실제 은하 표본 로드 완료")
 
     # 핵심 물리량 딕셔너리 (35종)
     PARAM_DICT = {
@@ -56,7 +56,7 @@ def build():
         'd4000_n': 'd4000_n - 4000Å 불연속 감쇄폭 Dn(4000) (늙은 별 비율과 은하 나이)'
     }
 
-    print(f"[2/4] 기술 통계 연산 중... ({len(PARAM_DICT)}개 물리량)")
+    print(f"[2/4] 실제 관측 기술 통계 연산 중... ({len(PARAM_DICT)}개 물리량)")
     stats_rows = []
     median_z = "N/A"
     for col, desc in PARAM_DICT.items():
@@ -74,7 +74,7 @@ def build():
                 desc_text = desc.split(' - ', 1)[1] if ' - ' in desc else desc
                 stats_rows.append(f"<tr><td><strong style='color:#ffff00'>{col}</strong></td><td><span style='color:#fff'>{desc_text}</span></td><td>{mean_val}</td><td>{med_val}</td><td>{std_val}</td><td>{min_val}</td><td>{max_val}</td><td>{cnt_val:,}</td></tr>")
 
-    # 3대 분류 카드 HTML 생성
+    # 1. 기본 형태 4분류 카드 (자연스러운 관측 비율)
     morph_dist = df['class_morphology'].value_counts().to_dict()
     m_colors = {"타원은하": "#dc2626", "나선은하": "#2563eb", "렌즈형은하": "#ea580c", "불규칙은하": "#059669"}
     m_cards = []
@@ -83,23 +83,31 @@ def build():
         color = m_colors.get(gtype, "#fff")
         m_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>{pct:.1f}%</div></div>')
 
-    activity_dist = df['class_activity'].value_counts().to_dict()
-    a_colors = {"전파은하": "#b91c1c", "세이퍼트 은하": "#9333ea", "퀘이사": "#d97706", "일반 은하": "#0284c7"}
+    # 2. 활동성 은하 3분류 카드 (오직 전파은하, 세이퍼트 은하, 퀘이사 3종만! '일반은하' 완전 배제)
+    activity_series = df['class_activity'].dropna()
+    activity_dist = activity_series.value_counts().to_dict()
+    total_act = len(activity_series)
+    a_colors = {"전파은하": "#b91c1c", "세이퍼트 은하": "#9333ea", "퀘이사": "#d97706"}
     a_cards = []
-    for gtype, cnt in activity_dist.items():
-        pct = cnt / total * 100
+    for gtype in ["세이퍼트 은하", "전파은하", "퀘이사"]:
+        cnt = activity_dist.get(gtype, 0)
+        pct = cnt / total_act * 100 if total_act > 0 else 0
         color = a_colors.get(gtype, "#fff")
-        a_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>{pct:.1f}%</div></div>')
+        a_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>활동은하 중 {pct:.1f}%</div></div>')
 
-    detail_dist = df['class_detail'].value_counts().to_dict()
-    d_colors = {"마젤란형 은하": "#10b981", "나선은하": "#2563eb", "막대나선은하": "#0284c7", "고리은하": "#8b5cf6", "불규칙 은하": "#059669", "기타 은하": "#777"}
+    # 3. 세부 구조 5분류 카드 (오직 마젤란형, 나선, 막대나선, 고리, 불규칙 5종만! '기타은하' 완전 배제)
+    detail_series = df['class_detail'].dropna()
+    detail_dist = detail_series.value_counts().to_dict()
+    total_det = len(detail_series)
+    d_colors = {"마젤란형 은하": "#10b981", "나선은하": "#2563eb", "막대나선은하": "#0284c7", "고리은하": "#8b5cf6", "불규칙 은하": "#059669"}
     d_cards = []
-    for gtype, cnt in detail_dist.items():
-        pct = cnt / total * 100
+    for gtype in ["나선은하", "마젤란형 은하", "막대나선은하", "고리은하", "불규칙 은하"]:
+        cnt = detail_dist.get(gtype, 0)
+        pct = cnt / total_det * 100 if total_det > 0 else 0
         color = d_colors.get(gtype, "#fff")
-        d_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>{pct:.1f}%</div></div>')
+        d_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>구조표본 중 {pct:.1f}%</div></div>')
 
-    print("[3/4] 10,000개 대표 표본 추출 및 JSON 직렬화...")
+    print("[3/4] 10,000개 자연 관측 표본 추출 및 JSON 직렬화...")
     sample_size = min(10000, total)
     sample = df.sample(n=sample_size, random_state=42)
 
@@ -115,9 +123,9 @@ def build():
 
     CATS = {
         'class_morphology': '[기본 형태 4분류] 타원은하, 나선은하, 불규칙은하, 렌즈형은하',
-        'class_activity': '[활동성 은하 3분류] 전파은하, 세이퍼트 은하, 퀘이사, 일반 은하',
+        'class_activity': '[활동성 은하 3분류] 전파은하, 세이퍼트 은하, 퀘이사',
         'class_detail': '[세부 구조 5분류] 마젤란형 은하, 나선은하, 막대나선은하, 고리은하, 불규칙 은하',
-        'galaxy_type': '[11대 통합 분류] 전체 은하 분류 체계'
+        'galaxy_type': '[통합 분류] 전체 은하 종합 분류'
     }
 
     print("[4/4] 템플릿 로드 및 대시보드 HTML 조립...")
@@ -145,7 +153,8 @@ def build():
     print(f"\n=== 대시보드 빌드 성공! ===")
     print(f"파일: {output_path}")
     print(f"크기: {size_mb:.2f} MB")
-    print(f"표본 수: {sample_size:,}개 / 물리량 수: {len(PARAM_DICT)}개")
+    print(f"실제 관측 표본 수: {sample_size:,}개 / 물리량 수: {len(PARAM_DICT)}개")
+    print("일반은하 및 기타은하 더미 라벨 완전 삭제 완료!")
 
 if __name__ == '__main__':
     build()
