@@ -17,7 +17,6 @@ plt.rcParams['axes.unicode_minus'] = False
 sys.path.append(r"c:\Users\neato\Desktop\정현\03_과학탐구_대회\YSC_대회")
 import config
 
-# 11대 은하 분류별 고유 색상 팔레트
 CLASS_COLORS = {
     "나선은하 (Spiral Galaxy)": "#2563eb",
     "막대나선은하 (Barred Spiral Galaxy)": "#0284c7",
@@ -34,7 +33,7 @@ CLASS_COLORS = {
 
 def generate_all_plots():
     print("="*60)
-    print("--- 200개 물리량 & 11대 은하 분류 기반 시각화 생성 시작 ---")
+    print("--- 200개 물리량 & 암흑물질 & 회전곡선 시각화 생성 시작 ---")
     print("="*60)
     
     if not os.path.exists(config.MASTER_DATASET_FILE):
@@ -43,13 +42,12 @@ def generate_all_plots():
         
     df = pd.read_csv(config.MASTER_DATASET_FILE)
     os.makedirs(config.PLOT_DIR, exist_ok=True)
-    os.makedirs(config.PHYSICAL_PLOT_DIR, exist_ok=True)
-    os.makedirs(config.CHEMICAL_PLOT_DIR, exist_ok=True)
 
-    # 1. BPT 다이어그램 (이온화 기원 및 11개 은하 분포)
+    sample_df = df.sample(min(len(df), 15000), random_state=42)
+
+    # 1. BPT 다이어그램
     print("[1/6] BPT 다이어그램 생성 중...")
     plt.figure(figsize=(10, 8))
-    
     x_kauff = np.linspace(-2.0, 0.0, 200)
     y_kauff = 0.61 / (x_kauff - 0.05) + 1.3
     x_kewley = np.linspace(-2.0, 0.4, 200)
@@ -58,7 +56,6 @@ def generate_all_plots():
     plt.plot(x_kauff, y_kauff, 'k--', lw=2, label='Kauffmann et al. (2003) SF 경계')
     plt.plot(x_kewley, y_kewley, 'r-', lw=2, label='Kewley et al. (2001) 극대 광이온화')
     
-    sample_df = df.sample(min(len(df), 15000), random_state=42)
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
         if len(sub) > 0:
@@ -76,14 +73,14 @@ def generate_all_plots():
     plt.savefig(os.path.join(config.PLOT_DIR, "bpt_diagram.png"), dpi=300)
     plt.close()
 
-    # 2. 은하 주계열 (Main Sequence: Mass vs SFR)
+    # 2. 은하 주계열 (Main Sequence)
     print("[2/6] 은하 주계열 (Main Sequence) 생성 중...")
     plt.figure(figsize=(10, 8))
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
         if len(sub) > 0:
             short_name = gtype.split(" (")[0]
-            plt.scatter(sub['log_stellar_mass'], sub['log_sfr'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['sfr_tot_p50'], s=12, alpha=0.5, color=color, label=short_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
     plt.ylabel(r'별 생성률 $\log(\mathrm{SFR}\,[M_\odot/\mathrm{yr}])$', fontsize=13)
@@ -94,14 +91,14 @@ def generate_all_plots():
     plt.savefig(os.path.join(config.PLOT_DIR, "main_sequence.png"), dpi=300)
     plt.close()
 
-    # 3. 질량-금속량 관계 (MZR: Mass vs Metallicity)
+    # 3. 질량-금속량 관계 (MZR)
     print("[3/6] 질량-금속량 관계 (MZR) 생성 중...")
     plt.figure(figsize=(10, 8))
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
         if len(sub) > 0:
             short_name = gtype.split(" (")[0]
-            plt.scatter(sub['log_stellar_mass'], sub['metallicity_oh'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['oh_p50'], s=12, alpha=0.5, color=color, label=short_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
     plt.ylabel(r'기체 산소 풍부도 $12 + \log(\mathrm{O/H})$', fontsize=13)
@@ -112,14 +109,14 @@ def generate_all_plots():
     plt.savefig(os.path.join(config.PLOT_DIR, "mass_metallicity.png"), dpi=300)
     plt.close()
 
-    # 4. 색-질량 도표 (Color-Mass Diagram & Bimodality)
+    # 4. 색-질량 도표 (Color-Mass)
     print("[4/6] 색-질량 도표 (Color-Mass Diagram) 생성 중...")
     plt.figure(figsize=(10, 8))
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
         if len(sub) > 0:
             short_name = gtype.split(" (")[0]
-            plt.scatter(sub['log_stellar_mass'], sub['color_u_r'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['color_u_r'], s=12, alpha=0.5, color=color, label=short_name)
             
     plt.axhline(y=2.2, color='red', linestyle='--', alpha=0.7, label='Red Sequence 하한')
     plt.axhline(y=1.8, color='blue', linestyle='--', alpha=0.7, label='Blue Cloud 상한')
@@ -132,25 +129,25 @@ def generate_all_plots():
     plt.savefig(os.path.join(config.PLOT_DIR, "color_mass_diagram.png"), dpi=300)
     plt.close()
 
-    # 5. 동역학-구조 관계 (Tully-Fisher / Faber-Jackson: Mass vs Velocity Dispersion)
-    print("[5/6] 동역학-구조 관계 도표 생성 중...")
+    # 5. 은하 회전곡선 및 툴리-피셔 관계 (Tully-Fisher: Mass vs Rotation Velocity)
+    print("[5/6] 은하 회전곡선/툴리-피셔 도표 생성 중...")
     plt.figure(figsize=(10, 8))
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
         if len(sub) > 0:
             short_name = gtype.split(" (")[0]
-            plt.scatter(sub['log_stellar_mass'], np.log10(np.maximum(10.0, sub['velDisp'])), s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['v_rot'], s=12, alpha=0.5, color=color, label=short_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
-    plt.ylabel(r'속도 분산 로그 $\log(\sigma_v\,[\mathrm{km/s}])$', fontsize=13)
-    plt.title('SDSS 11대 은하 질량-속도분산 동역학 관계 (Faber-Jackson / Dynamics)', fontsize=15, pad=12)
+    plt.ylabel(r'은하 회전속도 $V_{\mathrm{rot}}\,[\mathrm{km/s}]$', fontsize=13)
+    plt.title('SDSS 11대 은하 바리온 툴리-피셔 회전곡선 관계 (Tully-Fisher Relation)', fontsize=15, pad=12)
     plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
     plt.savefig(os.path.join(config.PLOT_DIR, "tully_fisher.png"), dpi=300)
     plt.close()
 
-    # 6. 통합 4분할 진화 패널 (Integrated Evolution Panel)
+    # 6. 통합 4분할 진화 패널 (암흑물질 분율 포함)
     print("[6/6] 통합 진화 4분할 패널 생성 중...")
     fig, axes = plt.subplots(2, 2, figsize=(16, 14))
     
@@ -171,7 +168,7 @@ def generate_all_plots():
     ax = axes[0, 1]
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
-        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['log_sfr'], s=8, alpha=0.4, color=color)
+        if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['sfr_tot_p50'], s=8, alpha=0.4, color=color)
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
     ax.set_ylabel(r'$\log(\mathrm{SFR})$')
     ax.set_title('(B) 은하 주계열 (Star-Formation Main Sequence)')
@@ -181,29 +178,29 @@ def generate_all_plots():
     ax = axes[1, 0]
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
-        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['color_u_r'], s=8, alpha=0.4, color=color)
+        if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['color_u_r'], s=8, alpha=0.4, color=color)
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
     ax.set_ylabel(r'$(u - r)\,\mathrm{[mag]}$')
     ax.set_title('(C) 색-질량 이분성 (Color-Mass Bimodality)')
     ax.grid(True, linestyle=':', alpha=0.5)
 
-    # Panel 4: Age vs Mass
+    # Panel 4: Dark Matter Fraction vs Mass
     ax = axes[1, 1]
     for gtype, color in CLASS_COLORS.items():
         sub = sample_df[sample_df['galaxy_type'] == gtype]
-        if len(sub) > 0: ax.scatter(sub['log_stellar_mass'], sub['d4000_n'], s=8, alpha=0.4, color=color, label=gtype.split(" (")[0])
+        if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['dark_matter_fraction'] * 100, s=8, alpha=0.4, color=color, label=gtype.split(" (")[0])
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
-    ax.set_ylabel(r'$D_n(4000)$ (항성 연령)')
-    ax.set_title('(D) 항성 종족 연령-질량 진화 관계')
+    ax.set_ylabel(r'암흑물질 분율 $f_{\mathrm{DM}}\,\,[\%]$')
+    ax.set_title('(D) 회전곡선 유도 암흑물질 분율-항성 질량 진화 관계')
     ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left", markerscale=2.5, fontsize=10)
     ax.grid(True, linestyle=':', alpha=0.5)
 
-    plt.suptitle('SDSS DR18 11대 은하 다차원 물리/화학 진화 종합 다이어그램', fontsize=18, y=1.02)
+    plt.suptitle('SDSS DR18 11대 은하 다차원 물리/화학/암흑물질 진화 종합 패널', fontsize=18, y=1.02)
     plt.tight_layout()
     plt.savefig(os.path.join(config.PLOT_DIR, "integrated_evolution.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
-    print("[완료] 모든 200개 물리량 기반 다이어그램 생성 완료!")
+    print("[완료] 모든 다이어그램 생성 완료!")
     print("="*60)
 
 if __name__ == "__main__":
