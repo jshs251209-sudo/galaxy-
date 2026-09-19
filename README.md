@@ -21,26 +21,30 @@ python run_pipeline.py
 ## 프로젝트 구조 (Project Structure)
 ```
 YSC_대회/
-├── config.py                 # 전역 설정 및 파라미터 관리
-├── requirements.txt          # 필요 패키지 목록
-├── data_fetcher.py           # SDSS API를 통한 원시 데이터 수집
-├── data_processor.py         # 데이터 전처리 및 물리량(SFR, 금속량 등) 계산
-├── plot_generators.py        # 정적 시각화 도표 생성 (BPT, MZR 등)
-├── plot_interactive.py       # 인터랙티브 시각화 도표 생성
-├── galaxy_classifier.py      # 머신러닝 기반 은하 분류 모델 
-├── validation_tool.py        # 분류 체계 및 데이터 검증 도구
-├── run_ml_pipeline.py        # 머신러닝 모델 학습 파이프라인
-├── run_pipeline.py           # 전체 파이프라인 통합 실행 스크립트
-├── dashboard/                # 웹 대시보드 리소스 (HTML, CSS, JS)
+├── config.py                         # 전역 설정 및 파라미터 관리
+├── requirements.txt                  # 필요 패키지 목록
+├── data_fetcher.py                   # SDSS API를 통한 원시 데이터 수집
+├── data_processor.py                 # 데이터 전처리 및 물리량(SFR, 금속량 등) 계산
+├── galaxy_correlation_analyzer.py    # [신규] 은하 물리량-화학조성 상관관계 통계 분석기
+├── Galaxy_Correlation_Analysis_Colab.ipynb # [신규] Google Colab 즉시 실행용 노트북
+├── plot_generators.py                # 정적 시각화 도표 생성 (BPT, MZR 등)
+├── plot_interactive.py               # 인터랙티브 시각화 도표 생성
+├── galaxy_classifier.py              # 머신러닝 기반 은하 분류 모델 
+├── validation_tool.py                # 분류 체계 및 데이터 검증 도구
+├── run_ml_pipeline.py                # 머신러닝 모델 학습 파이프라인
+├── run_pipeline.py                   # 전체 파이프라인 통합 실행 스크립트
+├── dashboard/                        # 웹 대시보드 리소스 (HTML, CSS, JS)
+├── galaxy_analysis_output/           # [신규] 상관분석 결과 도표(PNG) 및 통계표(CSV)
 ├── data/
-│   ├── raw/                  # 원본 수집 데이터
-│   └── processed/            # 전처리 완료된 마스터 데이터셋
+│   ├── raw/                          # 원본 수집 데이터
+│   └── processed/                    # 전처리 완료된 마스터 데이터셋
 ├── output/
-│   ├── plots/                # 생성된 도표 이미지 및 HTML
-│   └── models/               # 학습된 ML 모델 및 스케일러 (.pkl)
-└── docs/                     # 프로젝트 문서
-    ├── research_report.md    # 연구 보고서 (논문 초안)
-    └── data_dictionary.md    # 데이터 명세서
+│   ├── plots/                        # 생성된 도표 이미지 및 HTML
+│   └── models/                       # 학습된 ML 모델 및 스케일러 (.pkl)
+└── docs/                             # 프로젝트 문서
+    ├── galaxy_correlation_guide.md   # [신규] 상관분석 및 통계 이론 가이드
+    ├── research_report.md            # 연구 보고서 (논문 초안)
+    └── data_dictionary.md            # 데이터 명세서
 ```
 
 ## 데이터 출처 (Data Sources)
@@ -72,6 +76,22 @@ streamlit run spectrum_analyzer.py
 python validation_tool.py
 ```
 이는 데이터의 이상치(Anomaly), 누락값, 그리고 물리량 교정식의 정상 작동 여부를 확인합니다.
+
+## 은하 물리량 및 화학적 조성 상관관계 분석기 (Galaxy Correlation Analyzer)
+은하의 항성질량($M_*$), 별 생성률(SFR), 기체 금속함량($12+\log(\mathrm{O/H})$) 간의 상관관계를 통계적(Pearson, Spearman, 회귀분석, p-value)으로 자동 분석하고 표본 크기($N=100, 300, 500, 1000$)에 따른 수렴성을 검증합니다.
+
+```bash
+python galaxy_correlation_analyzer.py
+```
+- **결과 저장 위치**: `galaxy_analysis_output/`
+- **생성 결과물**:
+  - `scatter_mass_vs_sfr.png` (은하 주계열, SFMS)
+  - `scatter_mass_vs_metallicity.png` (질량-금속함량 관계, MZR)
+  - `scatter_sfr_vs_metallicity.png` (SFR-금속함량 관계, FMR)
+  - `three_core_relations_summary.png` (3대 핵심 관계 종합 도표)
+  - `sample_size_convergence.png` (표본 크기별 상관계수 수렴성)
+  - `galaxy_correlation_summary.csv` 및 `galaxy_type_correlation_summary.csv`
+- **Google Colab 지원**: `Galaxy_Correlation_Analysis_Colab.ipynb`를 열어 브라우저에서 즉시 실행 가능합니다.
 
 ## 라이선스 (License)
 이 프로젝트는 MIT License를 따릅니다.

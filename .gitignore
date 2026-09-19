@@ -9,6 +9,9 @@ data/processed/*
 !data/processed/.gitkeep
 data/excel_exports/*
 !data/excel_exports/.gitkeep
+data/download/*
+!data/download/.gitkeep
+mock_test_output/
 output/models/*
 !output/models/.gitkeep
 *.csv

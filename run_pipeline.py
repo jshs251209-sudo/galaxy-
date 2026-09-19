@@ -99,8 +99,19 @@ def main():
         except ImportError:
             os.system(f"{sys.executable} validation_tool.py")
         print(f"소요 시간: {time.time() - step6_start:.2f}초")
+
+        # 단계 7: 은하 물리량 및 화학적 조성 상관관계 통계 분석 (Correlation Analysis)
+        print_step(7, "물리량 및 화학적 조성 상관관계 통계 분석 (Correlation Analysis)")
+        step7_start = time.time()
+        try:
+            import galaxy_correlation_analyzer
+            target_csv = "galaxy_master_complete_all.csv" if os.path.exists("galaxy_master_complete_all.csv") else config.MASTER_DATASET_FILE
+            galaxy_correlation_analyzer.run_galaxy_analysis_pipeline(csv_path=target_csv)
+        except Exception as err:
+            print(f"[경고] 상관관계 분석 단계 건너뜀 또는 오류: {err}")
+        print(f"소요 시간: {time.time() - step7_start:.2f}초")
             
-        print(f"\n모든 분석 도표가 {config.PLOT_DIR} 에 저장되었습니다.")
+        print(f"\n모든 분석 도표가 {config.PLOT_DIR} 및 galaxy_analysis_output/ 에 저장되었습니다.")
         print(f"학습된 모델이 {config.MODEL_DIR} 에 저장되었습니다.")
         
         total_time = time.time() - start_time
