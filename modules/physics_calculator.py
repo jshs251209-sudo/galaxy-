@@ -238,74 +238,130 @@ class PhysicsCalculator:
         else:
             return {'stage': '진화 완료', 'stage_en': 'Fully Evolved', 'description': 'Red & dead', 'color': '#FF0000'}
 
-    def compute_all(self, emission_lines: dict, z: float = 0.05, 
-                    log_mass: Optional[float] = None, color_ur: Optional[float] = None) -> dict:
+    def classify_sii_bpt(self, log_sii_ha: float, log_oiii_hb: float) -> dict:
+        """[SII]-BPT (Kewley et al. 2006): SF / Seyfert / LINER"""
+        res = {'class': '미분류', 'class_en': 'Unclassified'}
+        if log_sii_ha is None or log_oiii_hb is None or not np.isfinite(log_sii_ha) or not np.isfinite(log_oiii_hb):
+            return res
+        x, y = log_sii_ha, log_oiii_hb
+        if x < 0.32 and y < 0.72 / (x - 0.32) + 1.30:
+            return {'class': '별생성 은하', 'class_en': 'Star-Forming'}
+        if y > 1.89 * x + 0.76:
+            return {'class': '세이퍼트 AGN', 'class_en': 'Seyfert'}
+        return {'class': 'LINER', 'class_en': 'LINER'}
+
+    @staticmethod
+    def electron_density_sii(sii6717: float, sii6731: float) -> Optional[float]:
+        """[SII]6717/6731 비 → 전자밀도 n_e (cm^-3), Sanders+2016 (T=10^4 K) 근사식"""
+        if not sii6717 or not sii6731 or sii6731 <= 0:
+            return None
+        R = sii6717 / sii6731
+        a, b, c = 0.4315, 2107.0, 627.1
+        if R >= 1.449:
+            return 1.0  # 저밀도 한계
+        if R <= 0.4375:
+            return 1e5  # 고밀도 한계
+        try:
+            ne = (c * R - a * b) / (a - R)
+            return float(max(ne, 1.0))
+        except Exception:
+            return None
+
+    def compute_all(self, emission_lines: dict, z: float = 0.05,
+                    log_mass: Optional[float] = None, color_ur: Optional[float] = None,
+                    flux_scale: float = 1.0) -> dict:
         """Master function: given emission line fluxes dict, compute ALL physical properties.
-        Input: {'H_alpha': float, 'H_beta': float, 'OIII_5007': float, 'NII_6584': float}
+        Input: {'H_alpha': float, 'H_beta': float, 'OIII_5007': float, 'NII_6584': float, ...}
+        flux_scale: 입력 플럭스 단위 → erg/s/cm² 변환 계수 (예: SDSS 1e-17). 비율 기반 양에는 영향 없음.
         Output: comprehensive dict with all computed quantities."""
-        ha = emission_lines.get('H_alpha')
-        hb = emission_lines.get('H_beta')
-        oiii = emission_lines.get('OIII_5007')
-        nii = emission_lines.get('NII_6584')
-        
+        def g(k):
+            v = emission_lines.get(k)
+            return float(v) * flux_scale if v is not None and v > 0 else None
+
+        ha, hb, oiii, nii = g('H_alpha'), g('H_beta'), g('OIII_5007'), g('NII_6584')
+        sii1, sii2 = g('SII_6717'), g('SII_6731')
+
         ebv = self.calculate_ebv(ha, hb)
-        
+        balmer = self.calculate_balmer_decrement(ha, hb)
+
         # Extinction correction
         ha_corr = self.correct_extinction(ha, 6563.0, ebv) if ebv else ha
         hb_corr = self.correct_extinction(hb, 4861.0, ebv) if ebv else hb
         oiii_corr = self.correct_extinction(oiii, 5007.0, ebv) if ebv else oiii
         nii_corr = self.correct_extinction(nii, 6584.0, ebv) if ebv else nii
-        
+
         # SFR & Metallicity
         log_sfr = self.calculate_sfr_halpha(ha_corr, z)
         metal_n2 = self.calculate_metallicity_n2(nii_corr, ha_corr)
         metal_o3n2 = self.calculate_metallicity_o3n2(oiii_corr, hb_corr, nii_corr, ha_corr)
-        
+
         # BPT Classification
         if nii_corr and ha_corr and nii_corr > 0 and ha_corr > 0:
             log_nii_ha = math.log10(nii_corr / ha_corr)
         else:
             log_nii_ha = np.nan
-            
         if oiii_corr and hb_corr and oiii_corr > 0 and hb_corr > 0:
             log_oiii_hb = math.log10(oiii_corr / hb_corr)
         else:
             log_oiii_hb = np.nan
-            
+        sii_tot = (sii1 or 0) + (sii2 or 0)
+        log_sii_ha = math.log10(sii_tot / ha) if sii_tot > 0 and ha else np.nan
+
         bpt_info = self.classify_bpt(log_nii_ha, log_oiii_hb)
-        
-        # 통합 금속량: O3N2 우선, N2 보조
+        sii_bpt = self.classify_sii_bpt(log_sii_ha, log_oiii_hb)
+        n_e = self.electron_density_sii(sii1, sii2)
+
+        # 통합 금속량: O3N2 우선, N2 보조 (AGN 은 강선 금속량 보정식 적용 불가 → 표시만)
         best_metallicity = metal_o3n2 if metal_o3n2 is not None else metal_n2
-        
+        metallicity_method = 'O3N2 (PP04)' if metal_o3n2 is not None else ('N2 (PP04)' if metal_n2 is not None else '-')
+
         results = {
             'ebv': ebv,
+            'balmer_decrement': balmer,
             'log_sfr': log_sfr,
             'metallicity': best_metallicity,
             'metallicity_oh': best_metallicity,
             'oh_p50': best_metallicity,
             'metallicity_n2': metal_n2,
             'metallicity_o3n2': metal_o3n2,
+            'metallicity_method': metallicity_method,
             'log_nii_ha': log_nii_ha,
             'log_oiii_hb': log_oiii_hb,
+            'log_sii_ha': log_sii_ha,
             'bpt_class': bpt_info['class'],
             'bpt_class_en': bpt_info['class_en'],
+            'sii_bpt_class': sii_bpt['class'],
+            'sii_bpt_class_en': sii_bpt['class_en'],
+            'electron_density': n_e,
             'kauffmann_distance': bpt_info['kauffmann_distance'],
-            'kewley_distance': bpt_info['kewley_distance']
+            'kewley_distance': bpt_info['kewley_distance'],
+            'z': z,
+            'ha_flux_corr': ha_corr,
         }
-        
+        if bpt_info['class_en'] in ('Seyfert', 'LINER', 'Composite') and best_metallicity is not None:
+            results['metallicity_warning'] = 'AGN/복합 은하는 강선 금속량 보정식의 적용 범위를 벗어납니다 (참고값).'
+
+        if log_mass is not None:
+            results['log_mass'] = log_mass
+            results['log_stellar_mass'] = log_mass
+        if color_ur is not None:
+            results['color_ur'] = color_ur
+            results['color_u_r'] = color_ur
+
         # Evolution Index
-        if log_mass is not None and color_ur is not None and log_sfr is not None and metal_n2 is not None:
+        met_for_gei = best_metallicity if best_metallicity is not None else metal_n2
+        if log_mass is not None and color_ur is not None and log_sfr is not None and met_for_gei is not None:
             log_ssfr = self.calculate_log_ssfr(log_sfr, log_mass)
-            gei = self.calculate_gei(log_mass, log_ssfr, metal_n2, color_ur)
+            gei = self.calculate_gei(log_mass, log_ssfr, met_for_gei, color_ur)
             stage_info = self.diagnose_evolution_stage(gei)
-            
             results.update({
                 'log_ssfr': log_ssfr,
                 'gei': gei,
+                'gei_score': gei,
                 'evolution_stage': stage_info['stage'],
                 'evolution_stage_en': stage_info['stage_en'],
                 'evolution_desc': stage_info['description'],
                 'evolution_color': stage_info['color']
             })
-            
+
         return results

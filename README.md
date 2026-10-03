@@ -63,6 +63,30 @@ python -m http.server --directory dashboard 8000
 ```
 접속 주소: `http://localhost:8000`
 
+## 🌌 GalaxyEvolution Studio (영역 선택형 은하 분석 앱, v4)
+사진·FITS 위에 **분석할 영역을 직접 그리면** 측광·형태·분광·물리량·SDSS 위상공간·AI 분류·보고서까지 한 번에 수행하는 Streamlit 앱입니다. (Ginga 스타일 뷰어 내장)
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**사용 순서**: ① 분석 종류(🖼️ 이미지 / 🌈 분광) 선택 → 파일 업로드 (또는 사이드바 「바로 체험하기」 데모·SDSS 실제 은하 사진) → ② 사각형·원·올가미·다각형·직선 도구로 영역 그리기 (여러 개 가능, 이동·회전 수정 가능) → 🔬 분석 실행
+
+| 기능 | 내용 |
+|---|---|
+| 입력 | JPG/PNG/TIFF, FITS (2D 영상 · 1D 스펙트럼 · SDSS spec 테이블), CSV/TXT 스펙트럼, SDSS 좌표 컷아웃 |
+| Ginga 뷰어 | zscale/백분위 컷, linear·log·sqrt·asinh·histeq 스트레치, 컬러맵, 픽셀값 탐침, 히스토그램, 선 단면, FITS 헤더 (표시 설정은 보기 전용 — 분석은 항상 원본 데이터) |
+| 이미지 분석 | 배경 제거 측광(S/N·기기등급), Petrosian/R50/R90, CAS(집중도·비대칭도·매끄러움), Gini–M20, Sérsic 피팅, 밝은 핵 개수 → 조기형/만기형/불규칙/병합 후보 판정 (근거 제시), 영역 간 비교 |
+| 분광 분석 | 분광 사진 ROI → 1D 추출(sRGB 감마 보정) → 파장 교정(양 끝/기준점) → 적색편이 자동 추정 → 블렌드 다중 가우시안([NII]+Hα, [SII]) → 소광·SFR·금속량(N2/O3N2)·[NII]/[SII]-BPT·전자밀도·D4000, 영역별 공간 분해 BPT |
+| 위상공간 | SDSS 은하 위 BPT·SFMS·MZR·색–질량·3D FMR, 백분위, 주계열 오프셋 ΔMS, 물리량 kNN 유사 은하 10개 |
+| AI | 11종 은하 유형 RF 분류(모델 파일이 없으면 마스터 CSV로 경량 대체 모델 자동 학습), 입력 특성 커버리지, 개별 예측 근거(XAI), 진화 군집, GEI 게이지 |
+| 보고서 | Markdown/HTML 보고서, 물리량 JSON, 스펙트럼·방출선·영역 비교 CSV |
+
+> ⚠️ JPG/PNG 측정은 근사값입니다(비교정 필터·센서 감도·포화). 정량 분석에는 FITS 를 권장합니다. 사진 픽셀값(임의 단위)에서는 비율 기반 양(BPT·금속량)만 신뢰할 수 있어 SFR 은 생략됩니다.
+
+통합 테스트: `python test_integration.py`
+
 ## 천체 스펙트럼 분석기 (Spectrum Analyzer)
 1D 관측 스펙트럼(CSV) 또는 스마트폰 등으로 촬영한 **스펙트럼 회절 사진(JPG/PNG)**을 업로드하여 방출선을 자동 감지하고 분류(BPT)할 수 있습니다.
 다음 명령어로 Streamlit 앱을 실행하세요.

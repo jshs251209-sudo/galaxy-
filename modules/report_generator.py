@@ -1,357 +1,346 @@
 import os
+import re
+import html as _html
 import datetime
+
 
 class ReportGenerator:
     """분석 결과 종합 보고서 자동 생성기"""
-    
+
     def __init__(self, output_dir: str = None):
         """Set output directory for reports."""
         self.output_dir = output_dir or os.path.join(os.getcwd(), 'output', 'reports')
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
-            
-    def _safe_format(self, value, format_str="{:.2f}", default="-"):
-        """안전한 값 포맷팅"""
+
+    # ── 유틸 ─────────────────────────────────────────────
+    @staticmethod
+    def _safe_format(value, format_str="{:.2f}", default="-"):
+        """안전한 값 포맷팅 (None/NaN/inf → default)"""
         if value is None:
             return default
         try:
-            return format_str.format(float(value))
+            f = float(value)
+            if f != f or f in (float('inf'), float('-inf')):
+                return default
+            return format_str.format(f)
         except (ValueError, TypeError):
             return str(value)
 
+    @staticmethod
+    def _pct(value):
+        """0–1 또는 0–100 스케일 모두 허용 → '85.0%'"""
+        if value is None:
+            return "N/A"
+        try:
+            v = float(value)
+        except (TypeError, ValueError):
+            return "N/A"
+        if v <= 1.0:
+            v *= 100.0
+        return "%.1f%%" % v
+
+    @staticmethod
+    def _bpt_interpretation(bpt_class, bpt_class_en=None):
+        key = (bpt_class_en or bpt_class or '').lower()
+        if 'seyfert' in key or '세이퍼트' in key or key == 'agn':
+            return "활동은하핵(AGN, 세이퍼트) 특성이 강합니다. 중심 초대질량 블랙홀 강착원반의 강한 전리 복사가 [OIII] 방출을 증폭시킵니다."
+        if 'composite' in key or '복합' in key:
+            return "별 탄생과 AGN 활동이 혼합된 복합(Composite) 특성을 보입니다. 퀜칭이 진행 중인 전이 단계일 가능성이 있습니다."
+        if 'liner' in key:
+            return "저전리 핵방출선 영역(LINER)으로 분류됩니다. 늙은 항성종족(post-AGB)이나 약한 AGN에 의한 전리일 수 있습니다."
+        if 'star' in key or '별생성' in key or key == 'sf':
+            return "젊고 무거운 O/B형 별이 주변 가스를 전리시키는 일반적인 별 탄생(HII) 은하입니다."
+        return "방출선 비가 부족하여 BPT 분류를 확정할 수 없습니다."
+
+    # ── Markdown ─────────────────────────────────────────
     def generate_markdown(self, analysis_results: dict) -> str:
         """분석 결과를 Markdown 문자열로 변환.
-        
-        analysis_results should contain:
-        {
-            'target_name': str,            # 천체 이름/식별자
-            'analysis_datetime': str,       # 분석 일시
-            'input_mode': str,              # 입력 모드 (스펙트럼/SDSS/모의 etc)
-            
-            # 물리량
-            'emission_lines': dict,         # 검출된 방출선 플럭스
-            'ebv': float,                   # 성간 소광량
-            'log_sfr': float,               # 별 생성률
-            'metallicity': float,           # 금속량
-            'metallicity_method': str,      # 금속량 산출 방법 (N2/O3N2)
-            
-            # BPT 분류
-            'bpt_class': str,               # BPT 분류 결과
-            'log_nii_ha': float,
-            'log_oiii_hb': float,
-            
-            # AI 분류
-            'predicted_type': str,          # 11대 은하 분류 결과
-            'confidence': float,            # 분류 신뢰도
-            'top_3_types': list,            # 상위 3개 분류 확률
-            'evolution_cluster': str,       # 4대 진화 군집
-            'gei_score': float,             # 은하진화지수 (0-100)
-            'evolution_stage': str,         # 진화 단계 명칭
-            
-            # 선택적
-            'log_mass': float,
-            'color_ur': float,
-            'z': float,
-        }
+
+        주요 키: target_name, analysis_datetime, input_mode, emission_lines(dict) 또는 line_table(list[dict]),
+        ebv, log_sfr, metallicity, metallicity_method, bpt_class(_en), log_nii_ha, log_oiii_hb,
+        predicted_type, confidence, top_3_types, evolution_cluster, gei_score, evolution_stage,
+        log_mass, color_ur, z
+        선택 키: morphology(dict), photometry(dict), percentiles(list[dict]), sfms(dict),
+        similar_vote(dict), sii_bpt_class, electron_density, d4000, notes(list[str])
         """
-        
-        target = analysis_results.get('target_name', 'Unknown Target')
-        now_str = analysis_results.get('analysis_datetime', datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        mode = analysis_results.get('input_mode', '미상')
-        
-        # 2. 방출선 테이블 구성
-        emission_lines = analysis_results.get('emission_lines', {})
-        line_table_rows = []
-        for line, flux in emission_lines.items():
-            if flux is not None and flux > 0:
-                detected = "✅"
-                flux_str = f"{flux:.4f}"
-            else:
-                detected = "❌"
-                flux_str = "미검출"
-            line_table_rows.append(f"| {line} | - | {flux_str} | {detected} |")
-            
-        if not line_table_rows:
-            line_table_rows.append("| 입력 없음 | - | - | - |")
-            
-        line_table = "\n".join(line_table_rows)
-        
-        # 물리량 안전 포맷팅
-        ebv_str = self._safe_format(analysis_results.get('ebv'))
-        sfr_str = self._safe_format(analysis_results.get('log_sfr'))
-        z_str = self._safe_format(analysis_results.get('metallicity'))
-        z_method = analysis_results.get('metallicity_method', 'N/A')
-        
-        # BPT 포맷팅
-        bpt_class = analysis_results.get('bpt_class', '미상')
-        nii_ha = self._safe_format(analysis_results.get('log_nii_ha'))
-        oiii_hb = self._safe_format(analysis_results.get('log_oiii_hb'))
-        
-        bpt_interpretation = "일반적인 별 탄생 은하(SF)로 보입니다."
-        if bpt_class == 'AGN':
-            bpt_interpretation = "활동은하핵(AGN) 활동이 감지됩니다. 중심 블랙홀의 강한 강착 원반 복사가 방출선에 기여하고 있습니다."
-        elif bpt_class == 'Composite':
-            bpt_interpretation = "별 탄생과 AGN 활동이 혼합된 복합(Composite) 특성을 보입니다."
-        elif bpt_class == 'LINER':
-            bpt_interpretation = "저전리 방출선 영역(LINER)으로 분류됩니다. 늙은 항성종족이나 약한 AGN에 의한 이온화일 수 있습니다."
-            
-        # AI 포맷팅
-        pred_type = analysis_results.get('predicted_type', '미분류')
-        conf = analysis_results.get('confidence')
-        conf_str = f"{conf:.1f}%" if conf is not None else "N/A"
-        
-        top3 = analysis_results.get('top_3_types', [])
-        top3_lines = []
-        for i, (t, p) in enumerate(top3[:3]):
-            top3_lines.append(f"  {i+1}. {t} ({p:.1f}%)")
-        if not top3_lines:
-            top3_lines.append("  - 데이터 없음")
-        top3_str = "\n".join(top3_lines)
-        
-        # 진화 포맷팅
-        cluster = analysis_results.get('evolution_cluster', '미상')
-        gei = analysis_results.get('gei_score')
-        gei_str = f"{gei:.1f}" if gei is not None else "N/A"
-        stage = analysis_results.get('evolution_stage', '미상')
-        
-        evo_interpretation = "현재 데이터로는 정확한 진화 단계를 파악하기 어렵습니다."
+        a = analysis_results or {}
+        target = a.get('target_name', 'Unknown Target')
+        now_str = a.get('analysis_datetime', datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        mode = a.get('input_mode', '미상')
+        f = self._safe_format
+
+        # 방출선 표
+        line_rows = []
+        if a.get('line_table'):
+            for r in a['line_table']:
+                line_rows.append("| %s | %s | %s | %s | %s |" % (
+                    r.get('선', r.get('key', '-')), f(r.get('정지파장(Å)'), "{:.2f}"),
+                    f(r.get('적분플럭스'), "{:.4g}"), f(r.get('S/N'), "{:.1f}"), f(r.get('EW(Å)'), "{:.2f}")))
+        else:
+            for line, flux in (a.get('emission_lines') or {}).items():
+                ok = flux is not None and flux > 0
+                line_rows.append("| %s | - | %s | %s | - |" % (line, f(flux, "{:.4g}") if ok else "미검출",
+                                                               "-" if not ok else "검출"))
+        if not line_rows:
+            line_rows.append("| 입력 없음 | - | - | - | - |")
+        line_table = "\n".join(line_rows)
+
+        bpt_class = a.get('bpt_class', '미상')
+        bpt_interp = self._bpt_interpretation(bpt_class, a.get('bpt_class_en'))
+
+        # AI
+        pred_type = a.get('predicted_type', '미분류')
+        conf_str = self._pct(a.get('confidence'))
+        top3 = a.get('top_3_types') or []
+        top3_lines = ["  %d. %s (%s)" % (i + 1, t, self._pct(p)) for i, (t, p) in enumerate(top3[:3])]
+        top3_str = "\n".join(top3_lines) if top3_lines else "  - 데이터 없음"
+        cov = a.get('feature_coverage')
+        cov_str = ""
+        if cov is not None:
+            cov_str = "\n- **입력 특성 커버리지(중요도 가중)**: %s — 낮을수록 예측 불확실" % self._pct(cov)
+
+        # 진화
+        cluster = a.get('evolution_cluster', '미상')
+        gei = a.get('gei_score')
+        stage = a.get('evolution_stage', '미상')
+        evo_interp = "현재 데이터(질량·색·SFR·금속량 중 일부 누락)로는 GEI를 산출할 수 없습니다."
         if gei is not None:
             if gei < 30:
-                evo_interpretation = "활발한 별 생성 단계에 있으며, 풍부한 가스를 바탕으로 성장 중인 젊은 은하입니다."
-            elif gei < 70:
-                evo_interpretation = "별 생성률이 점차 감소하는 전이기 은하로 추정됩니다 (Green Valley)."
+                evo_interp = "활발한 별 생성 단계로, 풍부한 가스를 바탕으로 성장 중인 젊은 은하입니다 (Blue Cloud)."
+            elif gei < 65:
+                evo_interp = "별 생성률이 감소하는 전이기 은하로 추정됩니다 (Green Valley)."
             else:
-                evo_interpretation = "가스가 대부분 고갈되어 별 생성이 거의 멈춘 늙고 안정한 은하입니다 (Red Sequence)."
+                evo_interp = "가스가 대부분 고갈되어 별 생성이 거의 멈춘 성숙한 은하입니다 (Red Sequence)."
 
-        mass_str = self._safe_format(analysis_results.get('log_mass'))
-        color_str = self._safe_format(analysis_results.get('color_ur'))
+        md = []
+        md.append("# 🌌 천체 분석 보고서\n")
+        md.append("## 1. 분석 개요")
+        md.append("- **분석 일시**: %s" % now_str)
+        md.append("- **입력 방식**: %s" % mode)
+        md.append("- **대상 천체**: %s" % target)
+        if a.get('roi_description'):
+            md.append("- **선택 영역**: %s" % a['roi_description'])
+        md.append("")
 
-        markdown = f"""# 🌌 천체 분석 보고서
+        # 형태/측광 (이미지 모드)
+        morph = a.get('morphology')
+        phot = a.get('photometry')
+        sec = 2
+        if morph or phot:
+            md.append("## %d. 영역 측광 · 형태 분석" % sec)
+            sec += 1
+            if phot:
+                md.append("| 항목 | 값 |")
+                md.append("|------|----|")
+                for k, v in phot.items():
+                    md.append("| %s | %s |" % (k, v))
+                md.append("")
+            if morph:
+                md.append("- **형태 판정**: **%s** (%s)" % (morph.get('class', '-'), morph.get('class_en', '-')))
+                for r in morph.get('reasons', [])[:8]:
+                    md.append("  - %s" % r)
+            md.append("")
 
-## 1. 분석 개요
-- **분석 일시**: {now_str}
-- **입력 방식**: {mode}
-- **대상 천체**: {target}
+        md.append("## %d. 분광 분석 결과" % sec)
+        sec += 1
+        md.append("| 방출선 | 정지파장 (Å) | 적분 플럭스 | S/N | EW (Å) |")
+        md.append("|--------|-------------|-------------|-----|--------|")
+        md.append(line_table)
+        if a.get('d4000') is not None:
+            md.append("\n- **D4000 (4000Å 단절 지수)**: %s — 1.5 이상이면 늙은 항성종족 우세" % f(a.get('d4000')))
+        md.append("")
 
-## 2. 분광 분석 결과
-| 방출선 | 파장 (Å) | 플럭스 | 검출 여부 |
-|--------|---------|--------|----------|
-{line_table}
+        md.append("## %d. 물리량 추출 결과" % sec)
+        sec += 1
+        md.append("- **성간 소광량 E(B−V)**: %s mag" % f(a.get('ebv'), "{:.3f}"))
+        md.append("- **별 생성률 log SFR**: %s (M☉/yr)" % f(a.get('log_sfr')))
+        md.append("- **금속량 12+log(O/H)**: %s (%s)" % (f(a.get('metallicity'), "{:.3f}"), a.get('metallicity_method', 'N/A')))
+        if a.get('electron_density') is not None:
+            md.append("- **전자밀도 n_e ([SII])**: %s cm⁻³" % f(a.get('electron_density'), "{:.0f}"))
+        md.append("- **항성 질량 log M★**: %s (M☉)" % f(a.get('log_mass')))
+        md.append("- **색지수 u−r**: %s" % f(a.get('color_ur')))
+        md.append("- **적색편이 z**: %s" % f(a.get('z'), "{:.4f}"))
+        md.append("")
 
-## 3. 물리량 추출 결과
-- **성간 소광량 E(B-V)**: {ebv_str} mag
-- **별 생성률 (log SFR)**: {sfr_str} M☉/yr
-- **금속량 12+log(O/H)**: {z_str} ({z_method})
-- **항성 질량 (log M*)**: {mass_str} M☉
-- **색지수 (u-r)**: {color_str}
+        md.append("## %d. BPT 진단 분류" % sec)
+        sec += 1
+        md.append("- **[NII]-BPT 분류**: **%s**" % bpt_class)
+        if a.get('sii_bpt_class'):
+            md.append("- **[SII]-BPT 분류 (Kewley 2006)**: %s" % a['sii_bpt_class'])
+        md.append("- **log([NII]/Hα)**: %s" % f(a.get('log_nii_ha')))
+        md.append("- **log([OIII]/Hβ)**: %s" % f(a.get('log_oiii_hb')))
+        md.append("- **해석**: %s" % bpt_interp)
+        md.append("")
 
-## 4. BPT 진단 분류
-- **분류 결과**: **{bpt_class}**
-- **log([NII]/Hα)**: {nii_ha}
-- **log([OIII]/Hβ)**: {oiii_hb}
-- **해석**: {bpt_interpretation}
+        md.append("## %d. AI 머신러닝 분류 결과" % sec)
+        sec += 1
+        md.append("- **예측 은하 유형**: **%s** (신뢰도 %s)%s" % (pred_type, conf_str, cov_str))
+        md.append("- **상위 3개 분류**:")
+        md.append(top3_str)
+        vote = a.get('similar_vote')
+        if vote:
+            md.append("- **유사 SDSS 은하 투표 (kNN)**: " + ", ".join("%s %s" % (k, self._pct(v)) for k, v in list(vote.items())[:3]))
+        md.append("")
 
-## 5. AI 머신러닝 분류 결과
-- **예측 은하 유형**: **{pred_type}** (신뢰도 {conf_str})
-- **상위 3개 분류**:
-{top3_str}
+        md.append("## %d. 은하 진화 단계 진단" % sec)
+        sec += 1
+        md.append("- **진화 군집**: %s" % cluster)
+        md.append("- **은하 진화 지수 (GEI)**: %s / 100" % (f(gei, "{:.1f}") if gei is not None else "N/A"))
+        md.append("- **진화 단계**: %s" % stage)
+        sfms = a.get('sfms')
+        if sfms:
+            md.append("- **주계열 대비 ΔMS**: %+.2f dex → %s" % (sfms['delta_ms'], sfms['state']))
+        md.append("- **해석**: %s" % evo_interp)
+        md.append("")
 
-## 6. 은하 진화 단계 진단
-- **진화 군집**: {cluster}
-- **은하 진화 지수 (GEI)**: {gei_str}점/100점
-- **진화 단계**: {stage}
-- **해석**: {evo_interpretation}
+        pcts = a.get('percentiles')
+        md.append("## %d. SDSS 배경 데이터 대비 위치" % sec)
+        sec += 1
+        if pcts:
+            md.append("| 물리량 | 대상 값 | 백분위 | SDSS 중앙값 |")
+            md.append("|--------|---------|--------|-------------|")
+            for r in pcts:
+                md.append("| %s | %s | %s%% | %s |" % (r['물리량'], r['대상 값'], r['백분위(%)'], r['SDSS 중앙값']))
+        else:
+            md.append("대상 천체는 BPT 진단도·주계열·질량-금속량·색-질량 공간에서 SDSS 은하 분포와 비교되었습니다.")
+        md.append("")
 
-## 7. SDSS 10만 개 배경 데이터 대비 위치
-대상 천체는 질량-별생성률 평면과 BPT 진단도 등 주요 은하 진화 물리량 공간에서 분석되었습니다. 
-제시된 물리량과 분류 결과는 SDSS DR17 통계적 분포에 기반한 머신러닝 모델의 판단을 따릅니다.
+        notes = a.get('notes') or []
+        if notes:
+            md.append("## %d. 주의 사항" % sec)
+            for n in notes:
+                md.append("- %s" % n)
+            md.append("")
 
----
-*본 보고서는 GalaxyEvolution Studio에 의해 자동 생성되었습니다.*
-"""
-        return markdown
+        md.append("---")
+        md.append("_본 보고서는 GalaxyEvolution Studio에 의해 자동 생성되었습니다._")
+        return "\n".join(md)
+
+    # ── HTML ─────────────────────────────────────────────
+    @staticmethod
+    def _inline(text: str) -> str:
+        t = _html.escape(text, quote=False)
+        t = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', t)
+        t = re.sub(r'(?<![\w*])_(.+?)_(?![\w*])', r'<em>\1</em>', t)
+        t = re.sub(r'`(.+?)`', r'<code>\1</code>', t)
+        return t
 
     def generate_html(self, markdown_content: str) -> str:
-        """문자열 Markdown을 스타일링된 HTML로 변환.
-        Use simple CSS for dark-themed, professional scientific document.
-        Support tables, headers, bullet points.
-        No external library needed - manual conversion of basic MD to HTML.
-        """
-        html_lines = []
-        html_lines.append("<html>")
-        html_lines.append("<head>")
-        html_lines.append("<meta charset='utf-8'>")
-        html_lines.append("<style>")
-        html_lines.append("""
-            body { font-family: 'Malgun Gothic', sans-serif; background-color: #1e1e1e; color: #d4d4d4; line-height: 1.6; padding: 20px; max-width: 900px; margin: 0 auto; }
-            h1, h2, h3 { color: #569cd6; border-bottom: 1px solid #333; padding-bottom: 5px; }
-            h1 { font-size: 2em; margin-bottom: 0.5em; }
-            h2 { font-size: 1.5em; margin-top: 1.5em; }
-            table { border-collapse: collapse; width: 100%; margin: 15px 0; background-color: #252526; }
-            th, td { border: 1px solid #3c3c3c; padding: 10px; text-align: left; }
-            th { background-color: #333333; font-weight: bold; color: #4ec9b0; }
-            tr:nth-child(even) { background-color: #2a2a2b; }
-            ul { margin-bottom: 15px; }
-            li { margin-bottom: 5px; }
-            strong { color: #ce9178; }
-            hr { border: 0; height: 1px; background: #333; margin: 30px 0; }
-            em { color: #808080; }
-        """)
-        html_lines.append("</style>")
-        html_lines.append("</head>")
-        html_lines.append("<body>")
-        
+        """Markdown → 다크 테마 HTML (외부 라이브러리 없이 표/헤더/목록/강조 지원)"""
+        out = ["<html>", "<head>", "<meta charset='utf-8'>", "<title>천체 분석 보고서</title>", "<style>", """
+            body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #e2e8f0; line-height: 1.7; padding: 24px; max-width: 920px; margin: 0 auto; }
+            h1, h2, h3 { color: #60a5fa; border-bottom: 1px solid #1e293b; padding-bottom: 6px; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.4em; margin-top: 1.6em; }
+            table { border-collapse: collapse; width: 100%; margin: 12px 0; background-color: #111827; }
+            th, td { border: 1px solid #334155; padding: 8px 10px; text-align: left; }
+            th { background-color: #1e293b; color: #93c5fd; }
+            tr:nth-child(even) { background-color: #0b1220; }
+            li { margin-bottom: 4px; }
+            strong { color: #fbbf24; }
+            code { background: #1e293b; padding: 1px 4px; border-radius: 3px; }
+            hr { border: 0; height: 1px; background: #334155; margin: 30px 0; }
+            em { color: #94a3b8; }
+        """, "</style>", "</head>", "<body>"]
+
         in_table = False
-        in_list = False
-        
-        lines = markdown_content.split('\n')
-        for line in lines:
-            line = line.strip()
-            
-            if not line:
-                if in_list:
-                    html_lines.append("</ul>")
-                    in_list = False
+        list_depth = 0
+
+        def close_lists():
+            nonlocal list_depth
+            while list_depth > 0:
+                out.append("</ul>")
+                list_depth -= 1
+
+        for raw in markdown_content.split('\n'):
+            line = raw.rstrip()
+            stripped = line.strip()
+            if not stripped:
+                close_lists()
+                if in_table:
+                    out.append("</table>")
+                    in_table = False
                 continue
-                
-            # Headers
-            if line.startswith('# '):
-                html_lines.append(f"<h1>{line[2:]}</h1>")
-                continue
-            if line.startswith('## '):
-                html_lines.append(f"<h2>{line[3:]}</h2>")
-                continue
-            if line.startswith('### '):
-                html_lines.append(f"<h3>{line[4:]}</h3>")
-                continue
-                
-            # Horizontal rule
-            if line == '---':
-                html_lines.append("<hr>")
-                continue
-                
-            # Table processing
-            if line.startswith('|'):
-                if '---' in line:
-                    continue # Skip separator
-                
-                cells = [c.strip() for c in line.split('|')[1:-1]]
+            if stripped.startswith('|'):
+                close_lists()
+                if re.match(r'^\|[\s\-|:]+\|$', stripped):
+                    continue
+                cells = [c.strip() for c in stripped.strip('|').split('|')]
                 if not in_table:
-                    html_lines.append("<table>")
-                    html_lines.append("<tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr>")
+                    out.append("<table>")
+                    out.append("<tr>" + "".join("<th>%s</th>" % self._inline(c) for c in cells) + "</tr>")
                     in_table = True
                 else:
-                    html_lines.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+                    out.append("<tr>" + "".join("<td>%s</td>" % self._inline(c) for c in cells) + "</tr>")
                 continue
-            else:
-                if in_table:
-                    html_lines.append("</table>")
-                    in_table = False
-                    
-            # Lists
-            if line.startswith('- ') or line.startswith('* '):
-                if not in_list:
-                    html_lines.append("<ul>")
-                    in_list = True
-                content = line[2:]
-                # Basic bold processing
-                while '**' in content:
-                    content = content.replace('**', '<strong>', 1).replace('**', '</strong>', 1)
-                html_lines.append(f"<li>{content}</li>")
+            if in_table:
+                out.append("</table>")
+                in_table = False
+            m = re.match(r'^(#{1,3})\s+(.*)$', stripped)
+            if m:
+                close_lists()
+                lvl = len(m.group(1))
+                out.append("<h%d>%s</h%d>" % (lvl, self._inline(m.group(2)), lvl))
                 continue
-                
-            if line.startswith('1.') or line.startswith('2.') or line.startswith('3.'):
-                # Treating as unordered for simplicity in this basic parser
-                if not in_list:
-                    html_lines.append("<ul>")
-                    in_list = True
-                html_lines.append(f"<li>{line}</li>")
+            if stripped == '---':
+                close_lists()
+                out.append("<hr>")
                 continue
-                
-            if in_list and not line.startswith('- ') and not line.startswith('* '):
-                html_lines.append("</ul>")
-                in_list = False
+            m = re.match(r'^(\s*)(?:[-*]|\d+\.)\s+(.*)$', line)
+            if m:
+                depth = len(m.group(1)) // 2 + 1
+                while list_depth < depth:
+                    out.append("<ul>")
+                    list_depth += 1
+                while list_depth > depth:
+                    out.append("</ul>")
+                    list_depth -= 1
+                out.append("<li>%s</li>" % self._inline(m.group(2)))
+                continue
+            close_lists()
+            out.append("<p>%s</p>" % self._inline(stripped))
 
-            # Basic emphasis and bold
-            formatted_line = line
-            while '**' in formatted_line:
-                formatted_line = formatted_line.replace('**', '<strong>', 1).replace('**', '</strong>', 1)
-            while '*' in formatted_line:
-                formatted_line = formatted_line.replace('*', '<em>', 1).replace('*', '</em>', 1)
-                
-            html_lines.append(f"<p>{formatted_line}</p>")
-            
+        close_lists()
         if in_table:
-            html_lines.append("</table>")
-        if in_list:
-            html_lines.append("</ul>")
-            
-        html_lines.append("</body>")
-        html_lines.append("</html>")
-        
-        return "\n".join(html_lines)
+            out.append("</table>")
+        out += ["</body>", "</html>"]
+        return "\n".join(out)
 
+    # ── 요약 카드 ─────────────────────────────────────────
     def generate_summary_card(self, analysis_results: dict) -> dict:
         """빠른 요약 카드 데이터 생성 (Streamlit 카드 UI용)."""
-        
-        target = analysis_results.get('target_name', 'Unknown')
-        pred_type = analysis_results.get('predicted_type', '미분류')
-        bpt = analysis_results.get('bpt_class', '미상')
-        gei = analysis_results.get('gei_score')
-        stage = analysis_results.get('evolution_stage', '-')
-        sfr = analysis_results.get('log_sfr')
-        metallicity = analysis_results.get('metallicity')
-        
+        a = analysis_results or {}
         metrics = []
-        
-        # 별생성률
+        sfr = a.get('log_sfr')
         if sfr is not None:
-            metrics.append({
-                'label': '별 생성률 (log SFR)',
-                'value': f"{sfr:.2f} M☉/yr",
-                'delta': '주계열' if bpt == 'SF' else '비활성'
-            })
-            
-        # 금속량
-        if metallicity is not None:
-            metrics.append({
-                'label': '금속량 12+log(O/H)',
-                'value': f"{metallicity:.2f}",
-                'delta': '태양비'
-            })
-            
-        # 진화 지수
+            sf_like = any(s in str(a.get('bpt_class_en', a.get('bpt_class', ''))) for s in ('Star', '별생성'))
+            metrics.append({'label': '별 생성률 (log SFR)', 'value': "%.2f M☉/yr" % sfr,
+                            'delta': '별생성 활동' if sf_like else None})
+        met = a.get('metallicity')
+        if met is not None:
+            metrics.append({'label': '금속량 12+log(O/H)', 'value': "%.2f" % met,
+                            'delta': '태양(8.69) 대비 %+.2f' % (met - 8.69)})
+        gei = a.get('gei_score')
         if gei is not None:
-            metrics.append({
-                'label': '진화 지수 (GEI)',
-                'value': f"{gei:.1f}/100",
-                'delta': stage
-            })
-            
-        # 분류
-        metrics.append({
-            'label': 'AI 예측 유형',
-            'value': pred_type,
-            'delta': f"신뢰도 {analysis_results.get('confidence', 0):.1f}%"
-        })
-
+            metrics.append({'label': '진화 지수 (GEI)', 'value': "%.1f/100" % gei, 'delta': a.get('evolution_stage')})
+        metrics.append({'label': 'AI 예측 유형', 'value': str(a.get('predicted_type', '미분류')).split(' (')[0],
+                        'delta': "신뢰도 %s" % self._pct(a.get('confidence', 0))})
         return {
-            'title': f"천체: {target}",
-            'subtitle': f"분석 모드: {analysis_results.get('input_mode', 'N/A')}",
+            'title': "천체: %s" % a.get('target_name', 'Unknown'),
+            'subtitle': "분석 모드: %s" % a.get('input_mode', 'N/A'),
             'metrics': metrics
         }
 
     def save_report(self, content: str, filename: str, format: str = 'md') -> str:
         """보고서 파일 저장. Returns: 저장된 파일 경로."""
-        if not filename.endswith(f".{format}"):
-            filename = f"{filename}.{format}"
-            
+        if not filename.endswith(".%s" % format):
+            filename = "%s.%s" % (filename, format)
         filepath = os.path.join(self.output_dir, filename)
-        
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
+            with open(filepath, 'w', encoding='utf-8') as fh:
+                fh.write(content)
             return filepath
         except Exception as e:
-            print(f"보고서 저장 중 오류 발생: {e}")
+            print("보고서 저장 중 오류 발생: %s" % e)
             return ""

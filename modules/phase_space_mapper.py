@@ -413,3 +413,114 @@ class PhaseSpaceMapper:
         fig.update_yaxes(title_text='(u-r)', range=[0, 4], row=2, col=2)
 
         return fig
+
+    # ═══════════════════════════════════════════════════
+    #        통계적 위치 · 주계열 오프셋 · 유사 은하
+    # ═══════════════════════════════════════════════════
+    TARGET_COLUMNS = {
+        # 표시명: (대상 dict 키 후보들, 데이터 컬럼, 배율)
+        '항성질량 log M★': (['log_mass', 'log_stellar_mass', 'lgm_tot_p50'], 'lgm_tot_p50', 1.0),
+        '별생성률 log SFR': (['log_sfr', 'sfr_tot_p50'], 'sfr_tot_p50', 1.0),
+        '비별생성률 log sSFR': (['log_ssfr'], 'log_ssfr', 1.0),
+        '금속량 12+log(O/H)': (['metallicity', 'metallicity_oh', 'oh_p50'], 'oh_p50', 1.0),
+        'u−r 색지수': (['color_ur', 'color_u_r'], 'color_u_r', 1.0),
+        'D4000': (['d4000_n', 'd4000'], 'd4000_n', 1.0),
+        'log([NII]/Hα)': (['log_nii_ha'], 'log_nii_ha', 1.0),
+        'log([OIII]/Hβ)': (['log_oiii_hb'], 'log_oiii_hb', 1.0),
+        'GEI': (['gei', 'gei_score'], 'GEI', 100.0),
+    }
+
+    @staticmethod
+    def _get(target, keys):
+        for k in keys:
+            v = target.get(k)
+            if v is None:
+                continue
+            try:
+                f = float(v)
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(f):
+                return f
+        return None
+
+    def percentile_ranks(self, target: dict) -> pd.DataFrame:
+        """대상 값이 SDSS 표본 중 몇 백분위에 위치하는지"""
+        rows = []
+        if self.df.empty:
+            return pd.DataFrame(rows)
+        for label, (keys, col, mult) in self.TARGET_COLUMNS.items():
+            v = self._get(target, keys)
+            if v is None or col not in self.df.columns:
+                continue
+            data = pd.to_numeric(self.df[col], errors='coerce').dropna() * mult
+            if len(data) < 10:
+                continue
+            pct = float((data < v).mean() * 100)
+            rows.append({'물리량': label, '대상 값': round(v, 3), '백분위(%)': round(pct, 1),
+                         'SDSS 중앙값': round(float(data.median()), 3),
+                         'SDSS 16–84%': '%.2f ~ %.2f' % (data.quantile(0.16), data.quantile(0.84))})
+        return pd.DataFrame(rows)
+
+    def sfms_offset(self, log_mass, log_sfr, width=0.25):
+        """별생성 주계열(SF 은하 중앙값) 대비 오프셋 ΔMS (dex) 와 상태 진단"""
+        if log_mass is None or log_sfr is None or self.df.empty:
+            return None
+        if not {'lgm_tot_p50', 'sfr_tot_p50'}.issubset(self.df.columns):
+            return None
+        d = self.df[['lgm_tot_p50', 'sfr_tot_p50', 'bpt_label']].dropna()
+        sf = d[d['bpt_label'].isin(['Star-Forming', 'Low S/N SF'])]
+        if len(sf) < 50:
+            sf = d
+        sel = sf[(sf['lgm_tot_p50'] > log_mass - width) & (sf['lgm_tot_p50'] < log_mass + width)]
+        if len(sel) < 15:
+            return None
+        ms = float(sel['sfr_tot_p50'].median())
+        delta = float(log_sfr - ms)
+        if delta > 0.6:
+            state = '폭발적 별생성 (Starburst)'
+        elif delta > -0.4:
+            state = '주계열 (Main Sequence)'
+        elif delta > -1.0:
+            state = '녹색 계곡 (Green Valley, 퀜칭 진행)'
+        else:
+            state = '퀜칭 완료 (Quiescent)'
+        return {'ms_sfr': ms, 'delta_ms': delta, 'state': state, 'n_ref': int(len(sel))}
+
+    def find_similar(self, target: dict, k: int = 10):
+        """입력된 물리량 공간에서 가장 가까운 SDSS 은하 k개 + 유형 투표 결과"""
+        if self.df.empty:
+            return None
+        feat_keys = {
+            'lgm_tot_p50': ['log_mass', 'log_stellar_mass', 'lgm_tot_p50'],
+            'sfr_tot_p50': ['log_sfr', 'sfr_tot_p50'],
+            'oh_p50': ['metallicity', 'metallicity_oh', 'oh_p50'],
+            'color_u_r': ['color_ur', 'color_u_r'],
+            'log_nii_ha': ['log_nii_ha'],
+            'log_oiii_hb': ['log_oiii_hb'],
+            'd4000_n': ['d4000_n', 'd4000'],
+        }
+        use, vals = [], []
+        for col, keys in feat_keys.items():
+            v = self._get(target, keys)
+            if v is not None and col in self.df.columns:
+                use.append(col)
+                vals.append(v)
+        if len(use) < 2:
+            return None
+        cols = use + [c for c in ['class_detail', 'class_activity', 'z'] if c in self.df.columns]
+        d = self.df[list(dict.fromkeys(cols))].dropna(subset=use).copy()
+        if len(d) < k:
+            return None
+        X = d[use].astype(float).values
+        mu, sd = X.mean(axis=0), X.std(axis=0)
+        sd[sd == 0] = 1.0
+        dist = np.sqrt((((X - mu) / sd - (np.array(vals) - mu) / sd) ** 2).sum(axis=1))
+        idx = np.argsort(dist)[:k]
+        near = d.iloc[idx].copy()
+        near.insert(0, '거리(σ)', np.round(dist[idx], 3))
+        vote = None
+        if 'class_detail' in near.columns:
+            w = 1.0 / (near['거리(σ)'] + 0.05)
+            vote = (w.groupby(near['class_detail']).sum() / w.sum()).sort_values(ascending=False)
+        return {'neighbors': near.reset_index(drop=True), 'features_used': use, 'vote': vote}

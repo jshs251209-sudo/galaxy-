@@ -1,6 +1,8 @@
 # ============================================
 # 은하 진화 다차원 분석 프로젝트 - 종속성 파일
 # Galaxy Evolution Multi-Dimensional Analysis
+# 설치: pip install -r requirements.txt
+# 실행: streamlit run app.py
 # ============================================
 
 # Core Scientific Computing
@@ -8,7 +10,7 @@ numpy>=1.24.0
 pandas>=2.0.0
 scipy>=1.10.0
 
-# Astronomy
+# Astronomy (FITS 입출력, zscale)
 astropy>=5.3.0
 astroquery>=0.4.6
 
@@ -21,13 +23,13 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 plotly>=5.15.0
 
-# HTTP & Data Fetching
+# HTTP & Data Fetching (SDSS SkyServer)
 requests>=2.31.0
 
-# Web Dashboard (Optional - Streamlit)
-# streamlit>=1.28.0
+# Web App (GalaxyEvolution Studio)
+streamlit>=1.40.0
+streamlit-drawable-canvas>=0.9.3
 
 # Utilities
-
 tqdm>=4.65.0
 Pillow>=10.0.0
