@@ -24,3 +24,7 @@ output/models/*
 !galaxy_master_complete_all.json
 !galaxy_master_complete_all.xlsx
 !galaxy_master_complete_all.zip
+
+*.fits
+*.exe
+scratch_*.py

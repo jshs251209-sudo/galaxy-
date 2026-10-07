@@ -56,7 +56,13 @@ YSC_대회/
 - BPT Diagram을 활용한 별 생성 은하(Star-forming)와 활동은하핵(AGN)의 명확한 분리.
 - 다차원 변수를 활용한 K-Means 클러스터링을 통해 형태학적 분류로는 설명할 수 없었던 특이 은하 군집 발견.
 
-## 웹 대시보드 사용법 (Web Dashboard)
+## 🌐 온라인 웹 실행 링크 (Online Deployment)
+별도의 파이썬 설치나 서버 구동 없이, 웹 브라우저에서 바로 은하 관측 사진을 업로드하고 분석할 수 있는 온라인 버전입니다.
+- **[🌌 온라인 은하 사진 & 분광 정밀 분석기 (클라이언트 독립 실행)](https://jshs251209-sudo.github.io/galaxy-/galaxy_analyzer_web.html)**: 은하 사진(JPG/PNG/FITS) 업로드, 영역 측광, CAS 형태 지수, Sérsic n 피팅, BPT 방출선 및 은하 AI 분류를 브라우저에서 즉시 수행.
+- **[📊 10만 은하 대시보드 (GitHub Pages)](https://jshs251209-sudo.github.io/galaxy-/dashboard_real_data.html)**: 10만 개 SDSS 은하 데이터셋 탐색 및 다운로드 센터.
+- **[🪐 YSC 대회 프로젝트 공식 통합 포털](https://jshs251209-sudo.github.io/galaxy-/)**: 전체 프로젝트 안내 및 인터랙티브 그래프 열람.
+
+## 웹 대시보드 로컬 사용법 (Web Dashboard Local)
 데이터 분석 결과를 인터랙티브하게 탐색할 수 있습니다. `dashboard/index.html` 파일을 웹 브라우저로 열거나, 로컬 서버를 띄워 접속하십시오.
 ```bash
 python -m http.server --directory dashboard 8000
