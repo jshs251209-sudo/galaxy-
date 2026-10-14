@@ -24,7 +24,12 @@ output/models/*
 !galaxy_master_complete_all.json
 !galaxy_master_complete_all.xlsx
 !galaxy_master_complete_all.zip
+!output/통합_은하진화지수_GEI_v2_3대카탈로그_비교통계.csv
+!output/천문대_관측은하_12종_진화지수_및_과거현재미래_궤적.csv
 
 *.fits
 *.exe
 scratch_*.py
+temp_dark_matter_package/
+test_font*.png
+

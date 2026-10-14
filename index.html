@@ -105,8 +105,9 @@
     <div class="nav-inner">
         <a href="#quick-start">빠른 시작</a>
         <a href="#tools">분석 도구</a>
+        <a href="observatory_analyzer_web.html" target="_blank" style="color:#f59e0b; font-weight:bold;">🔭 천문대 은하 진화 분석기 (GEI v2.0)</a>
         <a href="galaxy_analyzer_web.html" target="_blank" style="color:#10b981; font-weight:bold;">🌌 은하 사진 분석기</a>
-        <a href="#plots">인터랙티브 그래프</a>
+        <a href="#plots">3D & 인터랙티브 도표</a>
         <a href="#pipeline">파이프라인 안내</a>
         <a href="#files">파일 구조</a>
         <a href="dashboard_real_data.html" target="_blank" style="color:#ffff00">데이터 다운로드</a>
@@ -160,6 +161,22 @@
             카드를 클릭하면 해당 도구가 새 탭에서 열립니다.
         </p>
         <div class="cards cards-2">
+            <a href="observatory_analyzer_web.html" target="_blank" class="card" style="border-color:#f59e0b;">
+                <div class="card-icon">&#128301;</div>
+                <h3>천문대 관측 은하 진화 분석기 (GEI v2.0) <span style="font-size:0.75rem; background:#f59e0b; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px; font-weight:bold;">NEW 핵심 도구</span></h3>
+                <p>
+                    천문대에서 관측한 은하의 물리량($\log M_*$, $\mathrm{SFR}$, $V_{\mathrm{rot}}$, $R_e$, 색지수 등)을 입력하면 <strong>통합 은하 진화 지수(GEI v2.0)</strong>, 현재 <strong>진화 단계(Stage I~V)</strong>, <strong>과거($-10\,\mathrm{Gyr}$) 모습 복원</strong> 및 <strong>향후($+10\,\mathrm{Gyr}$) 진화 궤적</strong>과 3D 위상공간 위치를 즉시 도출합니다.
+                </p>
+                <span class="link-btn gold">천문대 은하 분석기 실행 →</span>
+            </a>
+            <a href="output/3d_plots/interactive_3d_ned_ceers_sdss_manifold.html" target="_blank" class="card" style="border-color:#38bdf8;">
+                <div class="card-icon">&#129482;</div>
+                <h3>3D 다변량 우주 진화 매니폴드 (NED + CEERS + SDSS) <span style="font-size:0.75rem; background:#38bdf8; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px; font-weight:bold;">3D 대화형</span></h3>
+                <p>
+                    NASA/IPAC NED-LVS(145.9만 개), JWST CEERS(7.66만 개), SDSS DR18(5만 개) 및 천문대 관측 은하들을 3차원 위상공간에서 360° 회전·확대하며 비교 분석합니다.
+                </p>
+                <span class="link-btn blue">3D 대화형 매니폴드 열기 →</span>
+            </a>
             <a href="dashboard_real_data.html" target="_blank" class="card">
                 <div class="card-icon">&#127756;</div>
                 <h3>은하 진화 대시보드 <span style="font-size:0.75rem; background:#60b3f7; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">웹 버전</span></h3>
@@ -186,12 +203,42 @@
 <!-- ═══════════════════════ 3. INTERACTIVE PLOTS ═══════════════════════ -->
 <section id="plots">
     <div class="container">
-        <h2 class="section-title">&#128202; 인터랙티브 그래프 (오프라인 열기)</h2>
+        <h2 class="section-title">&#128202; 인터랙티브 그래프 & 대회 최종 발표 차트</h2>
         <p class="section-desc">
-            아래 그래프들은 <strong>서버 없이도</strong> HTML 파일을 더블클릭하여 바로 열 수 있습니다.<br>
+            아래 그래프들은 <strong>서버 없이도</strong> HTML/PNG 파일을 클릭하여 바로 열 수 있습니다.<br>
             마우스를 올리면 개별 은하 정보를 확인하고, 드래그로 확대/축소가 가능합니다.
         </p>
         <div class="cards cards-3">
+            <a href="output/3d_plots/interactive_3d_ned_ceers_sdss_manifold.html" target="_blank" class="card">
+                <div class="card-icon">&#127760;</div>
+                <h3>3D 우주 진화 매니폴드 (NED+CEERS+SDSS)</h3>
+                <p>근방 우주(NED/SDSS)와 초기 우주(JWST CEERS) 은하 158.5만 표본의 3차원 진화 매니폴드 및 GEI 궤적 비교.</p>
+                <span class="link-btn gold">3D 열기</span>
+            </a>
+            <a href="output/presentation_charts/발표차트1_은하진화지수_GEI개발_및_과거현재미래_예측.png" target="_blank" class="card">
+                <div class="card-icon">&#127942;</div>
+                <h3>발표차트 1: 통합 은하 진화 지수 (GEI v2.0)</h3>
+                <p>5축 물리량 기반 GEI v2.0 수식, D4000 상관 검증(r=0.9112), 5단계 표준 진화 모식도 및 과거·현재·미래 예측.</p>
+                <span class="link-btn gold">차트 보기</span>
+            </a>
+            <a href="output/presentation_charts/발표차트2_3차원도표_NED_CEERS_SDSS_우주진화_비교분석.png" target="_blank" class="card">
+                <div class="card-icon">&#128300;</div>
+                <h3>발표차트 2: 3차원 다변량 도표 & NED·CEERS 비교</h3>
+                <p>NED-LVS(145.9만) vs JWST CEERS(7.66만) vs SDSS DR18(5만)의 3차원 물리 위상공간 비교 분석.</p>
+                <span class="link-btn gold">차트 보기</span>
+            </a>
+            <a href="output/presentation_charts/발표차트3_천문대_관측은하_진화단계_판별프로그램_실증.png" target="_blank" class="card">
+                <div class="card-icon">&#128301;</div>
+                <h3>발표차트 3: 천문대 관측 은하 과거·현재·미래 추적</h3>
+                <p>관측 은하들의 현재 진화 단계 판정 및 -10 Gyr 과거 복원 ~ +10 Gyr 미래 예측 시뮬레이션 종합 결과.</p>
+                <span class="link-btn gold">차트 보기</span>
+            </a>
+            <a href="output/presentation_charts/발표차트4_YSC대회_은하진화연구_최종종합_마스터차트.png" target="_blank" class="card">
+                <div class="card-icon">&#128203;</div>
+                <h3>발표차트 4: YSC 대회 종합 마스터 보드</h3>
+                <p>남은 연구 4대 과제(GEI 개발, 3D 도표 연구, 관측 분석 프로그램, 발표 차트) 통합 요약 포스터.</p>
+                <span class="link-btn gold">차트 보기</span>
+            </a>
             <a href="output/plots/interactive/main_sequence_interactive.html" target="_blank" class="card">
                 <div class="card-icon">&#11088;</div>
                 <h3>은하 주계열 다이어그램</h3>
