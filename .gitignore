@@ -32,4 +32,5 @@ output/models/*
 scratch_*.py
 temp_dark_matter_package/
 test_font*.png
+YSC_2026_*.zip
 
