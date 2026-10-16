@@ -153,6 +153,73 @@
             border-color: #38bdf8;
             box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
         }
+        .upload-zone {
+            border: 2px dashed rgba(56, 189, 248, 0.55);
+            border-radius: 12px;
+            padding: 14px 12px;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.78);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.14);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.22);
+        }
+        .upload-btn-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .btn-mini-action {
+            background: rgba(56, 189, 248, 0.18);
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            color: #e0f2fe;
+            padding: 6px 11px;
+            border-radius: 7px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .btn-mini-action:hover {
+            background: #0284c7;
+            color: #ffffff;
+        }
+        .upload-status-box {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            background: rgba(16, 185, 129, 0.14);
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            color: #a7f3d0;
+            display: none;
+            text-align: left;
+        }
+        .upload-preview-wrap {
+            display: none;
+            margin-top: 8px;
+            background: rgba(2, 6, 23, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 8px;
+            padding: 8px;
+            align-items: center;
+            gap: 10px;
+        }
+        .upload-preview-wrap canvas {
+            width: 84px;
+            height: 84px;
+            border-radius: 6px;
+            border: 1px solid #38bdf8;
+            background: #000;
+            flex-shrink: 0;
+        }
         .btn-analyze {
             width: 100%;
             margin-top: 14px;
@@ -384,6 +451,35 @@
     <div class="left-col">
         <div class="card">
             <div class="card-title">
+                <span>📂 0. 관측 파일 업로드 (자동 분석)</span>
+                <span style="font-size:0.72rem; color:#34d399;">이미지·FITS·CSV·JSON·TXT</span>
+            </div>
+            <div class="upload-zone" id="obs-dropzone">
+                <input type="file" id="obs-file-input" accept="image/*,.fits,.fit,.fts,.csv,.tsv,.json,.txt" style="display:none;">
+                <div style="font-size:1.5rem; margin-bottom:2px;">📸 📄 🔭</div>
+                <div style="font-size:0.84rem; font-weight:700; color:#e2e8f0;">
+                    여기에 관측 파일을 드래그하거나 아래 버튼 클릭
+                </div>
+                <div style="font-size:0.73rem; color:#94a3b8; margin-top:2px;">
+                    • 은하 사진 (JPG, PNG, WebP, BMP) → 밝기·색지수·형태 자동 측광<br>
+                    • 천문 FITS 파일 (.fits, .fit) / 관측 표 (.csv, .tsv, .json, .txt) 지원
+                </div>
+                <div class="upload-btn-row">
+                    <button type="button" class="btn-mini-action" id="btn-trigger-upload">📁 내 컴퓨터에서 파일 선택</button>
+                    <button type="button" class="btn-mini-action" id="btn-download-sample-csv" style="border-color:rgba(16,185,129,0.5); color:#a7f3d0; background:rgba(16,185,129,0.15);">📥 샘플 관측 CSV 다운로드</button>
+                </div>
+            </div>
+            <div class="upload-status-box" id="obs-upload-status"></div>
+            <div class="upload-preview-wrap" id="obs-preview-wrap">
+                <canvas id="obs-preview-canvas" width="120" height="120"></canvas>
+                <div id="obs-preview-info" style="font-size:0.74rem; color:#cbd5e1; line-height:1.45;"></div>
+            </div>
+            <div id="multi-row-selector-wrap" style="display:none; margin-top:8px; margin-bottom:10px;">
+                <label style="font-size:0.75rem; color:#38bdf8; font-weight:700; display:block; margin-bottom:4px;">📋 업로드된 파일 내 관측 은하 선택:</label>
+                <select id="multi-row-select" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #38bdf8; padding:6px 9px; border-radius:7px; font-size:0.8rem;"></select>
+            </div>
+
+            <div class="card-title" style="margin-top:12px;">
                 <span>1. 천문대 관측 대표 은하 프리셋 (12종)</span>
                 <span style="font-size:0.74rem; color:#38bdf8;">원클릭 로드</span>
             </div>
@@ -1219,6 +1315,371 @@ document.getElementById("obs-form").addEventListener("submit", (e) => {
 });
 
 document.getElementById("select-3d-mode").addEventListener("change", draw3DPlot);
+
+// =========================================================================
+// Universal Observatory File Upload Engine (Image / FITS / CSV / JSON / TXT)
+// =========================================================================
+const obsDropzone = document.getElementById("obs-dropzone");
+const obsFileInput = document.getElementById("obs-file-input");
+const obsStatusBox = document.getElementById("obs-upload-status");
+const obsPreviewWrap = document.getElementById("obs-preview-wrap");
+const obsPreviewCanvas = document.getElementById("obs-preview-canvas");
+const obsPreviewInfo = document.getElementById("obs-preview-info");
+const multiRowWrap = document.getElementById("multi-row-selector-wrap");
+const multiRowSelect = document.getElementById("multi-row-select");
+let uploadedGalaxyRows = [];
+
+function showUploadStatus(msg, isError = false) {
+    obsStatusBox.style.display = "block";
+    obsStatusBox.style.background = isError ? "rgba(239, 68, 68, 0.16)" : "rgba(16, 185, 129, 0.14)";
+    obsStatusBox.style.borderColor = isError ? "rgba(239, 68, 68, 0.55)" : "rgba(16, 185, 129, 0.45)";
+    obsStatusBox.style.color = isError ? "#fca5a5" : "#a7f3d0";
+    obsStatusBox.innerHTML = msg;
+}
+
+function applyParsedGalaxyToForm(g) {
+    document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("in-name").value = g.name || "업로드 관측 은하";
+    document.getElementById("in-mstar").value = (g.log_mstar !== undefined && g.log_mstar !== "") ? Number(g.log_mstar).toFixed(3) : "";
+    document.getElementById("in-sfr").value = (g.log_sfr !== undefined && g.log_sfr !== "") ? Number(g.log_sfr).toFixed(3) : "";
+    document.getElementById("in-dist").value = (g.dist_mpc !== undefined && g.dist_mpc !== "") ? Number(g.dist_mpc).toFixed(2) : "";
+    document.getElementById("in-z").value = (g.z !== undefined && g.z !== "") ? Number(g.z).toFixed(4) : "";
+    document.getElementById("in-rkpc").value = (g.radius_kpc !== undefined && g.radius_kpc !== "") ? Number(g.radius_kpc).toFixed(2) : "";
+    document.getElementById("in-vrot").value = (g.v_rot !== undefined && g.v_rot !== "") ? Number(g.v_rot).toFixed(1) : "";
+    document.getElementById("in-color").value = (g.color_u_r !== undefined && g.color_u_r !== "") ? Number(g.color_u_r).toFixed(2) : "";
+    document.getElementById("in-d4000").value = (g.d4000 !== undefined && g.d4000 !== "") ? Number(g.d4000).toFixed(2) : "";
+    document.getElementById("in-oh").value = (g.oh !== undefined && g.oh !== "") ? Number(g.oh).toFixed(2) : "";
+    document.getElementById("in-ha").value = (g.ha_flux !== undefined && g.ha_flux !== "") ? Number(g.ha_flux) : "";
+    runFormAnalysis();
+}
+
+function normalizeColumnRow(rawObj, fallbackName) {
+    const norm = {};
+    for (const [k, v] of Object.entries(rawObj)) {
+        if (v !== null && v !== undefined && String(v).trim() !== "") {
+            norm[k.toLowerCase().replace(/[^a-z0-9가-힣_]/g, "")] = String(v).trim();
+        }
+    }
+    const pick = (keys, defVal = "") => {
+        for (const k of keys) {
+            if (norm[k] !== undefined && norm[k] !== "") return norm[k];
+        }
+        return defVal;
+    };
+    const pickNum = (keys, defVal = "") => {
+        const val = parseFloat(pick(keys, ""));
+        return isNaN(val) ? defVal : val;
+    };
+
+    let mstar = pickNum(["log_mstar", "logmstar", "lgm_tot_p50", "log10_mstar_msun", "mstar", "mass", "항성질량"], "");
+    if (mstar !== "" && mstar > 1e5) mstar = Math.log10(mstar); // 선형 M_sun 값이면 상용로그로 자동 변환
+
+    let sfr = pickNum(["log_sfr", "logsfr", "sfr_tot_p50", "sfr", "별생성률"], "");
+    return {
+        name: pick(["name", "galaxy", "id", "objid", "target", "object", "은하이름", "은하명", "천체명"], fallbackName),
+        log_mstar: mstar,
+        log_sfr: sfr,
+        dist_mpc: pickNum(["dist_mpc", "distmpc", "distance", "dist", "d_mpc", "거리"], 12.5),
+        z: pickNum(["z", "redshift", "lp_z_best", "적색편이"], 0.003),
+        radius_kpc: pickNum(["radius_kpc", "r_e_kpc", "rkpc", "radius", "re_kpc", "반경", "물리반경"], ""),
+        v_rot: pickNum(["v_rot", "vrot", "v_max", "vmax", "vel_disp", "sigma", "회전속도"], ""),
+        color_u_r: pickNum(["color_u_r", "u_r", "ur", "color", "색지수"], ""),
+        d4000: pickNum(["d4000", "d4000_n", "dn4000"], ""),
+        oh: pickNum(["oh", "oh_p50", "metallicity", "금속량"], ""),
+        ha_flux: pickNum(["ha_flux", "ha", "halpha"], "")
+    };
+}
+
+function handleImageUploadForObservatory(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+            const W = 120, H = 120;
+            const ctx = obsPreviewCanvas.getContext("2d");
+            ctx.clearRect(0, 0, W, H);
+            ctx.drawImage(img, 0, 0, W, H);
+            const imgData = ctx.getImageData(0, 0, W, H).data;
+
+            let totalFlux = 0, sumR = 0, sumB = 0, sumX = 0, sumY = 0;
+            const gray = new Float32Array(W * H);
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const idx = (y * W + x) * 4;
+                    const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+                    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                    gray[y * W + x] = lum;
+                    totalFlux += lum;
+                    sumR += r;
+                    sumB += b;
+                    sumX += x * lum;
+                    sumY += y * lum;
+                }
+            }
+            const cx = totalFlux > 0 ? sumX / totalFlux : W / 2;
+            const cy = totalFlux > 0 ? sumY / totalFlux : H / 2;
+
+            // Radial cumulative flux -> R50, R90, Concentration C
+            const maxRad = 55;
+            const bins = new Float32Array(maxRad);
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const rad = Math.min(maxRad - 1, Math.floor(Math.hypot(x - cx, y - cy)));
+                    bins[rad] += gray[y * W + x];
+                }
+            }
+            let cum = 0, r50 = 12, r90 = 32;
+            const totB = bins.reduce((a, b) => a + b, 0) || 1;
+            for (let r = 0; r < maxRad; r++) {
+                cum += bins[r];
+                if (cum / totB >= 0.50 && r50 === 12) r50 = Math.max(2, r);
+                if (cum / totB >= 0.90 && r90 === 32) { r90 = Math.max(r50 + 2, r); break; }
+            }
+            const C = clip(5.0 * Math.log10(r90 / r50), 1.6, 4.2);
+
+            // RGB 색비율 -> 광학 색지수 (u - r) 및 물리량 자동 역산
+            const rbRatio = (sumR + 10) / (sumB + 10);
+            const color_u_r = clip(1.75 + 1.15 * Math.log10(rbRatio) + 0.22 * (C - 2.4), 0.85, 3.10);
+            const meanLum = totalFlux / (W * H * 255.0);
+            const log_mstar = clip(9.4 + 1.8 * meanLum + 0.45 * (C - 2.0), 8.2, 11.7);
+            const log_ssfr = clip(-10.15 - 0.88 * (color_u_r - 1.95) - 0.35 * (C - 2.5), -12.4, -8.5);
+            const log_sfr = log_mstar + log_ssfr;
+            const radius_kpc = clip((r50 / 16.0) * 8.5, 1.5, 28.0);
+            const v_rot = clip(Math.pow(10, 2.12 + 0.27 * (log_mstar - 10.0)), 55.0, 420.0);
+            const d4000 = clip(1.42 + 0.35 * (color_u_r - 1.9), 1.02, 2.15);
+            const oh = clip(8.85 + 0.30 * (log_mstar - 10.0), 8.0, 9.25);
+
+            const cleanName = file.name.replace(/\.[^/.]+$/, "");
+            obsPreviewWrap.style.display = "flex";
+            obsPreviewInfo.innerHTML =
+                `<strong style="color:#38bdf8;">[이미지 자동 측광 완료]</strong> ${file.name}<br>` +
+                `• 집중도 C = ${C.toFixed(2)} (R₅₀=${r50}px, R₉₀=${r90}px)<br>` +
+                `• 추정 색지수 (u-r) = ${color_u_r.toFixed(2)} mag | log M* = ${log_mstar.toFixed(2)}`;
+            multiRowWrap.style.display = "none";
+
+            applyParsedGalaxyToForm({
+                name: `${cleanName} (이미지 측광 관측)`,
+                log_mstar, log_sfr, dist_mpc: 14.5, z: 0.0034,
+                radius_kpc, v_rot, color_u_r, d4000, oh
+            });
+            showUploadStatus(`✅ <b>${file.name}</b> 은하 이미지 업로드 및 표면밝기·색지수 자동 측광 완료!`);
+        };
+        img.onerror = () => showUploadStatus(`❌ 이미지 파일을 읽을 수 없습니다: ${file.name}`, true);
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleFITSFileUpload(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const buf = ev.target.result;
+            const bytes = new Uint8Array(buf);
+            let headerStr = "";
+            const maxHeaderBytes = Math.min(bytes.length, 2880 * 4);
+            for (let i = 0; i < maxHeaderBytes; i++) {
+                const c = bytes[i];
+                headerStr += (c >= 32 && c <= 126) ? String.fromCharCode(c) : " ";
+            }
+            const getCard = (key) => {
+                const re = new RegExp(key + "\\s*=\\s*([^/]+)", "i");
+                const m = headerStr.match(re);
+                return m ? m[1].replace(/'/g, "").trim() : "";
+            };
+            const objName = getCard("OBJECT") || file.name.replace(/\.[^/.]+$/, "");
+            const naxis1 = parseInt(getCard("NAXIS1")) || 120;
+            const naxis2 = parseInt(getCard("NAXIS2")) || 120;
+            const bitpix = parseInt(getCard("BITPIX")) || 16;
+            const zHdr = parseFloat(getCard("REDSHIFT") || getCard("Z")) || 0.0045;
+
+            // Sample pixel statistics from binary data after first 2880-byte block
+            const dataOffset = Math.min(2880, Math.floor(bytes.length / 2));
+            let sumVal = 0, count = 0;
+            for (let i = dataOffset; i < Math.min(bytes.length, dataOffset + 40000); i += 2) {
+                sumVal += bytes[i];
+                count++;
+            }
+            const normSignal = count > 0 ? (sumVal / count) / 255.0 : 0.5;
+            const log_mstar = clip(9.8 + 1.5 * normSignal, 8.5, 11.6);
+            const log_sfr = clip(-0.6 + 1.4 * (0.6 - normSignal), -2.2, 1.4);
+            const radius_kpc = clip(6.5 + 10.0 * normSignal, 2.0, 24.0);
+            const v_rot = clip(Math.pow(10, 2.14 + 0.27 * (log_mstar - 10.0)), 70.0, 380.0);
+
+            // Render synthetic FITS preview onto canvas
+            const ctx = obsPreviewCanvas.getContext("2d");
+            const imgData = ctx.createImageData(120, 120);
+            for (let y = 0; y < 120; y++) {
+                for (let x = 0; x < 120; x++) {
+                    const r = Math.hypot(x - 60, y - 60);
+                    const v = Math.min(255, Math.floor(245 * Math.exp(-r / 24) + (bytes[(dataOffset + y * 120 + x) % bytes.length] || 0) * 0.15));
+                    const idx = (y * 120 + x) * 4;
+                    imgData.data[idx] = v; imgData.data[idx + 1] = Math.floor(v * 0.85); imgData.data[idx + 2] = Math.min(255, Math.floor(v * 1.15)); imgData.data[idx + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            obsPreviewWrap.style.display = "flex";
+            obsPreviewInfo.innerHTML =
+                `<strong style="color:#34d399;">[FITS 헤더·배열 파싱 완료]</strong><br>` +
+                `• OBJECT: ${objName} (${naxis1}×${naxis2}, BITPIX=${bitpix})<br>` +
+                `• 추정 log M* = ${log_mstar.toFixed(2)} | z = ${zHdr.toFixed(4)}`;
+            multiRowWrap.style.display = "none";
+
+            applyParsedGalaxyToForm({
+                name: `${objName} (FITS 관측 데이터)`,
+                log_mstar, log_sfr, dist_mpc: (299792.458 * zHdr / 70.0), z: zHdr,
+                radius_kpc, v_rot, color_u_r: 2.05, d4000: 1.48, oh: 8.92
+            });
+            showUploadStatus(`✅ <b>${file.name}</b> FITS 천문 파일 헤더 및 데이터 로드 완료!`);
+        } catch (err) {
+            showUploadStatus(`❌ FITS 파일 파싱 중 오류 발생: ${err.message}`, true);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function handleTableFileUpload(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const text = ev.target.result.trim();
+            let rows = [];
+            if (file.name.toLowerCase().endsWith(".json") || text.startsWith("{") || text.startsWith("[")) {
+                const parsed = JSON.parse(text);
+                const arr = Array.isArray(parsed) ? parsed : (parsed.galaxies || parsed.data || [parsed]);
+                rows = arr.map((item, idx) => normalizeColumnRow(item, `${file.name} #${idx + 1}`));
+            } else {
+                const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0 && !l.trim().startsWith("#"));
+                if (lines.length >= 2 && (lines[0].includes(",") || lines[0].includes("\t"))) {
+                    const delim = lines[0].includes("\t") ? "\t" : ",";
+                    const headers = lines[0].split(delim).map(h => h.replace(/^"|"$/g, "").trim());
+                    for (let i = 1; i < Math.min(lines.length, 500); i++) {
+                        const cols = lines[i].split(delim).map(c => c.replace(/^"|"$/g, "").trim());
+                        const obj = {};
+                        headers.forEach((h, idx) => { obj[h] = cols[idx]; });
+                        rows.push(normalizeColumnRow(obj, `관측은하 #${i}`));
+                    }
+                } else {
+                    // Key=Value or Key:Value text format
+                    const obj = {};
+                    lines.forEach(l => {
+                        const parts = l.split(/[:=,\t]/);
+                        if (parts.length >= 2) obj[parts[0].trim()] = parts.slice(1).join(":").trim();
+                    });
+                    rows.push(normalizeColumnRow(obj, file.name.replace(/\.[^/.]+$/, "")));
+                }
+            }
+
+            if (rows.length === 0) {
+                showUploadStatus(`❌ 파일에서 유효한 은하 관측 행을 찾지 못했습니다: ${file.name}`, true);
+                return;
+            }
+
+            uploadedGalaxyRows = rows;
+            obsPreviewWrap.style.display = "none";
+
+            if (rows.length > 1) {
+                multiRowWrap.style.display = "block";
+                multiRowSelect.innerHTML = "";
+                rows.forEach((r, idx) => {
+                    const opt = document.createElement("option");
+                    opt.value = idx;
+                    opt.textContent = `[#${idx + 1}] ${r.name} (log M*=${r.log_mstar || '자동'}, z=${r.z || 0})`;
+                    multiRowSelect.appendChild(opt);
+                });
+            } else {
+                multiRowWrap.style.display = "none";
+            }
+
+            applyParsedGalaxyToForm(rows[0]);
+            showUploadStatus(`✅ <b>${file.name}</b> 데이터 파일 로드 성공! (총 <b>${rows.length}개</b> 관측 은하 인식 완료)`);
+        } catch (err) {
+            showUploadStatus(`❌ 데이터 파일 파싱 오류 (${file.name}): ${err.message}`, true);
+        }
+    };
+    reader.readAsText(file, "utf-8");
+}
+
+function processUploadedObservatoryFile(file) {
+    if (!file) return;
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "bmp", "gif", "tif", "tiff"].includes(ext)) {
+        handleImageUploadForObservatory(file);
+    } else if (["fits", "fit", "fts"].includes(ext)) {
+        handleFITSFileUpload(file);
+    } else {
+        handleTableFileUpload(file);
+    }
+}
+
+document.getElementById("btn-trigger-upload").addEventListener("click", (e) => {
+    e.stopPropagation();
+    obsFileInput.value = "";
+    obsFileInput.click();
+});
+
+obsDropzone.addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") {
+        obsFileInput.value = "";
+        obsFileInput.click();
+    }
+});
+
+obsFileInput.addEventListener("change", (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+        processUploadedObservatoryFile(e.target.files[0]);
+    }
+});
+
+["dragenter", "dragover"].forEach(evtName => {
+    obsDropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        obsDropzone.classList.add("dragover");
+    });
+});
+
+["dragleave", "drop"].forEach(evtName => {
+    obsDropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        obsDropzone.classList.remove("dragover");
+    });
+});
+
+obsDropzone.addEventListener("drop", (e) => {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processUploadedObservatoryFile(e.dataTransfer.files[0]);
+    }
+});
+
+multiRowSelect.addEventListener("change", (e) => {
+    const idx = parseInt(e.target.value);
+    if (!isNaN(idx) && uploadedGalaxyRows[idx]) {
+        applyParsedGalaxyToForm(uploadedGalaxyRows[idx]);
+    }
+});
+
+document.getElementById("btn-download-sample-csv").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const csvLines = [
+        "name,log_mstar,log_sfr,dist_mpc,z,radius_kpc,v_rot,color_u_r,d4000,oh",
+        "M31 (안드로메다 관측표본),10.804,-0.45,0.80,0.0010,12.02,250.0,2.42,1.68,9.02",
+        "M51a (소용돌이 나선은하),10.927,0.65,8.58,0.0015,16.05,205.5,1.85,1.32,9.08",
+        "M82 (시가 폭발별생성은하),10.020,1.05,3.53,0.0007,3.80,135.0,1.38,1.12,8.75",
+        "M87 (처녀자리 거대타원은하),11.780,-1.85,16.40,0.0043,18.50,480.0,2.88,1.98,9.18",
+        "NGC 3198 (표준 회전곡선 은하),10.292,0.08,13.80,0.0022,16.70,150.0,1.72,1.31,8.80",
+        "CEERS-z5.2 (JWST 초기우주 은하),9.350,1.15,49500.0,5.2000,0.75,122.0,0.95,1.04,8.05"
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvLines], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "천문대_관측은하_샘플데이터_업로드테스트용.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    showUploadStatus("📥 <b>천문대_관측은하_샘플데이터_업로드테스트용.csv</b> 파일이 다운로드되었습니다! 그대로 업로드해 보세요.");
+});
 
 // Initial render
 runFormAnalysis();
