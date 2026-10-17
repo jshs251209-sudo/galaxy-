@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>천문대 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램 (GEI v2.0 & 3D Studio)</title>
+    <title>천문대 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램 (GEI v3 & 3D Studio)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <style>
@@ -454,7 +454,7 @@
 <header>
     <div class="header-title">
         <h1>🔭 천문대 직접 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램</h1>
-        <p>우리 팀 직접 관측 데이터(겉보기 등급·각반경·색지수·분광) 입력 기반 Unified GEI v2.0 산출 및 국소 우주(NED-LVS · SDSS DR18) 3D 다양체 비교 시스템</p>
+        <p>우리 팀 직접 관측 데이터(겉보기 등급·각반경·색지수·분광) 입력 기반 Unified GEI v3 산출 및 국소 우주(NED-LVS · SDSS DR18) 3D 다양체 비교 시스템</p>
     </div>
     <div class="header-badges">
         <a href="index.html" class="badge-pill">← 통합 포털</a>
@@ -560,6 +560,10 @@
                         <input type="number" step="any" id="in-rkpc" value="7.42">
                     </div>
                     <div class="form-group">
+                        <label>암흑물질 질량 log₁₀(M_DM/M☉) <span style="color:#64748b">(비우면 NED 추세선)</span></label>
+                        <input type="number" step="any" id="in-ldm" placeholder="모르면 비워두세요">
+                    </div>
+                    <div class="form-group">
                         <label>회전 속도 V_rot [km/s]</label>
                         <input type="number" step="any" id="in-vrot" value="185.0">
                     </div>
@@ -604,8 +608,9 @@
             </details>
 
             <div style="margin-top:12px; padding:12px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid rgba(148,163,184,0.18); font-size:0.77rem; color:#cbd5e1;">
-                <strong style="color:#38bdf8;">■ 통합 은하 진화 지수 (Unified GEI v2.0) 수식</strong><br>
-                <code>GEI = 0.30·S_quench + 0.25·S_mass + 0.20·S_pop + 0.15·S_struct + 0.10·S_halo</code><br>
+                <strong style="color:#38bdf8;">■ 은하 진화 지수 (GEI v3) 수식 — 우리가 분석한 변수만 사용</strong><br>
+                <code>GEI = ( S_mass + S_quench + S_DM ) / 3</code><br>
+                S_mass = (log M* − 6)/6 · S_quench = (−8 − log sSFR)/4 · S_DM = (log M_DM − 6)/6 (각각 0~1로 자름)<br>
                 • <b>Stage I (0.00~0.28)</b>: 원시 은하 형성 및 폭발적 별생성기<br>
                 • <b>Stage II (0.28~0.46)</b>: 초기 주계열 원반 성장기<br>
                 • <b>Stage III (0.46~0.64)</b>: 성숙 주계열 나선은하 안정기<br>
@@ -620,7 +625,7 @@
         <!-- Stage Banner -->
         <div class="stage-banner" id="stage-banner">
             <div class="gei-score-box">
-                <div class="gei-score-label">통합 은하 진화 지수 (GEI v2.0)</div>
+                <div class="gei-score-label">통합 은하 진화 지수 (GEI v3)</div>
                 <div class="gei-score-value" id="out-gei-val">0.534</div>
                 <div class="gei-score-sub" id="out-gei-100">백분율 환산: 53.4 / 100점</div>
             </div>
@@ -654,7 +659,7 @@
                 <div class="val" id="kpi-ssfr">-10.24</div>
             </div>
             <div class="kpi-box">
-                <div class="lbl">총 동역학 질량 log₁₀(M_dyn/M☉)</div>
+                <div class="lbl">암흑물질 질량 log₁₀(M_DM/M☉)</div>
                 <div class="val" id="kpi-mdyn">10.77</div>
             </div>
             <div class="kpi-box">
@@ -910,8 +915,14 @@ function computeUnifiedGEI(raw) {
         m_dyn = mstar / Math.max(1.0 - f_dm / 100.0, 0.03);
         m_dm = Math.max(0.15 * mstar, m_dyn - mstar);
     }
+    // GEI v3: 암흑물질 질량은 우리가 분석한 log M_DM 값을 그대로 사용.
+    // 입력이 없으면 NED Mass–DM 도표(r=0.90)의 추세선 log M_DM ≈ 0.88·log M* + 1.35 로 추정 (동역학 계산 사용 안 함)
+    const ldmIn = parseFloat(raw.log_mdm);
+    const log_mdm = !isNaN(ldmIn) ? clip(ldmIn, 4.0, 13.5) : 0.88 * log_mstar + 1.35;
+    m_dm = Math.pow(10, log_mdm);
+    m_dyn = m_dm + mstar;
+    f_dm = (m_dm / m_dyn) * 100.0;
     const log_mdyn = Math.log10(m_dyn);
-    const log_mdm = Math.log10(m_dm);
     const log_sigma = log_mstar - Math.log10(2.0 * Math.PI * radius_kpc * radius_kpc);
 
     let log_sfr = parseFloat(raw.log_sfr);
@@ -945,18 +956,18 @@ function computeUnifiedGEI(raw) {
     }
     oh = clip(oh, 7.40, 9.35);
 
-    const s_quench = clip((-8.2 - log_ssfr) / 4.0, 0.0, 1.0);
-    const s_mass = clip((log_mstar - 7.5) / 4.3, 0.0, 1.0);
+    // ── GEI v3: 우리가 도표로 분석한 변수만 사용 (M*, SFR, M_DM) ──
+    // 정규화 범위 = 우리 2D 도표의 실제 데이터 범위
+    const s_mass = clip((log_mstar - 6.0) / 6.0, 0.0, 1.0);        // log M* 6~12
+    const s_quench = clip((-8.0 - log_ssfr) / 4.0, 0.0, 1.0);      // sSFR = SFR/M*, -8(활발)~-12(정지)
+    const s_halo = clip((log_mdm - 6.0) / 6.0, 0.0, 1.0);          // log M_DM 6~12
     const s_color = clip((color_u_r - 0.8) / 2.2, 0.0, 1.0);
     const s_d4000 = clip((d4000 - 1.0) / 1.1, 0.0, 1.0);
     const s_metal = clip((oh - 7.8) / 1.4, 0.0, 1.0);
     const s_pop = 0.45 * s_color + 0.35 * s_d4000 + 0.20 * s_metal;
     const s_struct = clip((log_sigma - 6.2) / 3.8, 0.0, 1.0);
-    const s_mdyn = clip((log_mdyn - 8.5) / 3.8, 0.0, 1.0);
-    const s_fdm = clip((f_dm - 10.0) / 75.0, 0.0, 1.0);
-    const s_halo = 0.55 * s_mdyn + 0.45 * s_fdm;
-
-    const gei = clip(0.30 * s_quench + 0.25 * s_mass + 0.20 * s_pop + 0.15 * s_struct + 0.10 * s_halo, 0.0, 1.0);
+    // 세 축을 같은 비중(1/3)으로 평균. 광도는 질량과 r=0.95로 사실상 같은 정보라 중복 반영을 피하려 제외.
+    const gei = clip((s_mass + s_quench + s_halo) / 3.0, 0.0, 1.0);
     let st = STAGES[4];
     for (const s of STAGES) {
         if (gei >= s.min && gei < s.max) { st = s; break; }
@@ -1075,7 +1086,7 @@ function renderEverything(sim) {
     // 2. Update KPIs
     document.getElementById("kpi-mstar").textContent = `${cur.log_mstar.toFixed(2)} M☉`;
     document.getElementById("kpi-ssfr").textContent = `${cur.log_ssfr.toFixed(2)} yr⁻¹`;
-    document.getElementById("kpi-mdyn").textContent = `${cur.log_mdyn.toFixed(2)} M☉`;
+    document.getElementById("kpi-mdyn").textContent = `${cur.log_mdm.toFixed(2)} M☉`;
     document.getElementById("kpi-fdm").textContent = `${cur.f_dm_percent.toFixed(1)}%`;
     document.getElementById("kpi-sigma").textContent = `${cur.log_sigma.toFixed(2)}`;
     document.getElementById("kpi-quench").textContent = quenchStr;
@@ -1249,22 +1260,22 @@ function drawGEICurveAndBars() {
     Plotly.newPlot("plot-gei-curve", [traceCurve, traceNow], layoutCurve, { responsive: true, displayModeBar: false });
 
     // 2) 5-Axis Bar Comparison
-    const labels = ["별생성소광(30%)", "질량성숙(25%)", "종족노화(20%)", "표면밀도(15%)", "헤일로(10%)"];
+    const labels = ["항성질량 M*(1/3)", "별생성 정지 sSFR(1/3)", "암흑물질 M_DM(1/3)"];
     const barPast = {
         x: labels,
-        y: [pastRep.s_quench, pastRep.s_mass, pastRep.s_pop, pastRep.s_struct, pastRep.s_halo],
+        y: [pastRep.s_mass, pastRep.s_quench, pastRep.s_halo],
         name: `과거 (${pastRep.dt} Gyr)`,
         type: "bar", marker: { color: "#38bdf8" }
     };
     const barNow = {
         x: labels,
-        y: [cur.s_quench, cur.s_mass, cur.s_pop, cur.s_struct, cur.s_halo],
+        y: [cur.s_mass, cur.s_quench, cur.s_halo],
         name: "현재 (0 Gyr)",
         type: "bar", marker: { color: cur.stage.color }
     };
     const barFut = {
         x: labels,
-        y: [futRep.s_quench, futRep.s_mass, futRep.s_pop, futRep.s_struct, futRep.s_halo],
+        y: [futRep.s_mass, futRep.s_quench, futRep.s_halo],
         name: `미래 (+${futRep.dt} Gyr)`,
         type: "bar", marker: { color: "#f43f5e" }
     };
@@ -1427,7 +1438,7 @@ document.getElementById("btn-add-log").addEventListener("click", () => {
 document.getElementById("btn-export-log").addEventListener("click", () => {
     const listToExport = myObservedGalaxies.length > 0 ? myObservedGalaxies : (currentSim ? [currentSim.cur] : []);
     if (listToExport.length === 0) return;
-    const headers = "obs_index,name,z,dist_mpc,log_mstar,log_sfr,log_ssfr,radius_kpc,v_rot_kms,log_mdyn,log_mdm,f_dm_percent,color_u_r,d4000,oh,GEI_v2,stage_code,stage_name_kr";
+    const headers = "obs_index,name,z,dist_mpc,log_mstar,log_sfr,log_ssfr,radius_kpc,v_rot_kms,log_mdyn,log_mdm,f_dm_percent,color_u_r,d4000,oh,GEI_v3,stage_code,stage_name_kr";
     const rows = listToExport.map((g, idx) =>
         `${idx + 1},"${g.name}",${g.z.toFixed(5)},${g.dist_mpc.toFixed(2)},${g.log_mstar.toFixed(3)},${g.log_sfr.toFixed(3)},${g.log_ssfr.toFixed(3)},${g.radius_kpc.toFixed(2)},${g.v_rot.toFixed(1)},${g.log_mdyn.toFixed(3)},${g.log_mdm.toFixed(3)},${g.f_dm_percent.toFixed(2)},${g.color_u_r.toFixed(2)},${g.d4000.toFixed(2)},${g.oh.toFixed(2)},${g.gei.toFixed(4)},${g.stage.code},"${g.stage.name_kr}"`
     );
@@ -1449,6 +1460,7 @@ function runFormAnalysis() {
         z: document.getElementById("in-z").value,
         radius_kpc: document.getElementById("in-rkpc").value,
         v_rot: document.getElementById("in-vrot").value,
+        log_mdm: document.getElementById("in-ldm").value,
         color_u_r: document.getElementById("in-color").value,
         d4000: document.getElementById("in-d4000").value,
         oh: document.getElementById("in-oh").value,
