@@ -129,13 +129,16 @@
         /* ── Main Layout ── */
         .workspace-container {
             display: grid;
-            grid-template-columns: 460px 1fr;
+            grid-template-columns: 460px minmax(0, 1fr);
             gap: 1.25rem;
             padding: 1.25rem;
             max-width: 1700px;
             margin: 0 auto;
             width: 100%;
             flex: 1;
+        }
+        .workspace-container > *, .results-grid, .two-charts-row > *, .chart-box {
+            min-width: 0;
         }
 
         @media (max-width: 1200px) {
@@ -154,6 +157,7 @@
             flex-direction: column;
             gap: 1.1rem;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
         }
 
         .panel-card-title {
@@ -162,6 +166,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
             color: var(--text-main);
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.65rem;
@@ -310,16 +316,15 @@
             border-radius: var(--radius-md);
             position: relative;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 380px;
-            max-height: 480px;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
         }
 
         #imageCanvas {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
             display: block;
             image-rendering: pixelated;
         }
@@ -338,8 +343,10 @@
             font-size: 0.75rem;
             color: var(--text-muted);
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
-            padding: 0.25rem 0.5rem;
+            gap: 0.2rem 0.75rem;
+            padding: 0.35rem 0.6rem;
             background: var(--bg-dark);
             border-radius: 6px;
             border: 1px solid var(--border-color);
@@ -531,6 +538,72 @@
         .hidden-mode {
             display: none !important;
         }
+
+        /* ── Header wrapping (buttons used to collapse into one-character columns) ── */
+        header { flex-wrap: wrap; gap: 0.75rem; }
+        .header-nav { flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+        .nav-btn { white-space: nowrap; }
+        .brand-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* ── Hero: kicker + 3-class score bars ── */
+        .hero-result-card { transition: border-left-color 0.25s; }
+        .hero-kicker {
+            font-size: 0.72rem; color: var(--accent-blue); font-weight: 700;
+            letter-spacing: 0.04em; margin-bottom: 0.15rem;
+        }
+        .class-scores {
+            display: flex; flex-direction: column; gap: 0.3rem;
+            margin-top: 0.7rem; max-width: 420px;
+        }
+        .score-row {
+            display: grid; grid-template-columns: 4.8rem 1fr 2.6rem;
+            align-items: center; gap: 0.55rem;
+            font-size: 0.76rem; color: var(--text-muted);
+        }
+        .score-row.winner { color: var(--text-main); font-weight: 700; }
+        .score-track {
+            height: 7px; border-radius: 999px; background: #1e293b; overflow: hidden;
+        }
+        .score-fill {
+            display: block; height: 100%; border-radius: 999px;
+            transition: width 0.45s cubic-bezier(.2,.8,.2,1);
+        }
+        .score-row:not(.winner) .score-fill { opacity: 0.45; }
+        .score-pct { font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+        /* ── Metric cards ── */
+        .info-tip {
+            cursor: help; font-size: 0.8rem; color: #64748b;
+            width: 1.1rem; height: 1.1rem; display: inline-flex;
+            align-items: center; justify-content: center;
+        }
+        .info-tip:hover { color: var(--accent-blue); }
+        .metric-value.na { color: #475569; }
+        .metric-sub { min-height: 1.05em; }
+        /* First six cards are morphology indices: meaningless on a slit spectrum */
+        .metric-cards-grid.spec-mode .metric-mini-card:nth-child(-n+6) { display: none; }
+
+        /* ── Diagnosis list ── */
+        .diagnosis-item { align-items: flex-start; line-height: 1.55; }
+        .diagnosis-item.warn { border-left-color: #64748b; color: var(--text-muted); }
+        .diag-icon { flex-shrink: 0; }
+
+        /* ── Small screens ── */
+        @media (max-width: 720px) {
+            header { padding: 0.75rem 1rem; position: static; }
+            .brand-badge, .brand-sub { display: none; }
+            .header-nav { justify-content: flex-start; gap: 0.35rem; }
+            .header-nav .nav-btn { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
+            .workspace-container { padding: 0.75rem; gap: 0.9rem; }
+            .hero-result-card {
+                grid-template-columns: auto 1fr;
+                gap: 0.9rem;
+            }
+            .confidence-pill { grid-column: 1 / -1; text-align: left; display: flex; align-items: baseline; gap: 0.6rem; }
+            .galaxy-type-avatar { width: 54px; height: 54px; font-size: 2.1rem; }
+            .galaxy-type-info h2 { font-size: 1.15rem; }
+            .canvas-info-bar { flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+        }
     </style>
 </head>
 <body>
@@ -541,9 +614,9 @@
             <span class="brand-icon">🌌</span>
             <div>
                 <div class="brand-title">GalaxyEvolution Studio Web</div>
-                <div style="font-size:0.75rem; color:var(--text-muted)">클라이언트 완전 독립형 은하 사진 & 분광 정밀 분석 엔진</div>
+                <div class="brand-sub">은하 사진 형태 분류 (나선 · 타원 · 불규칙) & 분광 진단</div>
             </div>
-            <span class="brand-badge">Client-Side AI Engine</span>
+            <span class="brand-badge">브라우저 내 연산</span>
         </div>
         <div class="header-nav">
             <a href="index.html" class="nav-btn">← 통합 포털로 복귀</a>
@@ -562,22 +635,22 @@
             <!-- Mode Switcher -->
             <div class="mode-tabs">
                 <button id="btnModeImg" class="mode-tab-btn active" onclick="switchMode('image')">
-                    🖼️ 은하 사진 형태·측광
+                    🖼️ 은하 사진 (형태)
                 </button>
                 <button id="btnModeSpec" class="mode-tab-btn" onclick="switchMode('spectrum')">
-                    🌈 천체 분광·BPT 진단
+                    🌈 분광 (BPT)
                 </button>
             </div>
 
             <!-- Upload Dropzone -->
             <div class="upload-dropzone" id="dropzone">
-                <input type="file" id="fileInput" accept="image/*,.fits,.fit,.fts,.csv,.tsv,.json,.txt">
+                <input type="file" id="fileInput" accept="image/*,.fits,.fit,.fts">
                 <div style="font-size: 2rem; margin-bottom: 0.3rem;">📸 📄 🔭</div>
                 <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; color: #f8fafc;">
-                    은하 사진 · FITS · 관측 CSV/JSON 파일 업로드
+                    은하 사진 · FITS 파일 업로드
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.45rem;">
-                    JPG, PNG, WebP, BMP, FITS(.fits), CSV, JSON, TXT 완벽 지원 (드래그 앤 드롭 또는 클릭)
+                    JPG · PNG · WebP · BMP · FITS 지원 (드래그 앤 드롭 또는 클릭)
                 </div>
                 <button type="button" class="nav-btn primary" style="position:relative; z-index:5; padding:0.35rem 0.9rem; font-size:0.78rem;" onclick="event.stopPropagation(); document.getElementById('fileInput').value=''; document.getElementById('fileInput').click();">
                     📁 내 컴퓨터에서 파일 선택
@@ -588,12 +661,12 @@
             <!-- Fast Demo Samples -->
             <div>
                 <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem;">
-                    🚀 즉시 체험용 천체 표본 (클릭 시 자동 로드):
+                    🚀 샘플로 바로 체험 (합성 영상):
                 </div>
                 <div class="sample-presets">
                     <button class="preset-chip" onclick="loadSamplePreset('spiral_m51')">🌀 나선은하 M51 (소용돌이)</button>
                     <button class="preset-chip" onclick="loadSamplePreset('elliptical_m87')">⚪ 타원은하 M87 (거대타원)</button>
-                    <button class="preset-chip" onclick="loadSamplePreset('merger_antennae')">💥 병합은하 NGC 4038 (안테나)</button>
+                    <button class="preset-chip" onclick="loadSamplePreset('irregular_lmc')">✨ 불규칙은하 LMC (대마젤란)</button>
                     <button class="preset-chip" onclick="loadSamplePreset('spectrum_starforming')">🌈 회절 분광 사진 (별생성은하)</button>
                 </div>
             </div>
@@ -638,14 +711,14 @@
             <!-- Viewport Stats -->
             <div class="canvas-info-bar">
                 <span id="canvasDims">해상도: 400 × 400 px</span>
-                <span id="roiDims">선택 영역: 전체 (Full Frame)</span>
-                <span id="pixelStat">중심 밝기: 0.00</span>
+                <span id="roiDims">선택 영역: 전체</span>
+                <span id="pixelStat">좌표: —</span>
             </div>
 
             <!-- Run Button -->
             <button class="action-run-btn" onclick="executeFullAnalysis()">
                 <span>🔬</span>
-                <span>정밀 다차원 물리·형태 분석 실행</span>
+                <span>선택 영역 다시 분석</span>
             </button>
 
         </section>
@@ -657,16 +730,13 @@
             <div class="hero-result-card" id="heroCard">
                 <div class="galaxy-type-avatar" id="heroAvatar">🌀</div>
                 <div class="galaxy-type-info">
-                    <div style="font-size:0.75rem; color:var(--accent-blue); font-weight:700; text-transform:uppercase;">
-                        천체 분류 및 활동성 판정 결과
-                    </div>
-                    <h2 id="heroTitle">나선은하 (Spiral Galaxy, Late-type)</h2>
-                    <p id="heroDesc">
-                        뚜렷한 지수 원반(Sérsic n ≈ 1.1)과 완만한 집중도, 활발한 별 생성 특징을 보입니다.
-                    </p>
+                    <div class="hero-kicker" id="heroKicker">형태 분류 결과 (나선 · 타원 · 불규칙)</div>
+                    <h2 id="heroTitle">분석 대기 중</h2>
+                    <p id="heroDesc">샘플을 고르거나 은하 사진을 업로드하세요.</p>
+                    <div class="class-scores" id="classScores"></div>
                 </div>
-                <div class="confidence-pill">
-                    <div class="confidence-val" id="heroConfidence">94.8%</div>
+                <div class="confidence-pill" id="heroConfidenceBox">
+                    <div class="confidence-val" id="heroConfidence">—</div>
                     <div class="confidence-label">분류 신뢰도</div>
                 </div>
             </div>
@@ -677,73 +747,73 @@
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>집중도 (C)</span>
-                        <span title="Strateva(2001) R90/R50">ℹ️</span>
+                        <span class="info-tip" title="Conselice(2003): C = 5·log10(R80/R20). 원반 ≈ 2.7, 타원 ≈ 4~5">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valC">2.38</div>
-                    <div class="metric-sub" id="subC">C &lt; 2.6 (만기형/원반)</div>
+                    <div class="metric-value" id="valC">—</div>
+                    <div class="metric-sub" id="subC"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>Sérsic 지수 (n)</span>
-                        <span title="n=1 원반, n=4 타원">ℹ️</span>
+                        <span class="info-tip" title="n=1 지수 원반, n=4 드 보쿨뢰르(타원)">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valSersic">1.15</div>
-                    <div class="metric-sub" id="subSersic">지수 원반형 프로파일</div>
+                    <div class="metric-value" id="valSersic">—</div>
+                    <div class="metric-sub" id="subSersic"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>비대칭도 (A)</span>
-                        <span title="Conselice(2003) 180도 회전 차이">ℹ️</span>
+                        <span class="info-tip" title="Conselice(2003): 180° 회전 영상과의 차이, 하늘 잡음 보정">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valA">0.18</div>
-                    <div class="metric-sub" id="subA">나선 구조 / 별생성 덩어리</div>
+                    <div class="metric-value" id="valA">—</div>
+                    <div class="metric-sub" id="subA"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>Gini 계수</span>
-                        <span title="Lotz(2004) 광도 불균등도">ℹ️</span>
+                        <span class="info-tip" title="Lotz(2004): 픽셀 간 밝기 불균등도 (0=균일, 1=한 픽셀에 집중)">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valGini">0.49</div>
-                    <div class="metric-sub" id="subGini">중간 광량 분산</div>
+                    <div class="metric-value" id="valGini">—</div>
+                    <div class="metric-sub" id="subGini"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>M₂₀ 모멘트</span>
-                        <span title="상위 20% 광량 공간 모멘트">ℹ️</span>
+                        <span class="info-tip" title="Lotz(2004): 가장 밝은 20% 광량의 2차 공간 모멘트 (정규화, log)">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valM20">-1.62</div>
-                    <div class="metric-sub" id="subM20">Sb-Irr 정상 은하 영역</div>
+                    <div class="metric-value" id="valM20">—</div>
+                    <div class="metric-sub" id="subM20"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
-                        <span>Petrosian R₅₀</span>
-                        <span title="유효 광량 50% 반경">ℹ️</span>
+                        <span>반광 반경 R₅₀</span>
+                        <span class="info-tip" title="누적 광량 50%를 포함하는 반경">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valR50">24.5 px</div>
-                    <div class="metric-sub" id="subR50">R90: 58.2 px</div>
+                    <div class="metric-value" id="valR50">—</div>
+                    <div class="metric-sub" id="subR50"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>신호 대 잡음비 (S/N)</span>
-                        <span title="배경 노이즈 대비 순수 플럭스">ℹ️</span>
+                        <span class="info-tip" title="R90 구경 내 플럭스 / 하늘 잡음">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valSNR">64.2</div>
-                    <div class="metric-sub" id="subSNR">측광 신뢰성 우수</div>
+                    <div class="metric-value" id="valSNR">—</div>
+                    <div class="metric-sub" id="subSNR"></div>
                 </div>
 
                 <div class="metric-mini-card">
                     <div class="metric-label">
                         <span>산소 금속량 12+log(O/H)</span>
-                        <span title="Pettini & Pagel N2 방법">ℹ️</span>
+                        <span class="info-tip" title="Pettini & Pagel(2004) N2 방법. 스펙트럼에서만 측정 가능">ⓘ</span>
                     </div>
-                    <div class="metric-value" id="valZ">8.72</div>
-                    <div class="metric-sub" id="subZ">태양 금속량 유사 (~Z⊙)</div>
+                    <div class="metric-value" id="valZ">—</div>
+                    <div class="metric-sub" id="subZ"></div>
                 </div>
 
             </div>
@@ -766,14 +836,9 @@
                         <span>📑</span>
                         <span>천체물리학적 판정 근거 및 학술 분석 요약</span>
                     </span>
-                    <span style="font-size:0.75rem; color:var(--accent-purple); font-weight:600;">Strateva(2001) · Lotz(2008) · Kewley(2001) 기준</span>
+                    <span style="font-size:0.75rem; color:var(--accent-purple); font-weight:600;">Conselice(2003) · Lotz(2004) · Kewley(2001) 기준</span>
                 </div>
-                <ul class="diagnosis-list" id="diagnosisList">
-                    <li class="diagnosis-item">✅ <strong>집중도 검증:</strong> C = 2.38 (&lt; 2.6) 로 중심부에 비하여 완만한 원반 구조가 발달한 만기형(Late-type) 은하의 특성을 띱니다.</li>
-                    <li class="diagnosis-item">✅ <strong>Sérsic 지수 피팅:</strong> n = 1.15 로 지수형 원반(Exponential Disk, n≈1) 모형에 매우 가깝게 수렴합니다.</li>
-                    <li class="diagnosis-item">✅ <strong>비모수 형태 분석:</strong> Gini = 0.49 및 M20 = -1.62 는 Lotz(2008) 분류 체계의 전형적인 정상 나선은하(Sb-Sc) 영역에 위치합니다.</li>
-                    <li class="diagnosis-item">✅ <strong>BPT 분광 진단:</strong> log([NII]/Hα) = -0.38, log([OIII]/Hβ) = -0.12 로 Kauffmann(2003) 이론선 아래의 순수 별생성 은하(Star-forming) 영역에 정확히 투영됩니다.</li>
-                </ul>
+                <ul class="diagnosis-list" id="diagnosisList"></ul>
             </div>
 
             <!-- Export Buttons -->
@@ -781,7 +846,8 @@
                 <div style="font-size:0.8rem; color:var(--text-muted)">
                     데이터 및 결과는 로컬 브라우저 세션에서 연산되며 외부로 유출되지 않습니다.
                 </div>
-                <div style="display:flex; gap:0.5rem;">
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="nav-btn" style="border-color:#f59e0b; color:#fde68a;" onclick="sendToObservatoryAnalyzer()">🔭 이 측광값을 GEI v2.0 진화 분석기로 전송</button>
                     <button class="nav-btn" onclick="downloadJSON()">💾 JSON 저장</button>
                     <button class="nav-btn" onclick="downloadCSV()">📊 CSV 통계표</button>
                     <button class="nav-btn primary" onclick="copySummaryText()">📋 진단서 클립보드 복사</button>
@@ -860,13 +926,13 @@
                         const r = Math.hypot(dx, dy);
                         const theta = Math.atan2(dy, dx);
 
-                        // Bulge (Sérsic n=2.5) + Disk (n=1)
-                        const bulge = 220 * Math.exp(-Math.pow(r / 12, 1 / 2.5));
-                        const disk = 75 * Math.exp(-r / 55);
+                        // Bulge (Sérsic n=2.5, b_n=4.67, r_e=10 px) + exponential disk (h=40 px)
+                        const bulge = 20 * Math.exp(-4.67 * (Math.pow(Math.max(r, 0.3) / 10, 1 / 2.5) - 1));
+                        const disk = 80 * Math.exp(-r / 40);
 
                         // 2 logarithmic spiral arms
                         const armPhase = theta - 2.8 * Math.log(Math.max(r / 20, 1e-3));
-                        const arm = 35 * Math.exp(-r / 70) * Math.pow(Math.cos(armPhase), 4);
+                        const arm = 40 * Math.exp(-r / 50) * Math.pow(Math.cos(armPhase), 4);
 
                         // Clumps / HII regions
                         const noise = (Math.random() - 0.5) * 6;
@@ -886,31 +952,32 @@
                         const yr = -dx * sinP + dy * cosP;
                         const r_ell = Math.hypot(xr, yr / q);
 
-                        // de Vaucouleurs n=4
-                        const I = 250 * Math.exp(-3.67 * (Math.pow(r_ell / 48, 0.25) - 1));
+                        // de Vaucouleurs n=4 (b_4 = 7.669, I_e = 12, r_e = 30 px)
+                        const I = 12 * Math.exp(-7.669 * (Math.pow(Math.max(r_ell, 0.3) / 30, 0.25) - 1));
                         const noise = (Math.random() - 0.5) * 5;
                         buffer[y * w + x] = Math.max(0, I + noise + 10);
                     }
                 }
-            } else if (type === 'merger_antennae') {
-                // Double core + tidal tails + asymmetric debris
-                const c1x = cx - 35, c1y = cy - 15;
-                const c2x = cx + 40, c2y = cy + 25;
-
+            } else if (type === 'irregular_lmc') {
+                // No bulge: off-centre bar + scattered star-forming clumps (LMC-like)
+                const clumps = [
+                    [-60, -30, 70, 14], [45, -55, 55, 12], [70, 40, 80, 16],
+                    [-25, 65, 45, 11], [-85, 35, 40, 10], [20, 10, 35, 18]
+                ];
+                const pa = Math.PI / 5, cosP = Math.cos(pa), sinP = Math.sin(pa);
                 for (let y = 0; y < h; y++) {
                     for (let x = 0; x < w; x++) {
-                        const r1 = Math.hypot(x - c1x, y - c1y);
-                        const r2 = Math.hypot(x - c2x, y - c2y);
-
-                        const core1 = 180 * Math.exp(-r1 / 22);
-                        const core2 = 140 * Math.exp(-r2 / 18);
-
-                        // Tidal bridge & tail
-                        const tail1 = 30 * Math.exp(-Math.pow((x - (cx - 70)), 2) / 600 - Math.pow(y - (cy - 60), 2) / 1200);
-                        const tail2 = 35 * Math.exp(-Math.pow((x - (cx + 80)), 2) / 800 - Math.pow(y - (cy + 70), 2) / 1500);
-
-                        const noise = (Math.random() - 0.5) * 8;
-                        buffer[y * w + x] = Math.max(0, core1 + core2 + tail1 + tail2 + noise + 12);
+                        const dx = x - cx, dy = y - cy;
+                        const xr = dx * cosP + dy * sinP - 25;
+                        const yr = -dx * sinP + dy * cosP + 10;
+                        // Off-centre stellar bar + faint flat disk
+                        let I = 45 * Math.exp(-Math.pow(xr / 60, 2) - Math.pow(yr / 18, 2));
+                        I += 20 * Math.exp(-Math.hypot(dx + 20, dy - 15) / 90);
+                        for (const [ox, oy, amp, s] of clumps) {
+                            I += amp * Math.exp(-(Math.pow(dx - ox, 2) + Math.pow(dy - oy, 2)) / (2 * s * s));
+                        }
+                        const noise = (Math.random() - 0.5) * 6;
+                        buffer[y * w + x] = Math.max(0, I + noise + 10);
                     }
                 }
             } else if (type === 'spectrum_starforming') {
@@ -922,7 +989,7 @@
                         // Emission lines at specific x coordinates
                         const hb = 65 * Math.exp(-Math.pow(x - 90, 2) / 4) * slitProfile;
                         const o3_4959 = 35 * Math.exp(-Math.pow(x - 110, 2) / 4) * slitProfile;
-                        const o3_5007 = 105 * Math.exp(-Math.pow(x - 120, 2) / 4) * slitProfile;
+                        const o3_5007 = 70 * Math.exp(-Math.pow(x - 120, 2) / 4) * slitProfile;
                         const ha = 210 * Math.exp(-Math.pow(x - 290, 2) / 5) * slitProfile;
                         const nii_6584 = 75 * Math.exp(-Math.pow(x - 296, 2) / 4) * slitProfile;
                         const sii = 50 * Math.exp(-Math.pow(x - 315, 2) / 4) * slitProfile;
@@ -931,6 +998,9 @@
                         buffer[y * w + x] = Math.max(0, cont + hb + o3_4959 + o3_5007 + ha + nii_6584 + sii + noise + 8);
                     }
                 }
+                // Wavelength map of this synthetic slit (pixel windows of each line)
+                return { width: w, height: h, data: buffer,
+                    lines: { Hb: [86, 94], OIII: [116, 124], Ha: [285, 292], NII: [294, 300] } };
             }
 
             return { width: w, height: h, data: buffer };
@@ -957,12 +1027,13 @@
             const pixels = imgData.data;
             const src = rawImage.data;
 
-            // Find min/max for normalization
-            let minVal = Infinity, maxVal = -Infinity;
-            for (let i = 0; i < src.length; i++) {
-                if (src[i] < minVal) minVal = src[i];
-                if (src[i] > maxVal) maxVal = src[i];
-            }
+            // Percentile normalization (0.5% – 99.5%) so a bright core/star does not black out the rest
+            const step = Math.max(1, Math.floor(src.length / 50000));
+            const sample = [];
+            for (let i = 0; i < src.length; i += step) sample.push(src[i]);
+            sample.sort((a, b) => a - b);
+            const minVal = sample[Math.floor(sample.length * 0.005)];
+            const maxVal = sample[Math.min(sample.length - 1, Math.floor(sample.length * 0.995))];
             const range = Math.max(maxVal - minVal, 1e-5);
 
             for (let i = 0; i < src.length; i++) {
@@ -995,6 +1066,9 @@
             processedImageData = imgData;
 
             document.getElementById('canvasDims').innerText = `해상도: ${w} × ${h} px`;
+            const vp = document.getElementById('viewport');
+            vp.style.aspectRatio = `${w} / ${h}`;
+            vp.style.maxWidth = `${Math.round(400 * Math.min(1, w / h))}px`;
             drawOverlay();
         }
 
@@ -1004,11 +1078,7 @@
             currentTool = 'full';
             updateToolButtons();
 
-            if (presetKey === 'spectrum_starforming') {
-                switchMode('spectrum');
-            } else {
-                switchMode('image');
-            }
+            switchMode(presetKey === 'spectrum_starforming' ? 'spectrum' : 'image', false);
 
             applyImageProcessing();
             executeFullAnalysis();
@@ -1024,7 +1094,7 @@
                 overlayCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
                 overlayCtx.lineWidth = 2;
                 overlayCtx.strokeRect(2, 2, overlayCanvas.width - 4, overlayCanvas.height - 4);
-                document.getElementById('roiDims').innerText = '선택 영역: 전체 (Full Frame)';
+                document.getElementById('roiDims').innerText = '선택 영역: 전체';
                 return;
             }
 
@@ -1111,13 +1181,70 @@
             document.getElementById('toolFull').classList.toggle('active', currentTool === 'full');
         }
 
-        function switchMode(mode) {
+        function switchMode(mode, rerun = true) {
             currentMode = mode;
             document.getElementById('btnModeImg').classList.toggle('active', mode === 'image');
             document.getElementById('btnModeSpec').classList.toggle('active', mode === 'spectrum');
-            if (analysisResults) {
-                renderCharts(analysisResults);
+            if (rerun && rawImage) {
+                executeFullAnalysis();
             }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // Slit Spectrum: 1D extraction & emission-line fluxes
+        // ═══════════════════════════════════════════════════════
+        // Line pixel positions are only known when the image carries a wavelength map
+        // (rawImage.lines). Without it, the 1D spectrum is shown but no BPT point is made up.
+        function measureSpectrum(src, w, h) {
+            const median = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+
+            // Slit centre row = row with the largest total signal
+            let yc = 0, bestRow = -Infinity;
+            for (let y = 0; y < h; y++) {
+                let s = 0;
+                for (let x = 0; x < w; x++) s += src[y * w + x];
+                if (s > bestRow) { bestRow = s; yc = y; }
+            }
+            const half = Math.max(3, Math.round(h * 0.025));
+            const skyRows = Math.max(3, Math.round(h * 0.15));
+
+            const xs = [], f = [];
+            for (let x = 0; x < w; x++) {
+                const sky = [];
+                for (let y = 0; y < skyRows; y++) sky.push(src[y * w + x], src[(h - 1 - y) * w + x]);
+                const skyMed = median(sky);
+                let s = 0;
+                for (let y = Math.max(0, yc - half); y <= Math.min(h - 1, yc + half); y++) s += src[y * w + x] - skyMed;
+                xs.push(x);
+                f.push(s);
+            }
+
+            const lines = rawImage && rawImage.lines;
+            if (!lines) {
+                return { x: xs, f, logNII_Ha: null, logOIII_Hb: null, bptClass: null,
+                    note: '업로드한 스펙트럼에는 파장 보정 정보가 없어 방출선 위치를 알 수 없습니다. 1차원 스펙트럼만 표시합니다.' };
+            }
+
+            const cont = median(f);
+            const lineFlux = ([x0, x1]) => {
+                let s = 0;
+                for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) s += f[x] - cont;
+                return Math.max(s, 1e-6);
+            };
+            const fluxes = {
+                Hb: lineFlux(lines.Hb), OIII: lineFlux(lines.OIII),
+                Ha: lineFlux(lines.Ha), NII: lineFlux(lines.NII)
+            };
+            const logNII_Ha = Math.log10(fluxes.NII / fluxes.Ha);
+            const logOIII_Hb = Math.log10(fluxes.OIII / fluxes.Hb);
+
+            // BPT classification (Kauffmann 2003; Kewley 2001)
+            const belowKauff = logNII_Ha < 0.05 && logOIII_Hb < 0.61 / (logNII_Ha - 0.05) + 1.3;
+            const belowKewley = logNII_Ha < 0.47 && logOIII_Hb < 0.61 / (logNII_Ha - 0.47) + 1.19;
+            const bptClass = belowKauff ? '별생성 은하 (Star-forming)' : (belowKewley ? '복합형 (Composite)' : 'AGN (활동은하핵)');
+            const bptClassEn = belowKauff ? 'Star-forming' : (belowKewley ? 'Composite' : 'AGN');
+
+            return { x: xs, f, fluxes, lines, logNII_Ha, logOIII_Hb, bptClass, bptClassEn, note: '' };
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1196,126 +1323,190 @@
                 cumFlux.push(cFlux);
             }
 
-            // Radii R20, R50, R90
-            let r20 = 10, r50 = 25, r90 = 60;
+            // Radii R20, R50, R80, R90 (cumulative growth curve, linearly interpolated at bin edges)
             const maxCum = cumFlux[cumFlux.length - 1] || 1;
-            for (let b = 0; b < nBins; b++) {
-                const frac = cumFlux[b] / maxCum;
-                if (frac >= 0.20 && r20 === 10) r20 = profileR[b];
-                if (frac >= 0.50 && r50 === 25) r50 = profileR[b];
-                if (frac >= 0.90 && r90 === 60) { r90 = profileR[b]; break; }
-            }
+            const radiusAt = (frac) => {
+                const target = frac * maxCum;
+                let prev = 0;
+                for (let b = 0; b < nBins; b++) {
+                    if (cumFlux[b] >= target) {
+                        const t = (target - prev) / Math.max(cumFlux[b] - prev, 1e-9);
+                        return (b + t) * binWidth;
+                    }
+                    prev = cumFlux[b];
+                }
+                return nBins * binWidth;
+            };
+            const r20 = Math.max(radiusAt(0.20), 0.5);
+            const r50 = Math.max(radiusAt(0.50), 1);
+            const r80 = Math.max(radiusAt(0.80), 1);
+            const r90 = Math.max(radiusAt(0.90), 1);
 
             // 4. Non-parametric indices: C, A, Gini, M20
-            const C = 5 * Math.log10(Math.max(r90, 1) / Math.max(r50, 1));
+            // Concentration (Conselice 2003): C = 5 log10(r80 / r20)
+            const C = 5 * Math.log10(r80 / r20);
             
-            // Asymmetry A (180 deg rotation)
-            let asymDiff = 0, asymDenom = 0;
-            for (let y = ry0; y < ry1; y++) {
-                for (let x = rx0; x < rx1; x++) {
-                    const ox = Math.round(2 * cx - x);
-                    const oy = Math.round(2 * cy - y);
-                    if (ox >= 0 && ox < w && oy >= 0 && oy < h) {
-                        const i1 = Math.max(0, src[y * w + x] - bgMed);
-                        const i2 = Math.max(0, src[oy * w + ox] - bgMed);
-                        asymDiff += Math.abs(i1 - i2);
-                        asymDenom += i1;
+            // Asymmetry A (Conselice 2003): A = min_center Σ|I − I180| / Σ|I| − A_bg
+            // - measured inside the r90 aperture only (outside is mostly sky noise)
+            // - rotation centre searched on a half-pixel grid (2·centre is an integer → exact pixel mapping)
+            // - sky-noise contribution subtracted: E|n1 − n2| = 2σ/√π per pixel
+            const sortedBorderDev = borderVals.map(v => Math.abs(v - bgMed)).sort((a, b) => a - b);
+            const skySigma = Math.max(0.5, 1.4826 * sortedBorderDev[Math.floor(sortedBorderDev.length / 2)]);
+            const apR = Math.max(r90, 3);
+            const asymAt = (ccx, ccy) => {
+                let diff = 0, denom = 0, nAp = 0;
+                const ya = Math.max(ry0, Math.floor(ccy - apR)), yb = Math.min(ry1, Math.ceil(ccy + apR));
+                const xa = Math.max(rx0, Math.floor(ccx - apR)), xb = Math.min(rx1, Math.ceil(ccx + apR));
+                for (let y = ya; y < yb; y++) {
+                    for (let x = xa; x < xb; x++) {
+                        if (Math.hypot(x - ccx, y - ccy) > apR) continue;
+                        const ox = 2 * ccx - x, oy = 2 * ccy - y;
+                        if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue;
+                        const i1 = src[y * w + x] - bgMed;
+                        const i2 = src[oy * w + ox] - bgMed;
+                        diff += Math.abs(i1 - i2);
+                        denom += Math.abs(i1);
+                        nAp++;
                     }
                 }
+                if (denom <= 0) return 1;
+                return (diff - nAp * 2 * skySigma / Math.sqrt(Math.PI)) / denom;
+            };
+            let A = Infinity;
+            const cx0 = Math.round(cx * 2) / 2, cy0 = Math.round(cy * 2) / 2;
+            for (let oy = -2; oy <= 2; oy += 0.5) {
+                for (let ox = -2; ox <= 2; ox += 0.5) {
+                    A = Math.min(A, asymAt(cx0 + ox, cy0 + oy));
+                }
             }
-            const A = asymDenom > 0 ? Math.max(0, (asymDiff / (2 * asymDenom)) - 0.02) : 0.1;
+            A = Math.max(0, Math.min(1, A));
 
-            // Gini Coefficient
-            const roiPix = [];
+            // Gini & M20 (Lotz et al. 2004), pixels inside the r90 aperture
+            const roiPix = [];   // [flux, r²]
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
-                    roiPix.push(Math.max(0, src[y * w + x] - bgMed));
+                    const r2 = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+                    if (r2 > apR * apR) continue;
+                    roiPix.push([Math.max(0, src[y * w + x] - bgMed), r2]);
                 }
             }
-            roiPix.sort((a, b) => a - b);
-            let giniSum = 0;
             const nPix = roiPix.length;
-            const meanP = roiPix.reduce((acc, v) => acc + v, 0) / Math.max(nPix, 1);
+
+            // Gini: G = Σ(2i − n − 1)|X_i| / (mean·n·(n − 1)), X sorted ascending
+            const fluxAsc = roiPix.map(p => p[0]).sort((a, b) => a - b);
+            let giniSum = 0;
+            const meanP = fluxAsc.reduce((acc, v) => acc + v, 0) / Math.max(nPix, 1);
             for (let i = 0; i < nPix; i++) {
-                giniSum += (2 * (i + 1) - nPix - 1) * roiPix[i];
+                giniSum += (2 * (i + 1) - nPix - 1) * fluxAsc[i];
             }
-            const gini = (meanP > 0 && nPix > 1) ? Math.max(0.2, Math.min(0.85, giniSum / (meanP * nPix * (nPix - 1)))) : 0.45;
+            const gini = (meanP > 0 && nPix > 1) ? giniSum / (meanP * nPix * (nPix - 1)) : 0;
 
-            // M20 moment
-            const M20 = -1.65 + (gini - 0.5) * 0.8 + (A - 0.15) * 0.5;
+            // M20 = log10(Σ_brightest20% f·r² / Σ_all f·r²)
+            let mTot = 0, fTot = 0;
+            for (const [f, r2] of roiPix) { mTot += f * r2; fTot += f; }
+            const byFlux = roiPix.slice().sort((a, b) => b[0] - a[0]);
+            let fAcc = 0, mAcc = 0;
+            for (const [f, r2] of byFlux) {
+                if (fAcc >= 0.2 * fTot) break;
+                fAcc += f;
+                mAcc += f * r2;
+            }
+            const M20 = (mTot > 0 && mAcc > 0) ? Math.log10(mAcc / mTot) : 0;
 
-            // Sérsic Fit (Grid Approximation)
-            let bestN = 1.0, minChi2 = Infinity;
-            const testN = [0.8, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 4.5];
-            const Ie = profileI[0] || 100;
-            for (const n of testN) {
+            // Sérsic Fit (grid over n, r_e = r50, amplitude I_e fitted analytically in log space)
+            // Only bins clearly above the sky noise are used.
+            const fitBins = [];
+            for (let b = 0; b < nBins; b++) {
+                if (profileI[b] > 2 * bgStd) fitBins.push(b);
+            }
+            let bestN = 1.0, minChi2 = Infinity, Ie = 1;
+            for (let n = 0.5; n <= 6.001; n += 0.1) {
                 const bn = 1.9992 * n - 0.3271;
-                let chi2 = 0;
-                for (let b = 0; b < nBins; b++) {
-                    const r = profileR[b];
-                    const modelI = Ie * Math.exp(-bn * (Math.pow(r / r50, 1 / n) - 1));
-                    chi2 += Math.pow(Math.log(Math.max(profileI[b], 0.1)) - Math.log(Math.max(modelI, 0.1)), 2);
-                }
+                const d = fitBins.map(b =>
+                    Math.log(profileI[b]) + bn * (Math.pow(profileR[b] / r50, 1 / n) - 1));
+                if (d.length < 3) break;
+                const logIe = d.reduce((s, v) => s + v, 0) / d.length;
+                const chi2 = d.reduce((s, v) => s + (v - logIe) * (v - logIe), 0);
                 if (chi2 < minChi2) {
                     minChi2 = chi2;
-                    bestN = n;
+                    bestN = Math.round(n * 10) / 10;
+                    Ie = Math.exp(logIe);
                 }
             }
 
-            // S/N Ratio
-            const snr = totalFlux / (bgStd * Math.sqrt(Math.max(nPix, 100)));
+            // S/N Ratio (aperture flux / sky noise over the aperture)
+            const snr = fTot / (skySigma * Math.sqrt(Math.max(nPix, 1)));
 
-            // BPT & Spectroscopic values (approximate or extracted)
-            let logNII_Ha = -0.38;
-            let logOIII_Hb = -0.12;
+            // BPT & metallicity: only measurable from a spectrum.
+            // A photo has no emission-line information, so image mode reports null instead of a guess.
+            const spec = currentMode === 'spectrum' ? measureSpectrum(src, w, h) : null;
+            const logNII_Ha = spec ? spec.logNII_Ha : null;
+            const logOIII_Hb = spec ? spec.logOIII_Hb : null;
+            // Pettini & Pagel (2004) N2: 12 + log(O/H) = 8.90 + 0.57 · log([NII]/Hα)
+            const metallicity = logNII_Ha !== null ? 8.90 + 0.57 * logNII_Ha : null;
+
+            // 5. Galaxy Classification Logic (3 classes only: 나선 / 타원 / 불규칙)
+            // 나선팔은 비대칭도(A)를 크게 올리므로 A 하나만으로 불규칙을 판정하지 않는다.
+            // 타원: 높은 집중도 + 높은 Sérsic n + 낮은 비대칭
+            // 불규칙: 팽대부 없음(낮은 C, 낮은 n) + 높은 비대칭 (세 조건을 모두 만족해야 함)
+            // 나선: 그 외 (팽대부 + 원반)
+            const sig = (z) => 1 / (1 + Math.exp(-z));
+            // 기준값 (Conselice 2003; C = 5 log r80/r20):
+            //   타원 C ≈ 4~5, A < 0.1 / 나선 C ≈ 2.6~4, A ≈ 0.05~0.3 / 불규칙 C < 2.6, A > 0.3
+            //   나선→불규칙 오분류를 막기 위해 불규칙은 보수적으로 판정 (애매하면 나선)
+            const sE = sig((bestN - 2.5) / 0.3) * sig((C - 3.6) / 0.15) * sig((0.15 - A) / 0.03);
+            const sI = sig((A - 0.32) / 0.04) * sig((2.6 - C) / 0.12) * sig((1.3 - bestN) / 0.15);
+            const sS = Math.max(0.05, 1 - Math.max(sE, sI));
+            const sTot = sE + sI + sS;
+
+            const CLASSES = {
+                spiral: {
+                    type: "나선은하 (Spiral Galaxy)", en: "Spiral / Late-Type", avatar: "🌀",
+                    desc: "중심 팽대부와 지수 원반(n≈1~2)이 함께 존재하며, 나선팔에 의한 중간 수준의 비대칭을 보입니다."
+                },
+                elliptical: {
+                    type: "타원은하 (Elliptical Galaxy)", en: "Elliptical / Early-Type", avatar: "⚪",
+                    desc: "de Vaucouleurs(n≈4) 프로파일, 높은 중심 집중도, 낮은 비대칭도를 갖춘 조기형 은하입니다."
+                },
+                irregular: {
+                    type: "불규칙은하 (Irregular Galaxy)", en: "Irregular", avatar: "✨",
+                    desc: "뚜렷한 중심 팽대부가 없고(낮은 C·n) 밝기 분포가 크게 비대칭인 불규칙은하입니다."
+                }
+            };
+            let cls = 'spiral', best = sS;
+            if (sE > best) { cls = 'elliptical'; best = sE; }
+            if (sI > best) { cls = 'irregular'; best = sI; }
+
+            let galaxyType = CLASSES[cls].type;
+            let galaxyClassEn = CLASSES[cls].en;
+            let galaxyAvatar = CLASSES[cls].avatar;
+            let galaxyDesc = CLASSES[cls].desc;
+            let confidence = 100 * best / sTot;
+            const scores = {
+                spiral: 100 * sS / sTot, elliptical: 100 * sE / sTot, irregular: 100 * sI / sTot
+            };
+
+            // Spectrum mode: the image is a slit spectrum, so morphology is meaningless → spectral class
             if (currentMode === 'spectrum') {
-                // slit spectrum detection
-                logNII_Ha = -0.42;
-                logOIII_Hb = 0.15;
-            } else if (bestN >= 2.5) {
-                // Elliptical tends to LINER or passive
-                logNII_Ha = 0.05;
-                logOIII_Hb = -0.25;
-            } else if (A > 0.35) {
-                // Merger/Composite
-                logNII_Ha = -0.15;
-                logOIII_Hb = 0.25;
-            }
-
-            // Metallicity Pettini & Pagel (2004) N2: 12 + log(O/H) = 8.90 + 0.57 * log([NII]/Ha)
-            const metallicity = 8.90 + 0.57 * logNII_Ha;
-
-            // 5. Galaxy Classification Logic
-            let galaxyType = "나선은하 (Spiral Galaxy)";
-            let galaxyClassEn = "Spiral / Late-Type";
-            let galaxyAvatar = "🌀";
-            let galaxyDesc = "안정된 지수 원반(n≈1)과 중간 수준의 집중도를 보이며 정상 나선 구조를 가집니다.";
-            let confidence = 92.5;
-
-            if (A > 0.38) {
-                galaxyType = "병합 / 상호작용 은하 (Merger Candidate)";
-                galaxyClassEn = "Merger / Interacting";
-                galaxyAvatar = "💥";
-                galaxyDesc = "높은 비대칭도(A > 0.35)와 불규칙한 광량 모멘트로 은하 간 충돌 또는 조석 꼬리가 관측됩니다.";
-                confidence = 94.2;
-            } else if (bestN >= 2.8 || C >= 2.6) {
-                galaxyType = "타원은하 (Elliptical Galaxy)";
-                galaxyClassEn = "Elliptical / Early-Type";
-                galaxyAvatar = "⚪";
-                galaxyDesc = "de Vaucouleurs(n≈4) 프로파일 및 높은 중심 집중도를 갖춘 성숙한 조기형 은하입니다.";
-                confidence = 96.0;
-            } else if (C < 2.0 && A > 0.22) {
-                galaxyType = "불규칙 은하 (Irregular Galaxy)";
-                galaxyClassEn = "Irregular / Starburst";
-                galaxyAvatar = "✨";
-                galaxyDesc = "분명한 중심 팽대부 없이 파편화된 별 생성 영역이 산재한 불규칙 은하입니다.";
-                confidence = 88.4;
+                cls = 'spectrum';
+                galaxyAvatar = '🌈';
+                confidence = null;
+                if (spec && spec.bptClass) {
+                    galaxyType = `분광 진단: ${spec.bptClass}`;
+                    galaxyClassEn = spec.bptClassEn;
+                    galaxyDesc = 'BPT 진단도(Kauffmann 2003 / Kewley 2001 경계선) 위치로 판정한 이온화원입니다. 형태 분류는 은하 사진 모드에서 수행합니다.';
+                } else {
+                    galaxyType = '분광 진단: 판정 불가';
+                    galaxyClassEn = 'Spectrum / Uncalibrated';
+                    galaxyDesc = spec ? spec.note : '스펙트럼을 추출하지 못했습니다.';
+                }
             }
 
             analysisResults = {
-                galaxyType, galaxyClassEn, galaxyAvatar, galaxyDesc, confidence,
-                C, bestN, A, gini, M20, r50, r90, snr, metallicity,
-                logNII_Ha, logOIII_Hb,
+                mode: currentMode, cls,
+                galaxyType, galaxyClassEn, galaxyAvatar, galaxyDesc, confidence, scores,
+                C, bestN, A, gini, M20, r20, r50, r80, r90, snr, metallicity,
+                logNII_Ha, logOIII_Hb, spec,
                 profileR, profileI, Ie
             };
 
@@ -1324,132 +1515,216 @@
             renderCharts(analysisResults);
         }
 
+        const CLASS_COLORS = { spiral: '#38bdf8', elliptical: '#f59e0b', irregular: '#a855f7', spectrum: '#10b981' };
+
         function updateResultsUI(res) {
+            const isSpec = res.mode === 'spectrum';
+            document.getElementById('heroCard').style.borderLeftColor = CLASS_COLORS[res.cls];
+            document.getElementById('heroKicker').innerText = isSpec ? '분광 이온화원 진단 결과' : '형태 분류 결과 (나선 · 타원 · 불규칙)';
             document.getElementById('heroAvatar').innerText = res.galaxyAvatar;
             document.getElementById('heroTitle').innerText = res.galaxyType;
             document.getElementById('heroDesc').innerText = res.galaxyDesc;
-            document.getElementById('heroConfidence').innerText = res.confidence.toFixed(1) + '%';
+            document.getElementById('heroConfidence').innerText = res.confidence === null ? '—' : res.confidence.toFixed(1) + '%';
+            document.getElementById('heroConfidenceBox').style.display = isSpec ? 'none' : '';
+
+            const scoreBox = document.getElementById('classScores');
+            scoreBox.style.display = isSpec ? 'none' : '';
+            if (!isSpec) {
+                const rows = [['spiral', '🌀 나선'], ['elliptical', '⚪ 타원'], ['irregular', '✨ 불규칙']];
+                scoreBox.innerHTML = rows.map(([k, label]) => `
+                    <div class="score-row${k === res.cls ? ' winner' : ''}">
+                        <span class="score-label">${label}</span>
+                        <span class="score-track"><span class="score-fill" style="width:${res.scores[k].toFixed(1)}%; background:${CLASS_COLORS[k]}"></span></span>
+                        <span class="score-pct">${res.scores[k].toFixed(0)}%</span>
+                    </div>`).join('');
+            }
 
             document.getElementById('valC').innerText = res.C.toFixed(2);
-            document.getElementById('subC').innerText = res.C >= 2.6 ? 'C ≥ 2.6 (조기형/팽대부)' : 'C < 2.6 (만기형/원반)';
+            document.getElementById('subC').innerText = res.C >= 3.6 ? 'C ≥ 3.6 · 강한 중심 집중 (타원형)' : (res.C >= 2.6 ? '2.6 ≤ C < 3.6 · 팽대부 + 원반' : 'C < 2.6 · 팽대부 약하거나 없음');
 
             document.getElementById('valSersic').innerText = res.bestN.toFixed(2);
             document.getElementById('subSersic').innerText = res.bestN >= 2.5 ? 'de Vaucouleurs 타원형' : '지수 원반형 (Disk)';
 
             document.getElementById('valA').innerText = res.A.toFixed(2);
-            document.getElementById('subA').innerText = res.A > 0.35 ? '강한 상호작용/병합' : (res.A > 0.15 ? '나선팔/별생성' : '고대칭 평탄구조');
+            document.getElementById('subA').innerText = res.A > 0.25 ? '강한 비대칭 (나선팔/불규칙 구조)' : (res.A > 0.1 ? '나선팔/별생성' : '고대칭 평탄구조');
 
             document.getElementById('valGini').innerText = res.gini.toFixed(2);
+            document.getElementById('subGini').innerText = res.gini >= 0.55 ? '빛이 소수 픽셀에 집중' : (res.gini >= 0.4 ? '중간 수준의 광량 분산' : '빛이 넓게 고르게 분포');
             document.getElementById('valM20').innerText = res.M20.toFixed(2);
+            document.getElementById('subM20').innerText = res.M20 <= -2.0 ? '밝은 영역이 중심에 집중' : (res.M20 <= -1.5 ? '중심+원반 구조' : '밝은 덩어리가 외곽에 분산');
 
             document.getElementById('valR50').innerText = res.r50.toFixed(1) + ' px';
-            document.getElementById('subR50').innerText = 'R90: ' + res.r90.toFixed(1) + ' px';
+            document.getElementById('subR50').innerText = `R20 ${res.r20.toFixed(1)} · R80 ${res.r80.toFixed(1)} · R90 ${res.r90.toFixed(1)} px`;
 
             document.getElementById('valSNR').innerText = res.snr.toFixed(1);
-            document.getElementById('valZ').innerText = res.metallicity.toFixed(2);
+            document.getElementById('subSNR').innerText = res.snr >= 50 ? '측광 신뢰성 우수' : (res.snr >= 15 ? '측광 가능' : '잡음 많음 — 결과 신뢰도 낮음');
+
+            const zEl = document.getElementById('valZ');
+            zEl.innerText = res.metallicity === null ? '—' : res.metallicity.toFixed(2);
+            zEl.classList.toggle('na', res.metallicity === null);
+            document.getElementById('subZ').innerText = res.metallicity === null
+                ? '분광 모드 + 파장 보정 스펙트럼 필요'
+                : (res.metallicity >= 8.6 ? '태양 금속량 수준 (~Z⊙)' : '태양보다 낮은 금속량');
 
             // Update Diagnoses
-            const list = document.getElementById('diagnosisList');
-            list.innerHTML = `
-                <li class="diagnosis-item">✅ <strong>집중도(C):</strong> C = ${res.C.toFixed(2)} → ${res.C >= 2.6 ? '중심 집중도가 높아 조기형(Early-type) 영역으로 분류됩니다.' : '완만한 원반이 발달한 만기형(Late-type) 은하의 거동을 보입니다.'}</li>
-                <li class="diagnosis-item">✅ <strong>Sérsic n 피팅:</strong> n = ${res.bestN.toFixed(2)} → ${res.bestN >= 2.5 ? '드 보쿨뢰르(de Vaucouleurs) 팽대부 법칙에 부합합니다.' : '지수 원반(Exponential Disk, n≈1) 모형에 매우 가깝게 수렴합니다.'}</li>
-                <li class="diagnosis-item">✅ <strong>비대칭도(A) & Lotz 지수:</strong> A = ${res.A.toFixed(2)}, Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} → ${res.A > 0.35 ? 'Lotz(2008) 기준 병합/교란(Merger) 영역에 위치합니다.' : '정상 나선/타원 영역에 안정적으로 분포합니다.'}</li>
-                <li class="diagnosis-item">✅ <strong>화학적 진단:</strong> 산소 금속함량 12+log(O/H) ≈ ${res.metallicity.toFixed(2)} (N2 방법) 산출 완료.</li>
-            `;
+            const li = (ok, title, body) => `<li class="diagnosis-item${ok ? '' : ' warn'}"><span class="diag-icon">${ok ? '✅' : 'ℹ️'}</span><span><strong>${title}</strong> ${body}</span></li>`;
+            const items = [];
+            if (!isSpec) {
+                items.push(li(true, '집중도 C = 5·log(R80/R20):',
+                    `${res.C.toFixed(2)} → ${res.C >= 3.6 ? '중심 집중도가 높은 조기형(타원) 영역.' : (res.C >= 2.6 ? '팽대부+원반 구조 (나선 영역).' : '팽대부가 약하거나 없음 (원반·불규칙 영역).')}`));
+                items.push(li(true, 'Sérsic n 피팅:',
+                    `n = ${res.bestN.toFixed(1)} → ${res.bestN >= 2.5 ? '드 보쿨뢰르(n≈4) 형 프로파일에 가까움.' : '지수 원반(n≈1) 형 프로파일에 가까움.'}`));
+                items.push(li(true, '비대칭도 A (Conselice 2003):',
+                    `${res.A.toFixed(2)} → ${res.A > 0.32 ? '비대칭이 큼. 팽대부가 있으면 나선팔, 없으면 불규칙 구조로 해석.' : (res.A > 0.1 ? '나선팔·별생성 영역 수준의 비대칭.' : '대칭성이 높음.')}`));
+                items.push(li(true, 'Gini / M₂₀ (Lotz 2004):',
+                    `Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} (참고 지표, 분류에는 C·n·A 사용).`));
+                items.push(li(true, '최종 분류:',
+                    `${res.galaxyType} — 나선 ${res.scores.spiral.toFixed(0)}% · 타원 ${res.scores.elliptical.toFixed(0)}% · 불규칙 ${res.scores.irregular.toFixed(0)}%. 불규칙은 "팽대부 없음 + 높은 비대칭"을 모두 만족할 때만 판정합니다.`));
+                items.push(li(false, '분광 정보:', 'BPT·금속량은 사진으로 측정할 수 없습니다. 슬릿 스펙트럼을 분광 모드로 분석하세요.'));
+            } else if (res.spec && res.spec.bptClass) {
+                const fx = res.spec.fluxes;
+                items.push(li(true, '방출선 플럭스 (연속광 차감):',
+                    `Hβ ${fx.Hb.toFixed(0)}, [OIII] ${fx.OIII.toFixed(0)}, Hα ${fx.Ha.toFixed(0)}, [NII] ${fx.NII.toFixed(0)}`));
+                items.push(li(true, 'BPT 좌표:',
+                    `log([NII]/Hα) = ${res.logNII_Ha.toFixed(2)}, log([OIII]/Hβ) = ${res.logOIII_Hb.toFixed(2)} → ${res.spec.bptClass}`));
+                items.push(li(true, '금속량 (Pettini & Pagel 2004, N2):', `12+log(O/H) = ${res.metallicity.toFixed(2)}`));
+            } else {
+                items.push(li(false, '분광 진단 불가:', res.spec ? res.spec.note : '스펙트럼을 추출하지 못했습니다.'));
+            }
+            document.getElementById('diagnosisList').innerHTML = items.join('');
         }
 
         // ═══════════════════════════════════════════════════════
         // Interactive Charts (Plotly.js)
         // ═══════════════════════════════════════════════════════
+        const PLOT_BASE = {
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            margin: { t: 64, b: 46, l: 56, r: 16 },
+            font: { family: 'Inter, sans-serif', color: '#94a3b8', size: 11 },
+            legend: { orientation: 'h', x: 0, y: 1.13, font: { color: '#cbd5e1', size: 11 } }
+        };
+        const plotTitle = (text) => ({ text, x: 0.01, xanchor: 'left', y: 0.97, font: { color: '#f1f5f9', size: 13 } });
+        const axis = (title, extra = {}) => ({ title: { text: title, font: { size: 11 } }, color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155', ...extra });
+
         function renderCharts(res) {
-            // 1. Surface Brightness Profile & Sérsic Fit Curve
+            document.getElementById('metricsGrid').classList.toggle('spec-mode', res.mode === 'spectrum');
+            if (res.mode === 'spectrum') {
+                renderSpectrumChart(res);
+                renderBPTChart(res);
+            } else {
+                renderRadialChart(res);
+                renderMorphologyChart(res);
+            }
+        }
+
+        // 1a. Surface brightness profile & Sérsic fit
+        function renderRadialChart(res) {
             const bn = 1.9992 * res.bestN - 0.3271;
-            const fitR = [];
-            const fitI = [];
+            const fitR = [], fitI = [];
             for (let r = 0.5; r <= res.profileR[res.profileR.length - 1]; r += 1.5) {
                 fitR.push(r);
                 fitI.push(res.Ie * Math.exp(-bn * (Math.pow(r / res.r50, 1 / res.bestN) - 1)));
             }
-
-            const radialData = [
-                {
-                    x: res.profileR,
-                    y: res.profileI,
-                    mode: 'markers',
-                    name: '실측 표면밝기',
-                    marker: { color: '#38bdf8', size: 6 }
-                },
-                {
-                    x: fitR,
-                    y: fitI,
-                    mode: 'lines',
-                    name: `Sérsic 피팅 (n=${res.bestN.toFixed(1)})`,
-                    line: { color: '#a855f7', width: 2, dash: 'solid' }
-                }
+            const pos = res.profileI.map(v => v > 0 ? v : null);
+            const data = [
+                { x: res.profileR, y: pos, mode: 'markers', name: '실측 표면밝기', marker: { color: '#38bdf8', size: 6 } },
+                { x: fitR, y: fitI, mode: 'lines', name: `Sérsic 피팅 (n=${res.bestN.toFixed(1)})`, line: { color: '#a855f7', width: 2 } }
             ];
-
-            const radialLayout = {
-                title: { text: '반경 표면밝기 프로파일 & Sérsic 피팅', font: { color: '#f1f5f9', size: 13 } },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                margin: { t: 40, b: 40, l: 50, r: 20 },
-                xaxis: { title: '반경 r (px)', color: '#94a3b8', gridcolor: '#1e293b' },
-                yaxis: { title: '밝기 I(r) (단위 플럭스)', type: 'log', color: '#94a3b8', gridcolor: '#1e293b' },
-                legend: { orientation: 'h', y: 1.1, font: { color: '#cbd5e1' } }
+            const yPos = pos.filter(v => v !== null);
+            const layout = {
+                ...PLOT_BASE,
+                title: plotTitle('반경별 표면밝기 & Sérsic 피팅'),
+                xaxis: axis('반경 r (px)'),
+                yaxis: axis('밝기 I(r)', { type: 'log', range: yPos.length ? [Math.log10(Math.min(...yPos)) - 0.2, Math.log10(Math.max(...yPos)) + 0.3] : undefined }),
+                shapes: [res.r50].map(r => ({ type: 'line', x0: r, x1: r, yref: 'paper', y0: 0, y1: 1, line: { color: '#64748b', dash: 'dot', width: 1 } })),
+                annotations: [{ x: res.r50, yref: 'paper', y: 1, text: 'R50', showarrow: false, font: { color: '#94a3b8', size: 10 }, yanchor: 'bottom' }]
             };
+            Plotly.newPlot('chartRadial', data, layout, { responsive: true, displayModeBar: false });
+        }
 
-            Plotly.newPlot('chartRadial', radialData, radialLayout, { responsive: true, displayModeBar: false });
+        // 2a. C–A morphology diagram: where the three classes sit and where this galaxy falls
+        function renderMorphologyChart(res) {
+            const xMax = Math.max(0.7, res.A + 0.08), yMin = 1.5, yMax = Math.max(6, res.C + 0.4);
+            const zone = (x0, x1, y0, y1, color) => ({ type: 'rect', x0, x1, y0, y1, line: { width: 0 }, fillcolor: color, layer: 'below' });
+            const label = (x, y, text, color) => ({ x, y, text, showarrow: false, font: { color, size: 12, weight: 700 } });
+            const data = [{
+                x: [res.A], y: [res.C], mode: 'markers', name: '현재 은하',
+                marker: { color: '#fbbf24', size: 16, symbol: 'star', line: { color: '#fff', width: 1.5 } },
+                hovertemplate: 'A = %{x:.2f}<br>C = %{y:.2f}<extra></extra>'
+            }];
+            const layout = {
+                ...PLOT_BASE,
+                title: plotTitle('C–A 형태 분류도 (Conselice 2003)'),
+                showlegend: false,
+                xaxis: axis('비대칭도 A', { range: [0, xMax] }),
+                yaxis: axis('집중도 C = 5·log(R80/R20)', { range: [yMin, yMax] }),
+                shapes: [
+                    zone(0, xMax, yMin, yMax, 'rgba(56,189,248,0.07)'),
+                    zone(0, 0.15, 3.6, yMax, 'rgba(245,158,11,0.18)'),
+                    zone(0.32, xMax, yMin, 2.6, 'rgba(168,85,247,0.20)')
+                ],
+                annotations: [
+                    label(0.075, Math.min(yMax - 0.3, 5.4), '타원', '#fbbf24'),
+                    label((0.32 + xMax) / 2, 2.0, '불규칙', '#c084fc'),
+                    label(0.3, 3.3, '나선', '#7dd3fc')
+                ]
+            };
+            Plotly.newPlot('chartBPT', data, layout, { responsive: true, displayModeBar: false });
+        }
 
-            // 2. Phase-Space BPT Diagram
-            const kauffX = [];
-            const kauffY = [];
-            for (let x = -1.5; x < 0.04; x += 0.02) {
-                kauffX.push(x);
-                kauffY.push(0.61 / (x - 0.05) + 1.3);
+        // 1b. Extracted 1D spectrum with line windows
+        function renderSpectrumChart(res) {
+            const spec = res.spec;
+            if (!spec) return;
+            const names = { Hb: 'Hβ', OIII: '[OIII]', Ha: 'Hα', NII: '[NII]' };
+            const shapes = [], annotations = [];
+            if (spec.lines) {
+                Object.entries(spec.lines).forEach(([k, [x0, x1]], i) => {
+                    shapes.push({ type: 'rect', x0, x1, yref: 'paper', y0: 0, y1: 1, line: { width: 0 }, fillcolor: 'rgba(16,185,129,0.15)', layer: 'below' });
+                    annotations.push({ x: (x0 + x1) / 2, yref: 'paper', y: i % 2 ? 0.9 : 1, text: names[k], showarrow: false, font: { color: '#6ee7b7', size: 10 }, yanchor: 'bottom' });
+                });
             }
+            const layout = {
+                ...PLOT_BASE,
+                title: plotTitle('1차원 추출 스펙트럼'),
+                showlegend: false,
+                xaxis: axis('분산 방향 픽셀 (파장)'),
+                yaxis: axis('플럭스 (하늘 차감)'),
+                shapes, annotations
+            };
+            Plotly.newPlot('chartRadial', [{ x: spec.x, y: spec.f, mode: 'lines', line: { color: '#38bdf8', width: 1.5 } }], layout, { responsive: true, displayModeBar: false });
+        }
 
-            const kewleyX = [];
-            const kewleyY = [];
-            for (let x = -1.5; x < 0.46; x += 0.02) {
-                kewleyX.push(x);
-                kewleyY.push(0.61 / (x - 0.47) + 1.19);
-            }
-
-            const bptData = [
-                {
-                    x: kauffX,
-                    y: kauffY,
-                    mode: 'lines',
-                    name: 'Kauffmann(2003)',
-                    line: { color: '#10b981', dash: 'dash', width: 1.5 }
-                },
-                {
-                    x: kewleyX,
-                    y: kewleyY,
-                    mode: 'lines',
-                    name: 'Kewley(2001) 최대광이온화',
-                    line: { color: '#f43f5e', dash: 'solid', width: 1.5 }
-                },
-                {
-                    x: [res.logNII_Ha],
-                    y: [res.logOIII_Hb],
-                    mode: 'markers',
-                    name: '현재 대상 천체',
-                    marker: { color: '#fbbf24', size: 14, symbol: 'star', line: { color: '#fff', width: 1.5 } }
-                }
+        // 2b. BPT diagram
+        function renderBPTChart(res) {
+            const kauffX = [], kauffY = [], kewleyX = [], kewleyY = [];
+            for (let x = -1.5; x < 0.04; x += 0.02) { kauffX.push(x); kauffY.push(0.61 / (x - 0.05) + 1.3); }
+            for (let x = -1.5; x < 0.46; x += 0.02) { kewleyX.push(x); kewleyY.push(0.61 / (x - 0.47) + 1.19); }
+            const data = [
+                { x: kauffX, y: kauffY, mode: 'lines', name: 'Kauffmann(2003)', line: { color: '#10b981', dash: 'dash', width: 1.5 } },
+                { x: kewleyX, y: kewleyY, mode: 'lines', name: 'Kewley(2001)', line: { color: '#f43f5e', width: 1.5 } }
             ];
-
-            const bptLayout = {
-                title: { text: 'BPT 방출선 이온화 진단도 (SDSS 위상공간)', font: { color: '#f1f5f9', size: 13 } },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                margin: { t: 40, b: 40, l: 50, r: 20 },
-                xaxis: { title: 'log([NII] λ6584 / Hα)', range: [-1.2, 0.6], color: '#94a3b8', gridcolor: '#1e293b' },
-                yaxis: { title: 'log([OIII] λ5007 / Hβ)', range: [-1.0, 1.2], color: '#94a3b8', gridcolor: '#1e293b' },
-                legend: { orientation: 'h', y: 1.1, font: { color: '#cbd5e1' } }
+            const annotations = [];
+            if (res.logNII_Ha !== null) {
+                data.push({ x: [res.logNII_Ha], y: [res.logOIII_Hb], mode: 'markers', name: '현재 천체',
+                    marker: { color: '#fbbf24', size: 15, symbol: 'star', line: { color: '#fff', width: 1.5 } } });
+            } else {
+                annotations.push({ xref: 'paper', yref: 'paper', x: 0.5, y: 0.5, showarrow: false,
+                    text: '파장 보정 정보가 없어<br>BPT 좌표를 측정할 수 없음', font: { color: '#94a3b8', size: 12 } });
+            }
+            annotations.push(
+                { x: -0.9, y: -0.6, text: '별생성', showarrow: false, font: { color: '#6ee7b7', size: 11 } },
+                { x: 0.25, y: 0.9, text: 'AGN', showarrow: false, font: { color: '#fda4af', size: 11 } }
+            );
+            const layout = {
+                ...PLOT_BASE,
+                title: plotTitle('BPT 방출선 진단도'),
+                xaxis: axis('log([NII] λ6584 / Hα)', { range: [-1.2, 0.6] }),
+                yaxis: axis('log([OIII] λ5007 / Hβ)', { range: [-1.0, 1.2] }),
+                annotations
             };
-
-            Plotly.newPlot('chartBPT', bptData, bptLayout, { responsive: true, displayModeBar: false });
+            Plotly.newPlot('chartBPT', data, layout, { responsive: true, displayModeBar: false });
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1509,7 +1784,10 @@
                 reader.onload = (ev) => {
                     const img = new Image();
                     img.onload = () => {
-                        const targetW = 400, targetH = 400;
+                        // Keep the aspect ratio (stretching to a square distorts shape and inflates A)
+                        const scale = 400 / Math.max(img.width, img.height);
+                        const targetW = Math.max(16, Math.round(img.width * scale));
+                        const targetH = Math.max(16, Math.round(img.height * scale));
                         const canvas = document.createElement('canvas');
                         canvas.width = targetW;
                         canvas.height = targetH;
@@ -1531,9 +1809,9 @@
                         updateToolButtons();
                         applyImageProcessing();
                         executeFullAnalysis();
-                        setUploadBanner(`✅ <b>${file.name}</b> (원본 ${img.width}×${img.height}px → 400×400 과학 그리드 정규화) 업로드 및 형태·분광 분석 완료!`);
+                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> 분석 완료 (원본 ${img.width}×${img.height}px → ${targetW}×${targetH}px, 종횡비 유지)`);
                     };
-                    img.onerror = () => setUploadBanner(`❌ 이미지 로드 실패: ${file.name}`, true);
+                    img.onerror = () => setUploadBanner(`❌ 이미지 로드 실패: ${escapeHtml(file.name)}`, true);
                     img.src = ev.target.result;
                 };
                 reader.readAsDataURL(file);
@@ -1545,115 +1823,222 @@
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     try {
-                        const bytes = new Uint8Array(ev.target.result);
-                        let headerStr = '';
-                        for (let i = 0; i < Math.min(bytes.length, 2880 * 3); i++) {
-                            headerStr += (bytes[i] >= 32 && bytes[i] <= 126) ? String.fromCharCode(bytes[i]) : ' ';
-                        }
-                        const mObj = headerStr.match(/OBJECT\s*=\s*'([^']*)'/i);
-                        const objName = mObj ? mObj[1].trim() : file.name;
-                        const w = 400, h = 400;
-                        const buffer = new Float32Array(w * h);
-                        const dataStart = Math.min(2880, Math.floor(bytes.length / 3));
-                        for (let y = 0; y < h; y++) {
-                            for (let x = 0; x < w; x++) {
-                                const r = Math.hypot(x - 200, y - 200);
-                                const bVal = bytes[(dataStart + y * w + x) % Math.max(1, bytes.length)] || 20;
-                                buffer[y * w + x] = 210 * Math.exp(-r / 42) + (bVal * 0.25);
-                            }
-                        }
-                        rawImage = { width: w, height: h, data: buffer, fileName: file.name };
-                        roi = { x: 0, y: 0, w: w, h: h, shape: 'full' };
+                        const fits = parseFITS(ev.target.result);
+                        rawImage = { width: fits.width, height: fits.height, data: fits.data, fileName: file.name };
+                        roi = { x: 0, y: 0, w: fits.width, h: fits.height, shape: 'full' };
                         currentTool = 'full';
                         updateToolButtons();
                         applyImageProcessing();
                         executeFullAnalysis();
-                        setUploadBanner(`✅ <b>${file.name}</b> (FITS 천체: ${objName}) 헤더 및 2D 광량 배열 분석 완료!`);
+                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> FITS 분석 완료 (천체: ${escapeHtml(fits.object || '-')}, 원본 ${fits.origW}×${fits.origH}, BITPIX=${fits.bitpix} → ${fits.width}×${fits.height}px)`);
                     } catch (err) {
-                        setUploadBanner(`❌ FITS 파싱 오류: ${err.message}`, true);
+                        setUploadBanner(`❌ FITS 파싱 오류: ${escapeHtml(err.message)}`, true);
                     }
                 };
                 reader.readAsArrayBuffer(file);
                 return;
             }
 
-            // 3. CSV / TSV / JSON / TXT Data Files
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const txt = ev.target.result;
-                    const isElliptical = /elliptical|m87|타원|stage\s*v/i.test(txt);
-                    const isMerger = /merger|병합|antennae|m82/i.test(txt);
-                    const preset = isElliptical ? 'elliptical_m87' : (isMerger ? 'merger_antennae' : 'spiral_m51');
-                    rawImage = generateSyntheticGalaxy(preset);
-                    roi = { x: 0, y: 0, w: rawImage.width, h: rawImage.height, shape: 'full' };
-                    currentTool = 'full';
-                    updateToolButtons();
-                    applyImageProcessing();
-                    executeFullAnalysis();
-                    setUploadBanner(`✅ <b>${file.name}</b> 관측 데이터 파일 로드 및 표면밝기·BPT 모델 매핑 완료!`);
-                } catch (err) {
-                    setUploadBanner(`❌ 파일 처리 오류: ${err.message}`, true);
+            // 3. CSV / TSV / JSON / TXT: tabular data is not an image — do not fabricate one
+            setUploadBanner(`⚠️ <b>${escapeHtml(file.name)}</b> 은(는) 표 형식 데이터입니다. 이 분석기는 은하 <b>사진(JPG/PNG/FITS)</b>의 형태를 측정합니다. 측정값 표(질량·SFR·색지수 등)는 <a href="observatory_analyzer_web.html" style="color:#7dd3fc">🔭 천문대 GEI 분석기</a>에서 분석하세요.`, true);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // Minimal FITS reader: primary HDU, 2D (first plane of a cube), BITPIX 8/16/32/-32/-64,
+        // BZERO/BSCALE applied, block-averaged down to ≤400 px on the long side.
+        function parseFITS(buffer) {
+            const bytes = new Uint8Array(buffer);
+            const hdr = {};
+            let offset = 0, ended = false;
+            while (!ended && offset + 2880 <= bytes.length) {
+                for (let c = 0; c < 36; c++) {
+                    let card = '';
+                    for (let i = 0; i < 80; i++) card += String.fromCharCode(bytes[offset + c * 80 + i]);
+                    const key = card.slice(0, 8).trim();
+                    if (key === 'END') { ended = true; break; }
+                    if (card[8] === '=') {
+                        let val = card.slice(10).split('/')[0].trim();
+                        if (val.startsWith("'")) val = (card.slice(10).match(/'([^']*)'/) || [, ''])[1].trim();
+                        hdr[key] = val;
+                    }
                 }
-            };
-            reader.readAsText(file, 'utf-8');
+                offset += 2880;
+            }
+            if (!ended) throw new Error('헤더 END 카드를 찾지 못했습니다.');
+            const bitpix = parseInt(hdr.BITPIX, 10);
+            const naxis = parseInt(hdr.NAXIS, 10);
+            const W = parseInt(hdr.NAXIS1, 10), H = parseInt(hdr.NAXIS2, 10);
+            if (!(naxis >= 2) || !(W > 0) || !(H > 0)) throw new Error('2차원 이미지 데이터가 없습니다 (NAXIS < 2). 확장 HDU 이미지는 지원하지 않습니다.');
+            const bzero = parseFloat(hdr.BZERO || '0'), bscale = parseFloat(hdr.BSCALE || '1');
+            const bpp = Math.abs(bitpix) / 8;
+            if (offset + W * H * bpp > bytes.length) throw new Error('데이터 길이가 헤더와 맞지 않습니다.');
+            const dv = new DataView(buffer, offset);
+            const read = {
+                8: i => dv.getUint8(i), 16: i => dv.getInt16(i * 2), 32: i => dv.getInt32(i * 4),
+                '-32': i => dv.getFloat32(i * 4), '-64': i => dv.getFloat64(i * 8)
+            }[bitpix];
+            if (!read) throw new Error(`지원하지 않는 BITPIX=${bitpix}`);
+
+            const f = Math.max(1, Math.ceil(Math.max(W, H) / 400));
+            const w = Math.floor(W / f), h = Math.floor(H / f);
+            const data = new Float32Array(w * h);
+            let minFinite = Infinity;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    let s = 0, n = 0;
+                    for (let dy = 0; dy < f; dy++) {
+                        for (let dx = 0; dx < f; dx++) {
+                            const v = read((y * f + dy) * W + (x * f + dx));
+                            if (Number.isFinite(v)) { s += v; n++; }
+                        }
+                    }
+                    const val = n ? bzero + bscale * s / n : NaN;
+                    data[y * w + x] = val;
+                    if (Number.isFinite(val) && val < minFinite) minFinite = val;
+                }
+            }
+            // FITS rows go bottom→top; flip so north is up on screen. Blank (NaN) pixels → minimum.
+            const out = new Float32Array(w * h);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const v = data[(h - 1 - y) * w + x];
+                    out[y * w + x] = Number.isFinite(v) ? v : minFinite;
+                }
+            }
+            return { width: w, height: h, data: out, origW: W, origH: H, bitpix, object: hdr.OBJECT };
         }
 
         // ═══════════════════════════════════════════════════════
         // Report Export & Downloads
         // ═══════════════════════════════════════════════════════
+        const fmt = (v, d = 2) => (v === null || v === undefined || !Number.isFinite(v)) ? 'N/A' : v.toFixed(d);
+
+        function buildSummaryText(res) {
+            const lines = [`[GalaxyEvolution Studio Web 분석 진단서]`];
+            if (rawImage && rawImage.fileName) lines.push(`- 파일: ${rawImage.fileName}`);
+            if (res.mode === 'spectrum') {
+                lines.push(`- 분광 진단: ${res.galaxyType.replace('분광 진단: ', '')}`);
+                lines.push(`- BPT: log([NII]/Hα) = ${fmt(res.logNII_Ha)}, log([OIII]/Hβ) = ${fmt(res.logOIII_Hb)}`);
+                lines.push(`- 산소 금속량 12+log(O/H) (N2): ${fmt(res.metallicity)}`);
+            } else {
+                lines.push(`- 형태 분류: ${res.galaxyType} (신뢰도 ${fmt(res.confidence, 1)}%)`);
+                lines.push(`- 분류 점수: 나선 ${fmt(res.scores.spiral, 0)}% / 타원 ${fmt(res.scores.elliptical, 0)}% / 불규칙 ${fmt(res.scores.irregular, 0)}%`);
+                lines.push(`- 집중도 C = 5·log(R80/R20): ${fmt(res.C)}`);
+                lines.push(`- Sérsic 지수 n: ${fmt(res.bestN, 1)}`);
+                lines.push(`- 비대칭도 A: ${fmt(res.A)}`);
+                lines.push(`- Gini / M20: ${fmt(res.gini)} / ${fmt(res.M20)}`);
+                lines.push(`- 반광 반경 R50: ${fmt(res.r50, 1)} px`);
+            }
+            lines.push(`- S/N: ${fmt(res.snr, 1)}`);
+            return lines.join('\n');
+        }
+
         function copySummaryText() {
             if (!analysisResults) return;
-            const res = analysisResults;
-            const txt = `[🌌 GalaxyEvolution Studio Web 천체 분석 진단서]\n` +
-                `- 분류 결과: ${res.galaxyType} (신뢰도: ${res.confidence.toFixed(1)}%)\n` +
-                `- 집중도 (C = R90/R50): ${res.C.toFixed(2)}\n` +
-                `- Sérsic 지수 (n): ${res.bestN.toFixed(2)}\n` +
-                `- 비대칭도 (A): ${res.A.toFixed(2)}\n` +
-                `- Gini / M20: Gini=${res.gini.toFixed(2)}, M20=${res.M20.toFixed(2)}\n` +
-                `- 산소 금속량 12+log(O/H): ${res.metallicity.toFixed(2)}\n` +
-                `- BPT 위치: log([NII]/Ha)=${res.logNII_Ha.toFixed(2)}, log([OIII]/Hb)=${res.logOIII_Hb.toFixed(2)}\n` +
-                `- 판정: Strateva(2001) 및 Lotz(2008) 기준 ${res.galaxyClassEn}`;
-            
-            navigator.clipboard.writeText(txt).then(() => {
-                alert('천체 분석 진단서 요약문이 클립보드에 복사되었습니다!');
-            });
+            navigator.clipboard.writeText(buildSummaryText(analysisResults))
+                .then(() => showToast('📋 진단서 요약을 클립보드에 복사했습니다.'))
+                .catch(() => showToast('클립보드 복사에 실패했습니다.', true));
+        }
+
+        function showToast(msg, isErr = false) {
+            let t = document.getElementById('toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'toast';
+                t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-weight:600;z-index:999;box-shadow:0 8px 30px rgba(0,0,0,0.5);transition:opacity 0.3s;pointer-events:none;';
+                document.body.appendChild(t);
+            }
+            t.style.background = isErr ? '#7f1d1d' : '#064e3b';
+            t.style.color = isErr ? '#fecaca' : '#a7f3d0';
+            t.textContent = msg;
+            t.style.opacity = '1';
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+        }
+
+        function downloadBlob(content, type, filename) {
+            const url = URL.createObjectURL(new Blob([content], { type }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
         function downloadJSON() {
             if (!analysisResults) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(analysisResults, null, 2));
-            const a = document.createElement('a');
-            a.setAttribute("href", dataStr);
-            a.setAttribute("download", `galaxy_analysis_${Date.now()}.json`);
-            a.click();
+            const { profileR, profileI, spec, ...rest } = analysisResults;
+            const out = { ...rest, fileName: rawImage && rawImage.fileName || null,
+                profile: profileR.map((r, i) => ({ r, I: profileI[i] })),
+                spectrum: spec ? { lines: spec.lines || null, fluxes: spec.fluxes || null, bptClass: spec.bptClass } : null };
+            downloadBlob(JSON.stringify(out, null, 2), 'application/json', `galaxy_analysis_${Date.now()}.json`);
         }
 
         function downloadCSV() {
             if (!analysisResults) return;
             const res = analysisResults;
-            const csvContent = "data:text/csv;charset=utf-8," +
-                "Parameter,Value,Description\n" +
-                `Classification,"${res.galaxyType}",Morphological Class\n` +
-                `Confidence,${res.confidence.toFixed(1)}%,Classification Score\n` +
-                `Concentration_C,${res.C.toFixed(3)},Strateva R90/R50 Concentration\n` +
-                `Sersic_n,${res.bestN.toFixed(3)},Sersic Profile Index\n` +
-                `Asymmetry_A,${res.A.toFixed(3)},Conselice Rotational Asymmetry\n` +
-                `Gini_Coefficient,${res.gini.toFixed(3)},Lotz Gini Coefficient\n` +
-                `M20_Moment,${res.M20.toFixed(3)},20% Light Spatial Moment\n` +
-                `R50_px,${res.r50.toFixed(2)},Petrosian Half-light Radius\n` +
-                `SNR,${res.snr.toFixed(1)},Signal-to-Noise Ratio\n` +
-                `Metallicity_12_logOH,${res.metallicity.toFixed(3)},N2 Oxygen Abundance\n`;
-            
-            const a = document.createElement('a');
-            a.setAttribute("href", encodeURI(csvContent));
-            a.setAttribute("download", `galaxy_metrics_${Date.now()}.csv`);
-            a.click();
+            const rows = [
+                ['Parameter', 'Value', 'Description'],
+                ['Mode', res.mode, 'image = 형태 분석, spectrum = 분광 진단'],
+                ['Classification', res.galaxyType, res.mode === 'spectrum' ? 'BPT class' : 'Spiral / Elliptical / Irregular'],
+                ['Confidence_pct', fmt(res.confidence, 1), 'Winning class score share'],
+                ['Score_Spiral_pct', fmt(res.scores.spiral, 1), ''],
+                ['Score_Elliptical_pct', fmt(res.scores.elliptical, 1), ''],
+                ['Score_Irregular_pct', fmt(res.scores.irregular, 1), ''],
+                ['Concentration_C', fmt(res.C, 3), 'Conselice 5*log10(R80/R20)'],
+                ['Sersic_n', fmt(res.bestN, 1), 'Sersic index (grid fit)'],
+                ['Asymmetry_A', fmt(res.A, 3), 'Conselice rotational asymmetry, sky-corrected'],
+                ['Gini', fmt(res.gini, 3), 'Lotz 2004'],
+                ['M20', fmt(res.M20, 3), 'Lotz 2004'],
+                ['R20_px', fmt(res.r20, 2), ''],
+                ['R50_px', fmt(res.r50, 2), 'Half-light radius'],
+                ['R80_px', fmt(res.r80, 2), ''],
+                ['R90_px', fmt(res.r90, 2), ''],
+                ['SNR', fmt(res.snr, 1), 'Aperture flux / sky noise'],
+                ['log_NII_Ha', fmt(res.logNII_Ha, 3), 'Spectrum only'],
+                ['log_OIII_Hb', fmt(res.logOIII_Hb, 3), 'Spectrum only'],
+                ['Metallicity_12_logOH', fmt(res.metallicity, 3), 'N2, spectrum only']
+            ];
+            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            // BOM so Excel opens Korean text correctly
+            downloadBlob('﻿' + csv, 'text/csv;charset=utf-8', `galaxy_metrics_${Date.now()}.csv`);
         }
 
         function exportAnalysisReport() {
-            copySummaryText();
+            if (!analysisResults) return;
+            downloadBlob('﻿' + buildSummaryText(analysisResults), 'text/plain;charset=utf-8', `galaxy_report_${Date.now()}.txt`);
+            showToast('📄 분석 보고서(.txt)를 저장했습니다.');
         }
+
+        function sendToObservatoryAnalyzer() {
+            if (!analysisResults) return;
+            const res = analysisResults;
+            if (res.mode === 'spectrum') {
+                showToast('형태 측광값은 은하 사진 모드에서만 전송할 수 있습니다.', true);
+                return;
+            }
+            const shortType = res.galaxyType.split(' ')[0];
+            const name = (rawImage && rawImage.fileName) ? `${rawImage.fileName.replace(/\.[^/.]+$/, '')} (${shortType})` : `사진측광_${shortType}`;
+            // Rough photometric priors from morphology only (C on the Conselice R80/R20 scale)
+            const cEff = 1.8 + 0.4 * (res.C - 2.6);
+            const estMstar = (9.6 + 0.45 * cEff + 0.15 * res.bestN).toFixed(2);
+            const estColor = (1.35 + 0.35 * (cEff - 1.8) + 0.12 * res.bestN).toFixed(2);
+            const estSFR = (parseFloat(estMstar) - 10.1 - 0.75 * (parseFloat(estColor) - 1.85)).toFixed(2);
+            const estRkpc = Math.max(1.8, (res.r50 * 0.32)).toFixed(2);
+            const params = new URLSearchParams({ name, log_mstar: estMstar, log_sfr: estSFR, radius_kpc: estRkpc, color_u_r: estColor });
+            if (res.metallicity !== null) params.set('oh', res.metallicity.toFixed(2));
+            window.location.href = `observatory_analyzer_web.html?${params}`;
+        }
+
+        window.addEventListener('resize', () => {
+            ['chartRadial', 'chartBPT'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) Plotly.Plots.resize(el);
+            });
+        });
 
         // Initialize on load with M51 preset
         window.addEventListener('DOMContentLoaded', () => {
