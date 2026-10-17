@@ -222,3 +222,10 @@ document.getElementById('validate-form').addEventListener('submit', (e) => {
 
     Plotly.newPlot('val-plot', [trace, target], layout, {responsive: true});
 });
+
+window.addEventListener('resize', () => {
+    if (plotDiv && plotDiv.data) Plotly.Plots.resize(plotDiv);
+    const valPlot = document.getElementById('val-plot');
+    if (valPlot && valPlot.data) Plotly.Plots.resize(valPlot);
+});
+

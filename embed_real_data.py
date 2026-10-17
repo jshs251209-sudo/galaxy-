@@ -62,6 +62,15 @@ def build():
     for col, desc in PARAM_DICT.items():
         if col in df.columns:
             s = pd.to_numeric(df[col], errors='coerce').dropna()
+            s = s[s > -900]  # SDSS -9999 결측 센티넬 제거
+            if 'flux' in col:
+                s = s[(s > 0) & (s <= 50000)]
+            elif col == 'color_u_r':
+                s = s[(s >= -1.0) & (s <= 6.0)]
+            elif col == 'phot_z':
+                s = s[(s >= 0.0) & (s <= 1.0)]
+            elif col in ('log_n_o', 'log_oii_oiii', 'log_s_o', 'log_nii_ha', 'log_oiii_hb'):
+                s = s[(s >= -4.0) & (s <= 4.0)]
             if len(s) > 0:
                 mean_val = round(float(s.mean()), 4)
                 med_val = round(float(s.median()), 4)
@@ -72,39 +81,39 @@ def build():
                 if col == 'z':
                     median_z = str(med_val)
                 desc_text = desc.split(' - ', 1)[1] if ' - ' in desc else desc
-                stats_rows.append(f"<tr><td><strong style='color:#ffff00'>{col}</strong></td><td><span style='color:#fff'>{desc_text}</span></td><td>{mean_val}</td><td>{med_val}</td><td>{std_val}</td><td>{min_val}</td><td>{max_val}</td><td>{cnt_val:,}</td></tr>")
+                stats_rows.append(f"<tr><td><strong style='color:#38bdf8'>{col}</strong></td><td><span style='color:#cbd5e1'>{desc_text}</span></td><td>{mean_val}</td><td>{med_val}</td><td>{std_val}</td><td>{min_val}</td><td>{max_val}</td><td>{cnt_val:,}</td></tr>")
 
     # 1. 기본 형태 4분류 카드 (자연스러운 관측 비율)
     morph_dist = df['class_morphology'].value_counts().to_dict()
-    m_colors = {"타원은하": "#dc2626", "나선은하": "#2563eb", "렌즈형은하": "#ea580c", "불규칙은하": "#059669"}
+    m_colors = {"타원은하": "#f43f5e", "나선은하": "#38bdf8", "렌즈형은하": "#f59e0b", "불규칙은하": "#10b981"}
     m_cards = []
     for gtype, cnt in morph_dist.items():
         pct = cnt / total * 100
-        color = m_colors.get(gtype, "#fff")
+        color = m_colors.get(gtype, "#f8fafc")
         m_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>{pct:.1f}%</div></div>')
 
     # 2. 활동성 은하 3분류 카드 (오직 전파은하, 세이퍼트 은하, 퀘이사 3종만! '일반은하' 완전 배제)
     activity_series = df['class_activity'].dropna()
     activity_dist = activity_series.value_counts().to_dict()
     total_act = len(activity_series)
-    a_colors = {"전파은하": "#b91c1c", "세이퍼트 은하": "#9333ea", "퀘이사": "#d97706"}
+    a_colors = {"전파은하": "#f43f5e", "세이퍼트 은하": "#a855f7", "퀘이사": "#f59e0b"}
     a_cards = []
     for gtype in ["세이퍼트 은하", "전파은하", "퀘이사"]:
         cnt = activity_dist.get(gtype, 0)
         pct = cnt / total_act * 100 if total_act > 0 else 0
-        color = a_colors.get(gtype, "#fff")
+        color = a_colors.get(gtype, "#f8fafc")
         a_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>활동은하 중 {pct:.1f}%</div></div>')
 
     # 3. 세부 구조 5분류 카드 (오직 마젤란형, 나선, 막대나선, 고리, 불규칙 5종만! '기타은하' 완전 배제)
     detail_series = df['class_detail'].dropna()
     detail_dist = detail_series.value_counts().to_dict()
     total_det = len(detail_series)
-    d_colors = {"마젤란형 은하": "#10b981", "나선은하": "#2563eb", "막대나선은하": "#0284c7", "고리은하": "#8b5cf6", "불규칙 은하": "#059669"}
+    d_colors = {"마젤란형 은하": "#10b981", "나선은하": "#38bdf8", "막대나선은하": "#06b6d4", "고리은하": "#a855f7", "불규칙 은하": "#34d399"}
     d_cards = []
     for gtype in ["나선은하", "마젤란형 은하", "막대나선은하", "고리은하", "불규칙 은하"]:
         cnt = detail_dist.get(gtype, 0)
         pct = cnt / total_det * 100 if total_det > 0 else 0
-        color = d_colors.get(gtype, "#fff")
+        color = d_colors.get(gtype, "#f8fafc")
         d_cards.append(f'<div class="glass stat-card"><div class="val" style="color:{color}">{cnt:,}</div><div class="lbl"><span class="type-badge" style="border-color:{color};color:{color}">{gtype}</span><br>구조표본 중 {pct:.1f}%</div></div>')
 
     print("[3/4] 10,000개 자연 관측 표본 추출 및 JSON 직렬화...")

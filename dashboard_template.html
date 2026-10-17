@@ -5,68 +5,137 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YSC 은하 물리량 & 암흑물질 & 다차원 진화 대시보드</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-@font-face {
-    font-family: 'DungGeunMo';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
-    font-weight: normal; font-style: normal;
+:root {
+    --bg: #070b14;
+    --card-bg: rgba(15, 23, 42, 0.88);
+    --border-col: rgba(148, 163, 184, 0.22);
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
 }
-:root { --bg: #000; --text: #d0d0d0; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'DungGeunMo', 'VT323', monospace; line-height: 1.6; overflow-x: hidden; position: relative; }
-body::before {
-    content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
-    background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.4) 50%),
-                linear-gradient(90deg, rgba(255,0,0,0.08), rgba(0,255,0,0.03), rgba(0,0,255,0.08));
-    z-index: 999; background-size: 100% 4px, 4px 100%; pointer-events: none;
+body {
+    background: radial-gradient(circle at 20% 10%, #0f172a 0%, #070b14 65%, #020617 100%);
+    color: var(--text);
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
 }
-.hdr { text-align: center; padding: 2.5rem 1rem 1.5rem; border-bottom: 2px solid #f00; position: relative; z-index: 10; }
-.hdr h1 { font-size: 2.5rem; color: #fff; text-shadow: 2px 2px 0px #f00, -2px -2px 0px #00f; text-transform: uppercase; letter-spacing: 2px; }
-.hdr p { color: #aaa; margin-top: .4rem; font-size: 1.2rem; }
-.badge { display: inline-block; background: #f00; color: #000; padding: .2rem .7rem; border: 2px solid #fff; font-size: 1rem; margin-top: .6rem; animation: blink 2s infinite; font-weight: bold; text-transform: uppercase; }
-@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-.container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; position: relative; z-index: 10; }
+.top-nav {
+    background: rgba(10, 15, 29, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-col);
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.top-nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.nav-pill {
+    padding: 6px 13px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+    transition: all 0.18s;
+}
+.nav-pill:hover { background: #0284c7; color: #fff; border-color: #38bdf8; }
+.hdr {
+    text-align: center;
+    padding: 2.2rem 1rem 1.6rem;
+    border-bottom: 1px solid var(--border-col);
+    background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 70%);
+}
+.hdr h1 {
+    font-size: 2.0rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hdr p { color: var(--muted); margin-top: .4rem; font-size: 0.96rem; }
+.badge {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.14);
+    color: #7dd3fc;
+    padding: .3rem .9rem;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    margin-top: .6rem;
+    font-weight: 700;
+}
+.container { max-width: 1440px; margin: 0 auto; padding: 1.5rem; }
 .tabs { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.5rem; }
-.tab-btn { background: #000; border: 2px solid #f00; color: #f00; padding: .55rem 1.4rem; font-size: 1.2rem; cursor: pointer; transition: .1s; font-family: inherit; text-transform: uppercase; }
-.tab-btn:hover { background: #f00; color: #000; }
-.tab-btn.active { background: #f00; color: #000; border-color: #fff; font-weight: bold; }
-.tab { display: none; } .tab.active { display: block; animation: glitch 0.2s linear; }
-@keyframes glitch { 0% { transform: translate(2px, 2px); } 20% { transform: translate(-2px, -2px); } 40% { transform: translate(2px, -2px); } 60% { transform: translate(-2px, 2px); } 80% { transform: translate(2px, 2px); } 100% { transform: translate(0, 0); } }
-.glass { background: #000; border: 2px solid #f00; padding: 1.4rem; margin-bottom: 1.2rem; }
-.row { display: grid; gap: 1.2rem; } 
+.tab-btn {
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid var(--border-col);
+    color: #cbd5e1;
+    padding: .6rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s;
+    font-family: inherit;
+}
+.tab-btn:hover { border-color: var(--accent); color: #fff; background: rgba(56, 189, 248, 0.15); }
+.tab-btn.active { background: linear-gradient(135deg, #0284c7, #4f46e5); color: #fff; border-color: transparent; font-weight: 700; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3); }
+.tab { display: none; } .tab.active { display: block; }
+.glass { background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 14px; padding: 1.3rem; margin-bottom: 1.2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.row { display: grid; gap: 1rem; }
 .row-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .row-5 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.stat-card { text-align: center; padding: 1rem; border: 1px dashed #444; }
-.stat-card .val { font-size: 2.2rem; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #f00; }
-.stat-card .lbl { color: #ffff00; font-size: 1.05rem; margin-top: .3rem; text-transform: uppercase; }
+.stat-card { text-align: center; padding: 1rem; border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 12px; background: rgba(30, 41, 59, 0.5); }
+.stat-card .val { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #f8fafc; }
+.stat-card .lbl { color: var(--muted); font-size: 0.86rem; margin-top: .3rem; }
 .ctrls { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.ctrl { flex: 1; min-width: 280px; }
-.ctrl label { display: block; color: #fff; font-weight: bold; font-size: 1.1rem; margin-bottom: .3rem; }
-select, input { width: 100%; padding: .55rem; border: 2px solid #f00; background: #000; color: #fff; font-family: inherit; font-size: 1.1rem; outline: none; }
-select:focus, input:focus { border-color: #fff; }
-.presets { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.preset { background: #000; border: 2px solid #fff; color: #fff; padding: .4rem 1rem; cursor: pointer; font-family: inherit; font-size: 1.05rem; text-transform: uppercase; }
-.preset:hover { background: #fff; color: #000; }
-#plot { height: 65vh; min-height: 520px; border: 2px solid #444; background: #000; }
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px dashed #444; font-size: 1.05rem; }
-th { color: #ffff00; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #f00; position: sticky; top: 0; background: #111; }
-td { color: #ccc; }
-.type-badge { display: inline-block; padding: .15rem .5rem; border: 1px solid #fff; font-size: 0.95rem; text-transform: uppercase; }
-.btn-dl { display: inline-block; background: #f00; color: #000; font-weight: bold; font-size: 1.2rem; padding: .8rem 1.8rem; border: 2px solid #fff; cursor: pointer; text-decoration: none; text-transform: uppercase; font-family: inherit; margin: .5rem .5rem .5rem 0; transition: .2s; }
-.btn-dl:hover { background: #ffff00; color: #000; border-color: #f00; text-shadow: none; }
-.btn-fast { background: #ffff00; color: #000; border-color: #f00; }
-.btn-fast:hover { background: #fff; color: #f00; }
-footer { text-align: center; padding: 2rem 1rem; color: #555; font-size: 1rem; border-top: 2px solid #f00; }
+.ctrl { flex: 1; min-width: 260px; }
+.ctrl label { display: block; color: #cbd5e1; font-weight: 600; font-size: 0.85rem; margin-bottom: .35rem; }
+select, input { width: 100%; padding: .55rem .75rem; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 8px; background: #0f172a; color: #f8fafc; font-family: inherit; font-size: 0.9rem; outline: none; }
+select:focus, input:focus { border-color: var(--accent); }
+.presets { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.preset { background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; color: #e2e8f0; padding: .42rem .85rem; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; transition: all .15s; }
+.preset:hover { background: #0284c7; color: #fff; border-color: var(--accent); }
+#plot { height: 65vh; min-height: 520px; border: 1px solid var(--border-col); border-radius: 12px; background: rgba(15, 23, 42, 0.6); }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid rgba(148, 163, 184, 0.15); }
+th { color: #7dd3fc; font-weight: 700; border-bottom: 2px solid rgba(56, 189, 248, 0.4); position: sticky; top: 0; background: #0f172a; }
+td { color: #cbd5e1; font-family: 'JetBrains Mono', 'Noto Sans KR', sans-serif; }
+.type-badge { display: inline-block; padding: .15rem .55rem; border: 1px solid #38bdf8; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.btn-dl { display: inline-block; background: linear-gradient(135deg, #0284c7, #4f46e5); color: #fff; font-weight: 700; font-size: 0.92rem; padding: .7rem 1.4rem; border: none; border-radius: 9px; cursor: pointer; text-decoration: none; font-family: inherit; margin: .4rem .4rem .4rem 0; transition: .2s; }
+.btn-dl:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn-fast { background: linear-gradient(135deg, #059669, #0284c7); color: #fff; }
+footer { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border-col); }
 </style>
 </head>
 <body>
 
+<nav class="top-nav">
+    <div style="font-weight:800; color:#38bdf8; font-size:0.95rem;">🌌 YSC 2026 은하 진화 연구 빅데이터 센터</div>
+    <div class="top-nav-links">
+        <a href="index.html" class="nav-pill">← 통합 포털</a>
+        <a href="observatory_analyzer_web.html" class="nav-pill" style="border-color:rgba(245,158,11,0.5); color:#fde68a;">🔭 직접 관측 은하 진화 분석기 (GEI v2.0)</a>
+        <a href="galaxy_analyzer_web.html" class="nav-pill" style="border-color:rgba(16,185,129,0.5); color:#a7f3d0;">📸 천체사진·BPT 분석기</a>
+        <a href="은하진화연구_보정방식_수식_및_방법론_핵심정리.pdf" target="_blank" class="nav-pill">📄 보정방식·수식 핵심정리 PDF</a>
+    </div>
+</nav>
+
 <div class="hdr">
-<h1>YSC 은하 물리량 & 암흑물질 & 다차원 진화 대시보드</h1>
-<p>SDSS DR18 &middot; 신현승 지정 핵심 물리량 &middot; 암흑물질/회전곡선/광도/원소비 &middot; 3대 신규 분류 체계</p>
-<span class="badge">오차값 제외 &middot; 암흑물질 유도량 산출 &middot; 초고속 전체 다운로드 센터 완비</span>
+<h1>SDSS DR18 은하 물리량 · 암흑물질 · 다차원 진화 대시보드</h1>
+<p>SDSS DR18 정밀 분광 표본 &middot; 암흑물질/회전곡선/광도/원소비 &middot; 3대 분류 체계 및 상관관계 탐색</p>
+<span class="badge">이상치·결측 필터 완료 &middot; 암흑물질 유도량 산출 &middot; 전체 데이터 다운로드 센터</span>
 </div>
 
 <div class="container">
@@ -76,7 +145,7 @@ footer { text-align: center; padding: 2rem 1rem; color: #555; font-size: 1rem; b
 <button class="tab-btn" onclick="openTab('stats')">3. 물리량 기술통계 (__PARAM_COUNT__종)</button>
 <button class="tab-btn" onclick="openTab('data_table')">4. 표본 데이터 테이블</button>
 <button class="tab-btn" onclick="openTab('validate')">5. 분광 관측 판독기</button>
-<button class="tab-btn" onclick="openTab('download')" style="border-color:#ffff00;color:#ffff00;">6. 📥 데이터 다운로드</button>
+<button class="tab-btn" onclick="openTab('download')" style="border-color:#38bdf8;color:#7dd3fc;">6. 📥 데이터 다운로드</button>
 </div>
 
 <!-- ══ TAB: 개요 ══ -->
@@ -90,32 +159,32 @@ footer { text-align: center; padding: 2rem 1rem; color: #555; font-size: 1rem; b
 
 <!-- 1. 기본 형태 4분류 -->
 <div class="glass">
-<h3 style="color:#ffff00;margin-bottom:.8rem">&#127756; [신규 1] 기본 형태 4분류 (타원은하, 나선은하, 불규칙은하, 렌즈형은하)</h3>
+<h3 style="color:#38bdf8;margin-bottom:.8rem">&#127756; [신규 1] 기본 형태 4분류 (타원은하, 나선은하, 불규칙은하, 렌즈형은하)</h3>
 <div class="row row-4">
 __MORPH_CARDS__
 </div></div>
 
 <!-- 2. 활동성 은하 3분류 -->
 <div class="glass">
-<h3 style="color:#ffff00;margin-bottom:.8rem">&#9889; [신규 2] 활동성 은하 3분류 (전파은하, 세이퍼트 은하, 퀘이사, 일반 은하)</h3>
+<h3 style="color:#38bdf8;margin-bottom:.8rem">&#9889; [신규 2] 활동성 은하 3분류 (전파은하, 세이퍼트 은하, 퀘이사, 일반 은하)</h3>
 <div class="row row-4">
 __ACT_CARDS__
 </div></div>
 
 <!-- 3. 세부 구조 5분류 -->
 <div class="glass">
-<h3 style="color:#ffff00;margin-bottom:.8rem">&#128302; [신규 3] 세부 구조 5분류 (마젤란형 은하, 나선은하, 막대나선은하, 고리은하, 불규칙 은하)</h3>
+<h3 style="color:#38bdf8;margin-bottom:.8rem">&#128302; [신규 3] 세부 구조 5분류 (마젤란형 은하, 나선은하, 막대나선은하, 고리은하, 불규칙 은하)</h3>
 <div class="row row-5">
 __DETAIL_CARDS__
 </div></div>
 
 <div class="glass">
-<h3 style="color:#fff;margin-bottom:.6rem">&#9881;&#65039; 물리량 산출 및 암흑물질 유도 모델 안내</h3>
-<p style="color:#aaa;font-size:1.1rem">
-&bull; <strong>광도 (Luminosity)</strong>: 광도거리(D_L)와 겉보기 r등급을 바탕으로 r밴드 절대 등급(M_r)을 도출하고, 태양 광도 대비 복사 광도 log(L_r / L_sun)를 산출하였습니다.<br>
-&bull; <strong>은하 회전곡선 (Rotation Curve)</strong>: 중심부 속도분산(velDisp)과 비리얼 정리 평탄 회전속도 관계식 V_rot = sqrt(2) * velDisp 로 은하의 회전곡선 원형속도를 유도하였습니다.<br>
-&bull; <strong>암흑물질 양 (Dark Matter Mass & Fraction)</strong>: 은하 유효반경 R_e와 회전속도 V_rot를 이용해 총 동역학적 질량 M_dyn = 5 * V_rot^2 * R_e / (2G) 을 도출한 뒤, 항성 질량 M*을 감산하여 암흑물질 질량 M_DM = M_dyn - M* 및 분율 f_DM = M_DM / M_dyn 을 과학적으로 유도하였습니다.<br>
-&bull; <strong>은하 원소비 (Elemental Abundances)</strong>: 기체 산소 풍부도(12 + log(O/H)), 질소-산소 원소비 log(N/O), 산소 이온화 상태비 log([O II]/[O III]), 황-산소비 log([S II]/[O III])를 방출선 플럭스로부터 산출하였습니다.
+<h3 style="color:#f8fafc;margin-bottom:.6rem">&#9881;&#65039; 물리량 산출 및 암흑물질 유도 모델 안내</h3>
+<p style="color:#94a3b8;font-size:0.92rem;line-height:1.7">
+&bull; <strong style="color:#e2e8f0">광도 (Luminosity)</strong>: 광도거리(D_L)와 겉보기 r등급을 바탕으로 r밴드 절대 등급(M_r)을 도출하고, 태양 광도 대비 복사 광도 log(L_r / L_sun)를 산출하였습니다.<br>
+&bull; <strong style="color:#e2e8f0">은하 회전곡선 (Rotation Curve)</strong>: 중심부 속도분산(velDisp)과 비리얼 정리 평탄 회전속도 관계식 V_rot = sqrt(2) * velDisp 로 은하의 회전곡선 원형속도를 유도하였습니다.<br>
+&bull; <strong style="color:#e2e8f0">암흑물질 양 (Dark Matter Mass & Fraction)</strong>: 은하 유효반경 R_e와 회전속도 V_rot를 이용해 총 동역학적 질량 M_dyn = 5 * V_rot^2 * R_e / (2G) 을 도출한 뒤, 항성 질량 M*을 감산하여 암흑물질 질량 M_DM = M_dyn - M* 및 분율 f_DM = M_DM / M_dyn 을 과학적으로 유도하였습니다.<br>
+&bull; <strong style="color:#e2e8f0">은하 원소비 (Elemental Abundances)</strong>: 기체 산소 풍부도(12 + log(O/H)), 질소-산소 원소비 log(N/O), 산소 이온화 상태비 log([O II]/[O III]), 황-산소비 log([S II]/[O III])를 방출선 플럭스로부터 산출하였습니다.
 </p>
 </div>
 </div>
@@ -129,7 +198,7 @@ __DETAIL_CARDS__
 <div class="ctrl"><label>색상(Color) 기준 (3대 신규 분류 또는 물리량)</label><select id="c-var"></select></div>
 </div>
 <div class="presets">
-<strong style="color:#ffff00;align-self:center;margin-right:4px;">탐색 프리셋:</strong>
+<strong style="color:#38bdf8;align-self:center;margin-right:4px;font-size:0.85rem;">탐색 프리셋:</strong>
 <button class="preset" onclick="setPreset('ms')">1. 은하 주계열 (질량 vs SFR)</button>
 <button class="preset" onclick="setPreset('bpt')">2. BPT 진단도 (NII/Ha vs OIII/Hb)</button>
 <button class="preset" onclick="setPreset('dm')">3. 암흑물질 분율 vs 항성 질량</button>
@@ -162,7 +231,7 @@ __STATS_ROWS__
 <!-- ══ TAB: 데이터 표 ══ -->
 <div id="data_table" class="tab">
 <div class="glass">
-<h3 style="color:#fff;margin-bottom:1rem">대표 표본 데이터 목록 (Sample Data Viewer)</h3>
+<h3 style="color:#f8fafc;margin-bottom:1rem">대표 표본 데이터 목록 (Sample Data Viewer)</h3>
 <div style="overflow-x:auto; max-height: 600px; overflow-y: auto;">
 <table id="galaxy_table">
 <thead>
@@ -190,15 +259,15 @@ __STATS_ROWS__
 <!-- ══ TAB: 판독기 ══ -->
 <div id="validate" class="tab">
 <div class="glass">
-<h3 style="color:#fff;margin-bottom:.6rem">은하 분광 관측값 판독기</h3>
-<p style="color:#aaa;margin-bottom:1rem">방출선 플럭스를 입력하면 BPT 분류, 산소 금속성, Balmer Decrement 먼지 소광을 자동 연산합니다.</p>
+<h3 style="color:#f8fafc;margin-bottom:.6rem">은하 분광 관측값 판독기</h3>
+<p style="color:#94a3b8;margin-bottom:1rem">방출선 플럭스를 입력하면 BPT 분류, 산소 금속성, Balmer Decrement 먼지 소광을 자동 연산합니다.</p>
 <div class="ctrls">
-<div class="ctrl"><label>H-alpha Flux (6563Å)</label><input type="number" id="ha" step="any" placeholder="예: 125.4"></div>
-<div class="ctrl"><label>H-beta Flux (4861Å)</label><input type="number" id="hb" step="any" placeholder="예: 38.2"></div>
-<div class="ctrl"><label>[OIII] 5007Å Flux</label><input type="number" id="oiii" step="any" placeholder="예: 42.1"></div>
-<div class="ctrl"><label>[NII] 6584Å Flux</label><input type="number" id="nii" step="any" placeholder="예: 48.7"></div>
+<div class="ctrl"><label>H-alpha Flux (6563Å)</label><input type="number" id="ha" step="any" placeholder="예: 125.4" value="125.4"></div>
+<div class="ctrl"><label>H-beta Flux (4861Å)</label><input type="number" id="hb" step="any" placeholder="예: 38.2" value="38.2"></div>
+<div class="ctrl"><label>[OIII] 5007Å Flux</label><input type="number" id="oiii" step="any" placeholder="예: 42.1" value="42.1"></div>
+<div class="ctrl"><label>[NII] 6584Å Flux</label><input type="number" id="nii" step="any" placeholder="예: 48.7" value="48.7"></div>
 </div>
-<button class="preset" style="border-color:#ffff00;color:#ffff00;font-size:1.1rem;padding:.6rem 2rem" onclick="doValidate()">판독 가동</button>
+<button class="preset" style="border-color:#38bdf8;color:#38bdf8;font-size:0.95rem;padding:.6rem 1.8rem;font-weight:700" onclick="doValidate()">판독 가동</button>
 <div id="val-result" style="display:none;margin-top:1.2rem">
 <div class="row row-4">
 <div class="glass stat-card"><div class="val" id="r-bpt">-</div><div class="lbl">BPT 이온화 분류</div></div>
@@ -206,7 +275,7 @@ __STATS_ROWS__
 <div class="glass stat-card"><div class="val" id="r-ebv">-</div><div class="lbl">먼지 소광 E(B-V)</div></div>
 <div class="glass stat-card"><div class="val" id="r-type">-</div><div class="lbl">에너지원 기원</div></div>
 </div>
-<div id="val-plot" style="height:380px;margin-top:1rem;border:2px solid #444;background:#000"></div>
+<div id="val-plot" style="height:380px;margin-top:1rem;border:1px solid #1e293b;border-radius:10px;background:#0a0f1d;overflow:hidden"></div>
 </div>
 </div>
 </div>
@@ -214,62 +283,57 @@ __STATS_ROWS__
 <!-- ══ TAB: 다운로드 센터 ══ -->
 <div id="download" class="tab">
 <div class="glass">
-<h2 style="color:#ffff00;margin-bottom:1rem">&#128229; 은하계 데이터 파일 초고속 다운로드 센터</h2>
-<p style="color:#ccc;font-size:1.15rem;margin-bottom:1.5rem">
+<h2 style="color:#38bdf8;margin-bottom:1rem">&#128229; 은하계 데이터 파일 초고속 다운로드 센터</h2>
+<p style="color:#cbd5e1;font-size:0.95rem;margin-bottom:1.5rem">
 모든 은하 데이터셋(55,000개 전체 및 10,000개 표본)을 <strong>초대형 통합 엑셀(.xlsx)</strong>, <strong>초대형 JSON(.json)</strong>, <strong>마스터 CSV(.csv)</strong>, <strong>초고속 압축 패키지(.zip)</strong> 형태로 1초 만에 즉시 다운로드할 수 있습니다.
 </p>
 
-<div style="display:grid; gap:1.5rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-    <!-- 1. 초대형 통합 엑셀 -->
-    <div class="glass stat-card" style="text-align:left; padding:1.5rem; border:2px solid #22c55e;">
-        <h3 style="color:#22c55e; margin-bottom:.5rem;">📊 [추천 1] 초대형 통합 엑셀 파일 (.xlsx)</h3>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:1rem;">
+<div style="display:grid; gap:1.2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+    <div class="glass stat-card" style="text-align:left; padding:1.4rem; border:1px solid rgba(34,197,94,0.4);">
+        <h3 style="color:#4ade80; margin-bottom:.5rem;">📊 [추천 1] 초대형 통합 엑셀 파일 (.xlsx)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
             전체 55,000개 은하의 모든 물리량(광도, 회전곡선, 암흑물질, 원소비, 3대 분류 등 49개 컬럼)이 완벽 정리된 정품 엑셀 파일 (19.2 MB).
         </p>
         <a class="btn-dl btn-fast" href="galaxy_master_complete_all.xlsx" download="galaxy_master_complete_all.xlsx">⚡ 초대형 엑셀 (.xlsx) 즉시 받기</a>
     </div>
 
-    <!-- 2. 초대형 통합 JSON -->
-    <div class="glass stat-card" style="text-align:left; padding:1.5rem; border:2px solid #eab308;">
-        <h3 style="color:#eab308; margin-bottom:.5rem;">⚡ [추천 2] 초대형 통합 JSON 파일 (.json)</h3>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:1rem;">
+    <div class="glass stat-card" style="text-align:left; padding:1.4rem; border:1px solid rgba(234,179,8,0.4);">
+        <h3 style="color:#facc15; margin-bottom:.5rem;">⚡ [추천 2] 초대형 통합 JSON 파일 (.json)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
             모든 55,000개 은하 데이터를 담고 있는 고속 파싱용 대형 JSON 파일 (42.7 MB). Python 및 Web 연구 분석에 최적화되어 있습니다.
         </p>
         <a class="btn-dl btn-fast" href="galaxy_master_complete_all.json" download="galaxy_master_complete_all.json">⚡ 초대형 JSON (.json) 즉시 받기</a>
     </div>
 
-    <!-- 3. 초고속 ZIP 압축 패키지 -->
-    <div class="glass stat-card" style="text-align:left; padding:1.5rem; border:2px solid #3b82f6;">
-        <h3 style="color:#3b82f6; margin-bottom:.5rem;">📦 [초고속] 통합 압축 패키지 (.zip)</h3>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:1rem;">
+    <div class="glass stat-card" style="text-align:left; padding:1.4rem; border:1px solid rgba(56,189,248,0.4);">
+        <h3 style="color:#38bdf8; margin-bottom:.5rem;">📦 [초고속] 통합 압축 패키지 (.zip)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
             초대형 엑셀(.xlsx) + 초대형 JSON(.json) + 마스터 CSV(.csv) + 물리량 명세서(MD)가 모두 하나로 압축된 패키지 (34.2 MB).
         </p>
         <a class="btn-dl btn-fast" href="galaxy_master_complete_all.zip" download="galaxy_master_complete_all.zip">⚡ 초고속 ZIP 전체 패키지 받기</a>
     </div>
 
-    <!-- 4. 마스터 CSV -->
-    <div class="glass stat-card" style="text-align:left; padding:1.5rem; border:2px solid #f00;">
-        <h3 style="color:#fff; margin-bottom:.5rem;">📁 마스터 데이터셋 전체 CSV (.csv)</h3>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:1rem;">
+    <div class="glass stat-card" style="text-align:left; padding:1.4rem; border:1px solid rgba(168,85,247,0.4);">
+        <h3 style="color:#c084fc; margin-bottom:.5rem;">📁 마스터 데이터셋 전체 CSV (.csv)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
             SDSS 55,000개 은하 전체 표본 및 49개 파라미터가 수록된 단일 CSV 파일 (26.5 MB).
         </p>
         <a class="btn-dl" href="galaxy_master_complete_all.csv" download="galaxy_master_complete_all.csv">📥 마스터 CSV 다운로드</a>
     </div>
 
-    <!-- 5. 브라우저 실시간 메모리 추출 -->
-    <div class="glass stat-card" style="text-align:left; padding:1.5rem; border:2px dashed #ffff00;">
-        <h3 style="color:#ffff00; margin-bottom:.5rem;">🚀 브라우저 메모리 즉시 추출 (10,000개 표본)</h3>
-        <p style="color:#aaa; font-size:1rem; margin-bottom:1rem;">
+    <div class="glass stat-card" style="text-align:left; padding:1.4rem; border:1px dashed rgba(56,189,248,0.5);">
+        <h3 style="color:#38bdf8; margin-bottom:.5rem;">🚀 브라우저 메모리 즉시 추출 (10,000개 표본)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
             서버 통신 없이 현재 대시보드 브라우저 메모리에서 0.1초 만에 Blob 객체로 생성하여 다운로드합니다.
         </p>
-        <button class="btn-dl" style="background:#fff; color:#000;" onclick="downloadSampleJSON()">⚡ 표본 JSON 즉시 추출</button>
-        <button class="btn-dl" style="background:#ffff00; color:#000;" onclick="downloadSampleCSV()">⚡ 표본 CSV 즉시 추출</button>
+        <button class="btn-dl" onclick="downloadSampleJSON()">⚡ 표본 JSON 즉시 추출</button>
+        <button class="btn-dl" onclick="downloadSampleCSV()">⚡ 표본 CSV 즉시 추출</button>
     </div>
 </div>
 
-<div style="margin-top:2rem; padding:1.2rem; border:1px dashed #f00;">
-    <h4 style="color:#ffff00; margin-bottom:.5rem;">💡 다운로드 최적화 안내</h4>
-    <p style="color:#aaa; font-size:1rem;">
+<div style="margin-top:1.5rem; padding:1.2rem; border:1px solid #1e293b; border-radius:10px; background:rgba(15,23,42,0.6);">
+    <h4 style="color:#38bdf8; margin-bottom:.5rem;">💡 다운로드 최적화 안내</h4>
+    <p style="color:#94a3b8; font-size:0.88rem;">
     &bull; 모든 대형 파일(엑셀 19.2MB, JSON 42.7MB, ZIP 34.2MB, CSV 26.5MB)은 정적 CDN 서버에 사전 빌드되어 있어 <strong>클릭 즉시 최고 속도로 다운로드</strong>가 시작됩니다.<br>
     &bull; 엑셀 파일은 Excel 2016, 2019, 2021 및 Microsoft 365, 한셀에서 즉시 더블클릭하여 열람하실 수 있습니다.
     </p>
@@ -321,8 +385,8 @@ cs.value = 'class_morphology';
 const tbody = document.getElementById('galaxy_table_body');
 DATA.slice(0, 100).forEach(function(d) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td><span style="color:#2563eb">' + (d.class_morphology || '-') + '</span></td>' +
-        '<td><span style="color:#9333ea">' + (d.class_activity || '-') + '</span></td>' +
+    tr.innerHTML = '<td><span style="color:#38bdf8">' + (d.class_morphology || '-') + '</span></td>' +
+        '<td><span style="color:#a855f7">' + (d.class_activity || '-') + '</span></td>' +
         '<td><span style="color:#10b981">' + (d.class_detail || '-') + '</span></td>' +
         '<td>' + (d.z !== null && d.z !== undefined ? d.z.toFixed(4) : '-') + '</td>' +
         '<td>' + (d.lgm_tot_p50 !== null && d.lgm_tot_p50 !== undefined ? d.lgm_tot_p50.toFixed(2) : '-') + '</td>' +
@@ -335,56 +399,67 @@ DATA.slice(0, 100).forEach(function(d) {
     tbody.appendChild(tr);
 });
 
+// ═══ Helper: Valid physical value check (filters SDSS -9999 sentinel & extreme glitches) ═══
+function isValidVal(key, val) {
+    if (val === null || val === undefined || Number.isNaN(val)) return false;
+    if (val < -900) return false;
+    if (key && key.includes('flux') && (val <= 0 || val > 50000)) return false;
+    if (key === 'color_u_r' && (val < -1 || val > 6)) return false;
+    if ((key === 'log_n_o' || key === 'log_oii_oiii' || key === 'log_s_o' || key === 'log_nii_ha' || key === 'log_oiii_hb') && (val < -4 || val > 4)) return false;
+    return true;
+}
+
 // ═══ Draw plot ═══
 function draw() {
     const xk = xs.value, yk = ys.value, ck = cs.value;
-    const xd = DATA.map(function(d) { return d[xk]; });
-    const yd = DATA.map(function(d) { return d[yk]; });
+    const validRows = DATA.filter(function(d) {
+        return isValidVal(xk, d[xk]) && isValidVal(yk, d[yk]) && (CATS[ck] ? d[ck] != null : isValidVal(ck, d[ck]));
+    });
     let traces;
     if (CATS[ck]) {
-        const groups = [...new Set(DATA.map(function(d) { return d[ck]; }).filter(function(v) { return v != null; }))];
-        const palette = ['#2563eb', '#dc2626', '#059669', '#ea580c', '#9333ea', '#d97706', '#b91c1c', '#0284c7', '#8b5cf6', '#10b981', '#777777'];
+        const groups = [...new Set(validRows.map(function(d) { return d[ck]; }).filter(function(v) { return v != null; }))];
+        const palette = ['#38bdf8', '#f43f5e', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16', '#6366f1', '#14b8a6'];
         traces = groups.map(function(g, i) {
-            const idx = DATA.map(function(d, j) { return d[ck] === g ? j : -1; }).filter(function(j) { return j >= 0; });
+            const sub = validRows.filter(function(d) { return d[ck] === g; });
             return {
-                x: idx.map(function(j) { return xd[j]; }),
-                y: idx.map(function(j) { return yd[j]; }),
+                x: sub.map(function(d) { return d[xk]; }),
+                y: sub.map(function(d) { return d[yk]; }),
                 mode: 'markers',
                 name: g.split(' (')[0],
-                marker: { size: 4.5, opacity: 0.65, color: palette[i % palette.length] },
-                type: 'scatter'
+                marker: { size: 4.5, opacity: 0.68, color: palette[i % palette.length] },
+                type: 'scattergl'
             };
         });
     } else {
         traces = [{
-            x: xd,
-            y: yd,
+            x: validRows.map(function(d) { return d[xk]; }),
+            y: validRows.map(function(d) { return d[yk]; }),
             mode: 'markers',
-            type: 'scatter',
+            type: 'scattergl',
             marker: {
                 size: 4.5,
-                opacity: 0.65,
-                color: DATA.map(function(d) { return d[ck]; }),
+                opacity: 0.7,
+                color: validRows.map(function(d) { return d[ck]; }),
                 colorscale: 'Viridis',
                 showscale: true,
                 colorbar: {
-                    title: { text: VARS[ck] || ck, font: { color: '#aaa' } },
-                    tickfont: { color: '#888' }
+                    title: { text: (VARS[ck] || ck).split(' - ')[0], font: { color: '#cbd5e1', size: 11 } },
+                    tickfont: { color: '#94a3b8', size: 10 }
                 }
             }
         }];
     }
     const layout = {
-        xaxis: { title: VARS[xk] || xk, gridcolor: '#333', color: '#fff' },
-        yaxis: { title: VARS[yk] || yk, gridcolor: '#333', color: '#fff' },
-        paper_bgcolor: '#000',
-        plot_bgcolor: '#000',
-        font: { color: '#f00', family: 'VT323, DungGeunMo, monospace', size: 14 },
-        margin: { t: 30, b: 50, l: 60, r: 20 },
+        xaxis: { title: { text: VARS[xk] || xk, font: { color: '#cbd5e1', size: 12 } }, gridcolor: '#1e293b', zerolinecolor: '#334155', color: '#94a3b8' },
+        yaxis: { title: { text: VARS[yk] || yk, font: { color: '#cbd5e1', size: 12 } }, gridcolor: '#1e293b', zerolinecolor: '#334155', color: '#94a3b8' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: '#0a0f1d',
+        font: { color: '#e2e8f0', family: 'Noto Sans KR, sans-serif', size: 12 },
+        margin: { t: 28, b: 55, l: 65, r: 24 },
         hovermode: 'closest',
-        legend: { font: { color: '#fff' } }
+        legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(15,23,42,0.75)', bordercolor: '#1e293b', borderwidth: 1 }
     };
-    Plotly.newPlot('plot', traces, layout, { responsive: true });
+    Plotly.newPlot('plot', traces, layout, { responsive: true, displayModeBar: true });
 }
 xs.onchange = ys.onchange = cs.onchange = draw;
 
@@ -437,19 +512,24 @@ function doValidate() {
     document.getElementById('r-type').textContent = bpt.includes('Star') ? '광이온화 (HII 영역)' : '중심 블랙홀 강착/충격파';
     document.getElementById('val-result').style.display = 'block';
 
-    const bgx = DATA.map(function(d) { return d.log_nii_ha; }).filter(function(v) { return v != null; });
-    const bgy = DATA.map(function(d) { return d.log_nii_ha != null ? d.log_oiii_hb : null; }).filter(function(v) { return v != null; });
+    const validBpt = DATA.filter(function(d) {
+        return isValidVal('log_nii_ha', d.log_nii_ha) && isValidVal('log_oiii_hb', d.log_oiii_hb);
+    });
+    const bgx = validBpt.map(function(d) { return d.log_nii_ha; });
+    const bgy = validBpt.map(function(d) { return d.log_oiii_hb; });
     const kx = []; for (let x = -2; x <= 0.04; x += 0.02) kx.push(x);
     const ky1 = kx.map(function(x) { return x < 0.05 ? 0.61 / (x - 0.05) + 1.3 : null; });
     Plotly.newPlot('val-plot', [
-        { x: bgx, y: bgy, mode: 'markers', marker: { size: 3, color: '#444', opacity: 0.3 }, name: 'SDSS 표본', type: 'scatter' },
-        { x: kx, y: ky1, mode: 'lines', line: { color: '#ffff00', dash: 'dash', width: 2 }, name: 'Kauffmann (2003)' },
-        { x: [lnha], y: [lohb], mode: 'markers', marker: { size: 16, color: '#ff0000', symbol: 'star', line: { color: '#fff', width: 2 } }, name: '입력 타겟' }
+        { x: bgx, y: bgy, mode: 'markers', marker: { size: 3.5, color: '#475569', opacity: 0.35 }, name: 'SDSS 표본', type: 'scattergl' },
+        { x: kx, y: ky1, mode: 'lines', line: { color: '#38bdf8', dash: 'dash', width: 2.2 }, name: 'Kauffmann+03 경계선' },
+        { x: [lnha], y: [lohb], mode: 'markers', marker: { size: 15, color: '#f43f5e', symbol: 'star', line: { color: '#fff', width: 1.5 } }, name: '입력 관측 타겟' }
     ], {
-        xaxis: { title: 'log([NII] / Hα)', range: [-1.8, 0.8], gridcolor: '#333', color: '#fff' },
-        yaxis: { title: 'log([OIII] / Hβ)', range: [-1.5, 1.6], gridcolor: '#333', color: '#fff' },
-        paper_bgcolor: '#000', plot_bgcolor: '#000', font: { color: '#f00', family: 'VT323, DungGeunMo, monospace', size: 13 },
-        margin: { t: 20, b: 40, l: 50, r: 20 }, showlegend: true
+        xaxis: { title: 'log([NII] 6584 / Hα)', range: [-1.8, 0.8], gridcolor: '#1e293b', color: '#94a3b8' },
+        yaxis: { title: 'log([OIII] 5007 / Hβ)', range: [-1.5, 1.6], gridcolor: '#1e293b', color: '#94a3b8' },
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#0a0f1d',
+        font: { color: '#e2e8f0', family: 'Noto Sans KR, sans-serif', size: 12 },
+        margin: { t: 24, b: 45, l: 55, r: 20 }, showlegend: true,
+        legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(15,23,42,0.75)' }
     }, { responsive: true });
 }
 
@@ -498,6 +578,13 @@ function downloadSampleCSV() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
+window.addEventListener('resize', function() {
+    const plotEl = document.getElementById('plot');
+    if (plotEl && plotEl.data) Plotly.Plots.resize(plotEl);
+    const valEl = document.getElementById('val-plot');
+    if (valEl && valEl.data) Plotly.Plots.resize(valEl);
+});
 
 // Initial draw
 draw();

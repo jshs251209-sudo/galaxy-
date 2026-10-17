@@ -3,420 +3,599 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YSC 대회 프로젝트 — 통합 포털 & 사용 설명서</title>
+    <title>YSC 2026 은하 진화 연구 — 통합 분석 포털 & 안내 센터</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ─── Retro Analog Horror CSS ─── */
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-        @font-face {
-            font-family: 'DungGeunMo';
-            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
-            font-weight: normal; font-style: normal;
+        :root {
+            --bg-dark: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.88);
+            --bg-card-hover: rgba(30, 41, 59, 0.92);
+            --border-color: rgba(148, 163, 184, 0.22);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-indigo: #6366f1;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         body {
-            font-family: 'DungGeunMo', 'VT323', monospace;
-            background: #000;
-            color: #d0d0d0;
-            line-height: 1.6;
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at 20% 10%, #0f172a 0%, #070b14 60%, #020617 100%);
+            color: var(--text-main);
+            line-height: 1.65;
             overflow-x: hidden;
+            min-height: 100vh;
         }
-        body::before {
-            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%),
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.08), rgba(0, 255, 0, 0.03), rgba(0, 0, 255, 0.08));
-            z-index: 999; background-size: 100% 4px, 4px 100%; pointer-events: none;
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+        a { color: var(--accent-blue); text-decoration: none; transition: all 0.2s; }
+
+        /* Navigation Bar */
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 15, 29, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 0;
         }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 10; }
-        a { color: #ffff00; text-decoration: none; border-bottom: 1px dashed #ffff00; transition: color .2s; }
-        a:hover { color: #fff; border-bottom-style: solid; text-shadow: 2px 0 0 rgba(255,0,0,0.8), -2px 0 0 rgba(0,0,255,0.8); }
-        h1, h2, h3 { color: #fff; text-transform: uppercase; letter-spacing: 1px; }
-        h1 { text-shadow: 3px 3px 0px #f00, -2px -2px 0px #00f; }
-        
-        .hero { text-align: center; padding: 5rem 1rem 3rem; border-bottom: 2px solid #f00; background: #050505; }
-        .hero-icon { font-size: 4.5rem; margin-bottom: .5rem; filter: grayscale(1) contrast(3); }
-        .hero h1 { font-size: 3rem; margin-bottom: .6rem; }
-        .hero .subtitle { color: #aaa; font-size: 1.3rem; max-width: 640px; margin: 0 auto 2rem; }
-        .hero .badge { display: inline-block; background: #f00; color: #000; padding: .3rem .9rem; border: 2px solid #fff; font-size: 1rem; font-weight: bold; text-transform: uppercase; animation: blink 2s infinite; }
-        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .nav-inner {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .nav-link {
+            padding: 7px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.65);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-link:hover {
+            border-color: var(--accent-blue);
+            background: rgba(56, 189, 248, 0.16);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .nav-link.highlight-amber {
+            border-color: rgba(245, 158, 11, 0.55);
+            background: rgba(245, 158, 11, 0.15);
+            color: #fde68a;
+        }
+        .nav-link.highlight-emerald {
+            border-color: rgba(16, 185, 129, 0.55);
+            background: rgba(16, 185, 129, 0.15);
+            color: #a7f3d0;
+        }
+        .nav-link.highlight-blue {
+            border-color: rgba(56, 189, 248, 0.55);
+            background: rgba(56, 189, 248, 0.15);
+            color: #bae6fd;
+        }
 
-        .nav-bar { position: sticky; top: 0; z-index: 100; background: #000; border-bottom: 2px solid #f00; padding: .65rem 0; }
-        .nav-inner { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-        .nav-inner a { padding: .45rem 1rem; font-size: 1.1rem; color: #fff; border: 1px solid #fff; background: #111; text-decoration: none; text-transform: uppercase; border-bottom: 1px solid #fff; }
-        .nav-inner a:hover { background: #f00; color: #000; font-weight: bold; }
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 56px 20px 44px;
+            border-bottom: 1px solid var(--border-color);
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 70%);
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.14);
+            color: #7dd3fc;
+            padding: 5px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .hero h1 {
+            font-size: 2.35rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        .hero .subtitle {
+            color: #cbd5e1;
+            font-size: 1.02rem;
+            max-width: 820px;
+            margin: 0 auto 24px;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-hero {
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-hero.primary {
+            background: linear-gradient(135deg, #0284c7, #4f46e5);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
+        }
+        .btn-hero.secondary {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            color: #e0f2fe;
+        }
+        .btn-hero:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
 
-        section { padding: 3rem 0; border-bottom: 2px dashed #444; }
-        .section-title { font-size: 2rem; margin-bottom: 1rem; color: #ffff00; }
-        .section-desc { color: #aaa; margin-bottom: 2rem; font-size: 1.2rem; }
+        section { padding: 44px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.14); }
+        .section-title {
+            font-size: 1.48rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-desc { color: var(--text-muted); margin-bottom: 24px; font-size: 0.94rem; }
 
-        .cards { display: grid; gap: 1.5rem; }
-        .cards-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-        .cards-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        .card { background: #000; border: 2px solid #f00; padding: 1.8rem; transition: background .1s; }
-        .card:hover { background: #111; border-color: #fff; }
-        .card-icon { font-size: 2.8rem; margin-bottom: .8rem; filter: grayscale(1); }
-        .card h3 { font-size: 1.5rem; margin-bottom: .5rem; color: #fff; }
-        .card p { color: #888; font-size: 1.1rem; border-bottom: none; }
-        a.card { display: block; color: inherit; text-decoration: none; border-bottom: 2px solid #f00; }
-        a.card:hover { text-decoration: none; border-bottom: 2px solid #fff; }
+        /* Cards Grid */
+        .cards { display: grid; gap: 18px; }
+        .cards-2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+        .cards-3 { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+        @media (max-width: 768px) {
+            .cards-2, .cards-3 { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 1.75rem; }
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 22px;
+            transition: all 0.22s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+        }
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-blue);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(56, 189, 248, 0.18);
+        }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .card-icon { font-size: 2rem; }
+        .card-tag {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.15);
+            color: #7dd3fc;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+        .card h3 { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; color: #f8fafc; }
+        .card p { color: #cbd5e1; font-size: 0.88rem; margin-bottom: 16px; line-height: 1.6; }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 9px 16px;
+            border-radius: 9px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            background: rgba(56, 189, 248, 0.16);
+            color: #e0f2fe;
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            transition: all 0.18s;
+            align-self: flex-start;
+        }
+        .card:hover .link-btn {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+        }
 
-        .link-btn { display: inline-block; margin-top: 1rem; padding: .5rem 1.2rem; border: 2px solid #fff; font-size: 1.1rem; font-weight: bold; color: #000; background: #ccc; text-transform: uppercase; }
-        .link-btn.blue, .link-btn.purple, .link-btn.gold, .link-btn.green { background: #fff; color: #000; border-color: #f00; }
-        .link-btn:hover { background: #f00; color: #fff; }
+        /* Formula & Summary Box */
+        .formula-banner {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-left: 5px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-bottom: 22px;
+        }
+        .formula-banner code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: #7dd3fc;
+            font-weight: 700;
+        }
 
-        .steps { counter-reset: step; border-left: 2px solid #f00; margin-left: 1.5rem; }
-        .step { display: flex; gap: 1.4rem; padding: 1.5rem 0 1.5rem 1.5rem; position: relative; border-bottom: 1px dashed #444; }
-        .step-num { position: absolute; left: -1.2rem; top: 1.5rem; width: 35px; height: 35px; background: #000; border: 2px solid #f00; color: #f00; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
-        .step-body h3 { font-size: 1.4rem; color: #ffff00; }
-        .step-body p { color: #aaa; font-size: 1.1rem; }
-        .step-body code { background: #222; padding: .2rem .5rem; border: 1px solid #f00; color: #ff5555; font-family: 'VT323', monospace; font-size: 1.1rem; }
+        /* Info Table */
+        .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); }
+        table.info-table { width: 100%; border-collapse: collapse; background: var(--bg-card); font-size: 0.86rem; }
+        table.info-table th, table.info-table td { padding: 11px 14px; border-bottom: 1px solid rgba(148, 163, 184, 0.15); text-align: left; }
+        table.info-table th { background: rgba(30, 41, 59, 0.9); color: #7dd3fc; font-weight: 700; }
+        table.info-table td code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 2px 6px;
+            border-radius: 5px;
+            color: #fbbf24;
+            font-size: 0.8rem;
+        }
 
-        .faq-item { border-bottom: 1px dashed #f00; }
-        .faq-q { width: 100%; text-align: left; background: none; border: none; color: #fff; font-size: 1.3rem; padding: 1.2rem 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: inherit; }
-        .faq-q:hover { color: #f00; }
-        .faq-a { max-height: 0; overflow: hidden; transition: max-height .2s ease-out; }
-        .faq-inner { padding-bottom: 1.5rem; color: #aaa; font-size: 1.1rem; }
-        
-        table { width: 100%; border-collapse: collapse; margin: 1rem 0; background: #000; border: 2px solid #f00; }
-        th, td { text-align: left; padding: .8rem; border: 1px solid #444; font-size: 1.1rem; }
-        th { background: #111; color: #ffff00; border-bottom: 2px solid #f00; font-weight: bold; }
-        td { color: #ccc; }
-        
-        footer { text-align: center; padding: 3rem 1rem; border-top: 4px double #f00; font-size: 1rem; color: #666; }
-        
-        h2:hover, h3:hover { text-shadow: 2px 0 0 rgba(255,0,0,0.8), -2px 0 0 rgba(0,0,255,0.8); }
+        /* FAQ Accordion */
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .faq-q {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            color: #f8fafc;
+            font-size: 0.96rem;
+            font-weight: 700;
+            padding: 15px 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: inherit;
+        }
+        .faq-q:hover { color: var(--accent-blue); background: rgba(30, 41, 59, 0.5); }
+        .faq-q::after { content: "▼"; font-size: 0.75rem; color: var(--text-muted); transition: transform 0.2s; }
+        .faq-q.open::after { transform: rotate(180deg); color: var(--accent-blue); }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.28s ease-out; }
+        .faq-a.open { max-height: 500px; }
+        .faq-inner { padding: 0 18px 16px; color: #cbd5e1; font-size: 0.88rem; border-top: 1px solid rgba(148, 163, 184, 0.12); padding-top: 12px; }
+
+        footer {
+            text-align: center;
+            padding: 36px 20px;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
     </style>
 </head>
 <body>
 
-<!-- ═══════════════════════ HERO ═══════════════════════ -->
-<div class="hero">
-    <div class="hero-icon">&#127756;</div>
-    <h1>YSC 통합 분석 플랫폼</h1>
-    <p class="subtitle">
-        은하 진화 다차원 분석 및 관측 소프트웨어 (v2.0)<br>
-        SDSS DR18 기반 10만 개 은하 데이터를 활용한 물리·화학적 은하 분류 체계 연구
-    </p>
-    <span class="badge">YSC 2026 과학탐구 대회 프로젝트</span>
-</div>
-
-<!-- ═══════════════════════ NAV ═══════════════════════ -->
 <nav class="nav-bar">
     <div class="nav-inner">
-        <a href="#quick-start">빠른 시작</a>
-        <a href="#tools">분석 도구</a>
-        <a href="observatory_analyzer_web.html" target="_blank" style="color:#f59e0b; font-weight:bold;">🔭 천문대 은하 진화 분석기 (GEI v2.0)</a>
-        <a href="galaxy_analyzer_web.html" target="_blank" style="color:#10b981; font-weight:bold;">🌌 은하 사진 분석기</a>
-        <a href="#plots">3D & 인터랙티브 도표</a>
-        <a href="#pipeline">파이프라인 안내</a>
-        <a href="#files">파일 구조</a>
-        <a href="dashboard_real_data.html" target="_blank" style="color:#ffff00">데이터 다운로드</a>
-        <a href="#faq">FAQ</a>
+        <a href="observatory_analyzer_web.html" class="nav-link highlight-amber">🔭 직접 관측 은하 진화 분석기 (GEI v2.0)</a>
+        <a href="galaxy_analyzer_web.html" class="nav-link highlight-emerald">📸 천체사진 · 분광(BPT) 분석기</a>
+        <a href="dashboard_real_data.html" class="nav-link highlight-blue">📊 SDSS 10만 은하 대시보드</a>
+        <a href="은하진화연구_보정방식_수식_및_방법론_핵심정리.pdf" target="_blank" class="nav-link">📄 보정방식·수식 핵심정리 PDF</a>
+        <a href="#tools" class="nav-link">핵심 프로그램</a>
+        <a href="#charts" class="nav-link">대회 발표 차트 (1~6)</a>
+        <a href="#methodology" class="nav-link">보정 방식 & 수식 요약</a>
+        <a href="#faq" class="nav-link">핵심 Q&A</a>
     </div>
 </nav>
 
-<!-- ═══════════════════════ 1. QUICK START ═══════════════════════ -->
-<section id="quick-start">
-    <div class="container">
-        <h2 class="section-title">&#128640; 시스템 열람 지침</h2>
-        <p class="section-desc">효율적인 데이터 탐색을 위해 아래의 시스템 사용 단계를 숙지하십시오.</p>
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-body">
-                    <h3>은하 진화 대시보드 접속</h3>
-                    <p>
-                        외부 서버 연동 없이 <strong>10만 개의 은하 관측 데이터</strong>가 통째로 브라우저에 임베딩되어 있습니다.<br>
-                        아래 [분석 도구 바로가기]에서 대시보드 버튼을 눌러 즉시 열람하십시오.
-                    </p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-body">
-                    <h3>상관관계 추적</h3>
-                    <p>
-                        주계열, BPT, 색-질량 등 프리셋 버튼을 통해 은하의 물리·화학적 특성 변화를 시각적으로 추적합니다.<br>
-                        데이터 상의 특이점이 발견되면 세부 수치를 분석해 보십시오.
-                    </p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-body">
-                    <h3>실시간 판독기 가동</h3>
-                    <p>
-                        대시보드의 [판독기] 탭에서 미확인 타겟 은하의 방출선 플럭스를 직접 입력하십시오.<br>
-                        백그라운드 데이터 위에서 실시간으로 타겟의 은하 유형, 금속성, 먼지 소광값을 즉시 연산합니다.
-                    </p>
-                </div>
-            </div>
-        </div>
+<div class="hero">
+    <span class="hero-badge">🌌 YSC 2026 과학탐구대회 최종 완성 포털</span>
+    <h1>은하 진화 지수(GEI v2.0) 및 직접 관측 은하 분석 플랫폼</h1>
+    <p class="subtitle">
+        국소 우주 대규모 관측 카탈로그(NASA NED-LVS · SDSS DR18) 기반 말름퀴스트 편향 보정, 5축 통합 은하 진화 지수(Unified GEI v2.0) 산출, 그리고 우리 팀이 천문대에서 직접 측정한 원시 관측값(겉보기 등급·각반경·후퇴속도·색지수)으로부터 은하의 과거(-10 Gyr) 복원과 미래(+10 Gyr) 진화 경로를 예측하는 웹 시스템입니다.
+    </p>
+    <div class="hero-actions">
+        <a href="observatory_analyzer_web.html" class="btn-hero primary">🔭 우리 팀 직접 관측 은하 입력 · 진화 분석기 실행</a>
+        <a href="은하진화연구_보정방식_수식_및_방법론_핵심정리.pdf" target="_blank" class="btn-hero secondary">📄 보정 방식 · GEI 수식 · 방법론 정리 PDF 열기</a>
+        <a href="galaxy_analyzer_web.html" class="btn-hero secondary">📸 천체사진 형태·Sérsic·BPT 분석기 실행</a>
     </div>
-</section>
+</div>
 
-<!-- ═══════════════════════ 2. TOOLS ═══════════════════════ -->
+<!-- 1. 핵심 웹 분석 프로그램 & PDF 안내서 -->
 <section id="tools">
     <div class="container">
-        <h2 class="section-title">&#128295; 분석 도구 바로가기</h2>
-        <p class="section-desc">
-            카드를 클릭하면 해당 도구가 새 탭에서 열립니다.
-        </p>
+        <h2 class="section-title">🚀 1. 핵심 은하 분석 웹 프로그램 & 공식 보고서 PDF</h2>
+        <p class="section-desc">설치나 별도 서버 없이 브라우저에서 클릭 즉시 작동하는 인터랙티브 분석 프로그램 및 출판 품질 PDF 문서입니다.</p>
+
         <div class="cards cards-2">
-            <a href="observatory_analyzer_web.html" target="_blank" class="card" style="border-color:#f59e0b;">
-                <div class="card-icon">&#128301;</div>
-                <h3>천문대 관측 은하 진화 분석기 (GEI v2.0) <span style="font-size:0.75rem; background:#f59e0b; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px; font-weight:bold;">NEW 핵심 도구</span></h3>
-                <p>
-                    천문대에서 관측한 은하의 물리량($\log M_*$, $\mathrm{SFR}$, $V_{\mathrm{rot}}$, $R_e$, 색지수 등)을 입력하면 <strong>통합 은하 진화 지수(GEI v2.0)</strong>, 현재 <strong>진화 단계(Stage I~V)</strong>, <strong>과거($-10\,\mathrm{Gyr}$) 모습 복원</strong> 및 <strong>향후($+10\,\mathrm{Gyr}$) 진화 궤적</strong>과 3D 위상공간 위치를 즉시 도출합니다.
-                </p>
-                <span class="link-btn gold">천문대 은하 분석기 실행 →</span>
+            <a href="observatory_analyzer_web.html" class="card" style="border-color:rgba(245, 158, 11, 0.5);">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">🔭</span>
+                        <span class="card-tag" style="background:rgba(245,158,11,0.18); color:#fde68a; border-color:rgba(245,158,11,0.45);">핵심 과제 3 · 직접 관측 입력</span>
+                    </div>
+                    <h3>천문대 직접 관측 은하 진화 분석기 (GEI v2.0 & 3D Studio)</h3>
+                    <p>
+                        천문대 망원경·CCD로 직접 측정한 <strong>원시 관측값(겉보기 등급 m_r, 각반경 θ, 후퇴속도 v_r, 색지수 u-r)</strong> 또는 촬영 사진(JPG/PNG/FITS/CSV)을 입력하면 물리량(log₁₀ M*, R_kpc, log₁₀ SFR)을 자동 환산하고, <strong>GEI v2.0 지수 · 5단계 진화 판정 · ±10 Gyr 진화 궤적 · 우리 팀 관측 일지 CSV 저장</strong>을 수행합니다.
+                    </p>
+                </div>
+                <span class="link-btn">직접 관측 은하 분석기 실행하기 →</span>
             </a>
-            <a href="output/3d_plots/interactive_3d_ned_ceers_sdss_manifold.html" target="_blank" class="card" style="border-color:#38bdf8;">
-                <div class="card-icon">&#129482;</div>
-                <h3>3D 다변량 우주 진화 매니폴드 (NED + CEERS + SDSS) <span style="font-size:0.75rem; background:#38bdf8; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px; font-weight:bold;">3D 대화형</span></h3>
-                <p>
-                    NASA/IPAC NED-LVS(145.9만 개), JWST CEERS(7.66만 개), SDSS DR18(5만 개) 및 천문대 관측 은하들을 3차원 위상공간에서 360° 회전·확대하며 비교 분석합니다.
-                </p>
-                <span class="link-btn blue">3D 대화형 매니폴드 열기 →</span>
+
+            <a href="galaxy_analyzer_web.html" class="card" style="border-color:rgba(16, 185, 129, 0.5);">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">📸</span>
+                        <span class="card-tag" style="background:rgba(16,185,129,0.18); color:#a7f3d0; border-color:rgba(16,185,129,0.45);">천체사진 측광 · BPT 분광</span>
+                    </div>
+                    <h3>은하 사진 형태(CAS·Gini·Sérsic) & 분광(BPT) 웹 분석기</h3>
+                    <p>
+                        은하 관측 사진(JPG, PNG, WebP, FITS) 또는 회절 분광 사진을 업로드하면 400×400 과학 그리드로 정규화하여 <strong>집중도(C), 비대칭도(A), Gini 계수, M₂₀ 모멘트, Sérsic 프로파일 지수(n) 피팅, BPT 방출선 이온화 위상공간 진단</strong>을 즉시 수행하고 GEI 분석기로 연동합니다.
+                    </p>
+                </div>
+                <span class="link-btn">사진·분광 웹 분석기 실행하기 →</span>
             </a>
-            <a href="dashboard_real_data.html" target="_blank" class="card">
-                <div class="card-icon">&#127756;</div>
-                <h3>은하 진화 대시보드 <span style="font-size:0.75rem; background:#60b3f7; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px;">웹 버전</span></h3>
-                <p>
-                    암흑물질 유도량, 은하 회전곡선, 광도, 화학 원소비, 3대 신규 분류 체계(형태 4분류, 활동성 3분류, 세부구조 5분류) 및 10,000개 전표본 원클릭 다운로드 센터를 지원합니다.<br>
-                    <strong>(서버 없이 언제나 작동하며, 다운로드 탭에서 전체 데이터 CSV 저장 가능)</strong>
-                </p>
-                <span class="link-btn blue">대시보드 열기 →</span>
+
+            <a href="은하진화연구_보정방식_수식_및_방법론_핵심정리.pdf" target="_blank" class="card" style="border-color:rgba(56, 189, 248, 0.5);">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">📄</span>
+                        <span class="card-tag">필독 PDF 문서 1</span>
+                    </div>
+                    <h3>보정 방식 · GEI v2.0 수식 · 통계 방법론 핵심 정리집 (PDF)</h3>
+                    <p>
+                        ① 말름퀴스트 편향 보정 유도식 및 부피 완전 표본 검증(r=0.34→0.005), ② 통합 은하 진화 지수(GEI v2.0) 마스터 수식, ③ 피어슨(r) vs 스피어만(ρ) 상관계수, ④ 이상치·클리핑 제거 필터, ⑤ Hexbin(log₁₀ N) 원리, ⑥ CEERS 제외 사유, ⑦ 3D/2D 분석, ⑧ 원시 관측값 환산식을 깔끔하게 정리한 PDF입니다.
+                    </p>
+                </div>
+                <span class="link-btn">핵심 정리집 PDF 바로 열기 →</span>
             </a>
-            <a href="galaxy_analyzer_web.html" target="_blank" class="card">
-                <div class="card-icon">&#128200;</div>
-                <h3>은하 사진 & 분광 웹 분석기 <span style="font-size:0.75rem; background:#10b981; color:#000; padding:2px 6px; border-radius:8px; vertical-align:middle; margin-left:5px; font-weight:bold;">웹 버전 즉시 실행</span></h3>
-                <p>
-                    은하 관측 사진(JPG, PNG, FITS) 또는 <strong>회절 분광 사진</strong>을 업로드하면,<br>
-                    영역 측광, CAS 형태 지수, Sérsic n 피팅, BPT 방출선 및 은하 AI 분류를 브라우저에서 즉시 수행합니다.<br>
-                    <strong>(별도 설치나 서버 없이 브라우저에서 100% 독립 실행)</strong>
-                </p>
-                <span class="link-btn purple">웹 분석기 실행하기 →</span>
+
+            <a href="dashboard_real_data.html" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <span class="card-tag">SDSS DR18 빅데이터</span>
+                    </div>
+                    <h3>SDSS DR18 은하 물리량 · 암흑물질 · 3대 분류 통합 대시보드</h3>
+                    <p>
+                        SDSS DR18 정밀 분광 표본의 35종 핵심 물리량(광도, 회전속도, 동역학 질량, 암흑물질 분율, 산소·질소 원소비, BPT 비율 등) 상관관계 탐색기, 실시간 분광 판독기 및 전체 마스터 데이터셋(CSV/XLSX/JSON) 다운로드 센터를 제공합니다.
+                    </p>
+                </div>
+                <span class="link-btn">10만 은하 대시보드 열기 →</span>
             </a>
         </div>
     </div>
 </section>
 
-<!-- ═══════════════════════ 3. INTERACTIVE PLOTS ═══════════════════════ -->
-<section id="plots">
+<!-- 2. 대회 발표 차트 & 3D 인터랙티브 도표 -->
+<section id="charts">
     <div class="container">
-        <h2 class="section-title">&#128202; 인터랙티브 그래프 & 대회 최종 발표 차트</h2>
-        <p class="section-desc">
-            아래 그래프들은 <strong>서버 없이도</strong> HTML/PNG 파일을 클릭하여 바로 열 수 있습니다.<br>
-            마우스를 올리면 개별 은하 정보를 확인하고, 드래그로 확대/축소가 가능합니다.
-        </p>
+        <h2 class="section-title">📊 2. 대회 최종 발표 차트 (300 DPI) & 3D 대화형 도표</h2>
+        <p class="section-desc">카드를 클릭하면 고해상도 발표 차트(PNG) 또는 마우스로 360° 회전 가능한 대화형 HTML 도표가 열립니다.</p>
+
         <div class="cards cards-3">
+            <a href="output/presentation_charts/발표차트5_8대그래프_오류수정_NED_SDSS_비교_및_GEI도표선별.png" target="_blank" class="card">
+                <div>
+                    <div class="card-header"><span class="card-icon">📈</span><span class="card-tag">발표차트 5 · 핵심</span></div>
+                    <h3>8대 상관관계 오류 수정 (NED vs SDSS) 및 도표 선별</h3>
+                    <p>SFR 선형/로그 혼동 및 클리핑 이상치를 제거하고 45×45 Hexbin(log₁₀ N)과 구간별 중앙값(Binned Median), 피어슨(r)·스피어만(ρ)을 재산출한 마스터 비교 차트.</p>
+                </div>
+                <span class="link-btn">발표차트 5 보기 →</span>
+            </a>
+
+            <a href="output/presentation_charts/발표차트6_심화검증_질량통제_거리편향보정_도표적합성분류.png" target="_blank" class="card">
+                <div>
+                    <div class="card-header"><span class="card-icon">🔬</span><span class="card-tag">발표차트 6 · 심화검증</span></div>
+                    <h3>질량 통제 편상관 · 말름퀴스트 편향 보정 · 적합성 3단계</h3>
+                    <p>항성질량 통제 시 주계열 편차(ΔMS)-암흑물질 음의 상관 입증, 부피 완전 표본에서 거리 상관 소멸(r=0.005) 증명, 도표 3단계 분류표.</p>
+                </div>
+                <span class="link-btn">발표차트 6 보기 →</span>
+            </a>
+
             <a href="output/3d_plots/interactive_3d_ned_ceers_sdss_manifold.html" target="_blank" class="card">
-                <div class="card-icon">&#127760;</div>
-                <h3>3D 우주 진화 매니폴드 (NED+CEERS+SDSS)</h3>
-                <p>근방 우주(NED/SDSS)와 초기 우주(JWST CEERS) 은하 158.5만 표본의 3차원 진화 매니폴드 및 GEI 궤적 비교.</p>
-                <span class="link-btn gold">3D 열기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">🌐</span><span class="card-tag">WebGL 3D 대화형</span></div>
+                    <h3>3차원 다변량 은하 진화 매니폴드 뷰어</h3>
+                    <p>항성질량, 비별생성률(sSFR), 물리적 반경, 암흑물질 분율(f_DM)이 이루는 3차원 진화 다양체를 마우스로 회전·확대하며 탐색합니다.</p>
+                </div>
+                <span class="link-btn">3D 매니폴드 열기 →</span>
             </a>
+
             <a href="output/presentation_charts/발표차트1_은하진화지수_GEI개발_및_과거현재미래_예측.png" target="_blank" class="card">
-                <div class="card-icon">&#127942;</div>
-                <h3>발표차트 1: 통합 은하 진화 지수 (GEI v2.0)</h3>
-                <p>5축 물리량 기반 GEI v2.0 수식, D4000 상관 검증(r=0.9112), 5단계 표준 진화 모식도 및 과거·현재·미래 예측.</p>
-                <span class="link-btn gold">차트 보기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">🏆</span><span class="card-tag">발표차트 1</span></div>
+                    <h3>5축 통합 은하 진화 지수 (GEI v2.0) 수식 및 검증</h3>
+                    <p>GEI v2.0 5대 물리 축 가중 결합 수식, 항성 연령 지표 Dn4000과의 상관 검증(r=0.911), 5단계 진화 분포도.</p>
+                </div>
+                <span class="link-btn">발표차트 1 보기 →</span>
             </a>
-            <a href="output/presentation_charts/발표차트2_3차원도표_NED_CEERS_SDSS_우주진화_비교분석.png" target="_blank" class="card">
-                <div class="card-icon">&#128300;</div>
-                <h3>발표차트 2: 3차원 다변량 도표 & NED·CEERS 비교</h3>
-                <p>NED-LVS(145.9만) vs JWST CEERS(7.66만) vs SDSS DR18(5만)의 3차원 물리 위상공간 비교 분석.</p>
-                <span class="link-btn gold">차트 보기</span>
-            </a>
+
             <a href="output/presentation_charts/발표차트3_천문대_관측은하_진화단계_판별프로그램_실증.png" target="_blank" class="card">
-                <div class="card-icon">&#128301;</div>
-                <h3>발표차트 3: 천문대 관측 은하 과거·현재·미래 추적</h3>
-                <p>관측 은하들의 현재 진화 단계 판정 및 -10 Gyr 과거 복원 ~ +10 Gyr 미래 예측 시뮬레이션 종합 결과.</p>
-                <span class="link-btn gold">차트 보기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">🔭</span><span class="card-tag">발표차트 3</span></div>
+                    <h3>관측 은하 과거 복원 · 현재 판별 · 미래 예측 궤적</h3>
+                    <p>관측 은하의 현재 진화 단계 판정 및 -10 Gyr 과거 모습 복원 ~ +10 Gyr 미래 소광 예측 시뮬레이션 차트.</p>
+                </div>
+                <span class="link-btn">발표차트 3 보기 →</span>
             </a>
+
             <a href="output/presentation_charts/발표차트4_YSC대회_은하진화연구_최종종합_마스터차트.png" target="_blank" class="card">
-                <div class="card-icon">&#128203;</div>
-                <h3>발표차트 4: YSC 대회 종합 마스터 보드</h3>
-                <p>남은 연구 4대 과제(GEI 개발, 3D 도표 연구, 관측 분석 프로그램, 발표 차트) 통합 요약 포스터.</p>
-                <span class="link-btn gold">차트 보기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">📋</span><span class="card-tag">발표차트 4</span></div>
+                    <h3>YSC 대회 은하 진화 연구 최종 종합 마스터 포스터</h3>
+                    <p>연구 과제 1~4 전체 핵심 결과와 알고리즘 아키텍처를 한눈에 조망하는 발표용 마스터 보드.</p>
+                </div>
+                <span class="link-btn">발표차트 4 보기 →</span>
             </a>
+
             <a href="output/plots/interactive/main_sequence_interactive.html" target="_blank" class="card">
-                <div class="card-icon">&#11088;</div>
-                <h3>은하 주계열 다이어그램</h3>
-                <p>항성 질량(log M) vs 별 생성률(log SFR). 은하가 활발하게 별을 만들고 있는지, 별 생성이 멈춘 상태인지 한눈에 파악합니다.</p>
-                <span class="link-btn gold">열기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">⭐</span><span class="card-tag">대화형 HTML</span></div>
+                    <h3>은하 주계열 (SFMS) 인터랙티브 다이어그램</h3>
+                    <p>항성질량 log₁₀(M*/M☉) vs 별생성률 log₁₀(SFR) 위상공간에서 별생성 주계열과 소광 은하군을 탐색합니다.</p>
+                </div>
+                <span class="link-btn">그래프 열기 →</span>
             </a>
+
             <a href="output/plots/interactive/bpt_interactive.html" target="_blank" class="card">
-                <div class="card-icon">&#128308;</div>
-                <h3>BPT 진단 다이어그램</h3>
-                <p>방출선 비율([NII]/Hα vs [OIII]/Hβ)로 은하의 에너지원을 분류합니다. Kauffmann·Kewley 경계선이 함께 표시됩니다.</p>
-                <span class="link-btn gold">열기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">🌈</span><span class="card-tag">대화형 HTML</span></div>
+                    <h3>BPT 방출선 이온화 진단 인터랙티브 도표</h3>
+                    <p>log([NII]/Hα) vs log([OIII]/Hβ) 비율과 Kauffmann(2003)·Kewley(2001) 경계선으로 별생성 은하와 AGN을 구분합니다.</p>
+                </div>
+                <span class="link-btn">그래프 열기 →</span>
             </a>
+
             <a href="output/plots/interactive/color_mass_interactive.html" target="_blank" class="card">
-                <div class="card-icon">&#127912;</div>
-                <h3>색-질량 다이어그램</h3>
-                <p>항성 질량 vs u-r 색지수. 11대 은하 분류별 붉은 계열(Red Sequence)과 푸른 구름(Blue Cloud), 그린 밸리(Green Valley) 진화 경로를 탐색합니다.</p>
-                <span class="link-btn gold">열기</span>
+                <div>
+                    <div class="card-header"><span class="card-icon">🎨</span><span class="card-tag">대화형 HTML</span></div>
+                    <h3>색–질량 이분성 (Color-Mass) 인터랙티브 도표</h3>
+                    <p>청색 구름(Blue Cloud)에서 녹색 계곡(Green Valley)을 거쳐 적색 계열(Red Sequence)로 진화하는 경로를 탐색합니다.</p>
+                </div>
+                <span class="link-btn">그래프 열기 →</span>
             </a>
         </div>
     </div>
 </section>
 
-<!-- ═══════════════════════ 4. PIPELINE ═══════════════════════ -->
-<section id="pipeline">
+<!-- 3. 보정 방식 및 은하 진화 지수 수식 핵심 요약 -->
+<section id="methodology">
     <div class="container">
-        <h2 class="section-title">&#9881;&#65039; 파이프라인 작동 원리</h2>
-        <p class="section-desc">
-            로컬 PC 환경에서 <code>run_project.bat</code> 실행 시, 다음 데이터 처리 파이프라인 6단계가 순차 가동됩니다.
-        </p>
+        <h2 class="section-title">📐 3. 통합 은하 진화 지수(GEI v2.0) 수식 & 도표 적합성 3단계 분류</h2>
+        <p class="section-desc">말름퀴스트 거리 편향을 제거한 5대 고유 물리 축 기반 마스터 방정식 및 도표 분류 기준입니다.</p>
 
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-body">
-                    <h3>데이터 수집 (data_fetcher.py)</h3>
-                    <p>SDSS DR18 SkyServer API에 SQL 쿼리를 보내 은하 10만 개의 원시 관측 데이터를 수집합니다. 이미 데이터가 있으면 건너뜁니다.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">2</div>
-                <div class="step-body">
-                    <h3>데이터 처리 및 스키마 정제 (data_processor.py)</h3>
-                    <p>SDSS 200개 핵심 물리량(측광 5밴드 등급, 유효반경, 축비, 방출선 플럭스, 등가폭, 성간 소광, D4000, 2MASS/WISE 적외선, FIRST 전파 플럭스 등)을 정제하고 11대 은하 분류 라벨을 통합 부여합니다.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">3</div>
-                <div class="step-body">
-                    <h3>시각화 생성 (plot_generators.py + plot_interactive.py)</h3>
-                    <p>16개의 정적 상관 다이어그램(PNG)과 3개의 대화형 HTML 그래프를 자동 생성합니다.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">4</div>
-                <div class="step-body">
-                    <h3>머신러닝 분류 (run_ml_pipeline.py)</h3>
-                    <p>K-Means 군집화로 은하를 4개 진화 그룹으로 분류하고, Random Forest로 은하 유형(타원/나선) 분류 모델을 학습합니다.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">5</div>
-                <div class="step-body">
-                    <h3>요약 & 대시보드 갱신</h3>
-                    <p>최종 마스터 데이터셋의 크기와 저장 위치를 출력합니다.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">6</div>
-                <div class="step-body">
-                    <h3>외부 검증 (validation_tool.py)</h3>
-                    <p>M82(폭발적 별생성), M87(타원/AGN), M31(나선) 등 실제 유명 은하의 관측값과 비교하여 분석 결과의 타당성을 검증합니다.</p>
-                </div>
-            </div>
+        <div class="formula-banner">
+            <div style="font-size:0.82rem; color:#94a3b8; margin-bottom:4px;">■ 차세대 5축 통합 은하 진화 지수 (Unified GEI v2.0) 마스터 방정식</div>
+            <code>GEI_v2 = 0.30 · S_quench(sSFR) + 0.25 · S_mass(M*) + 0.20 · S_pop(u-r, Dn4000, O/H) + 0.15 · S_struct(Σ*) + 0.10 · S_halo(M_dyn, f_DM)</code>
+        </div>
+
+        <div class="table-wrap">
+            <table class="info-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">적합성 등급</th>
+                        <th style="width:280px;">해당 도표 및 물리량 관계</th>
+                        <th>물리적·통계적 판정 근거 및 GEI 반영 원칙</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color:#34d399;">[1등급] 즉시 사용 가능<br>(GEI 핵심 축 채택)</strong></td>
+                        <td>
+                            • 항성질량 – 비별생성률 (<code>M* – sSFR</code>)<br>
+                            • 항성질량 – 광학 색지수 (<code>M* – u-r</code>)<br>
+                            • 항성질량 – 항성연령 (<code>M* – Dn4000</code>)<br>
+                            • 표면밀도 – 암흑물질 분율 (<code>Σ* – f_DM</code>)<br>
+                            • 항성질량 – 암흑물질 질량 (<code>M* – M_DM</code>)<br>
+                            • 항성질량 – 광도 (<code>M* – L</code>, r = 0.96)
+                        </td>
+                        <td>관측 거리 편향 없이 은하 고유의 ① 별생성 소광도, ② 질량 축적 성숙도, ③ 항성 종족 노화, ④ 중심부 바리온 냉각 수축도, ⑤ 암흑물질 헤일로 성장을 직접 대변하므로 GEI v2.0의 5대 핵심 축으로 직접 채택함.</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color:#fbbf24;">[2등급] 추가 검증·변환 후<br>조건부 사용 가능</strong></td>
+                        <td>
+                            • 단순 질량 – 별생성률 (<code>M* – SFR</code>)<br>
+                            • 별생성률 – 암흑물질 (<code>SFR – M_DM</code>)<br>
+                            • 광도 – 암흑물질 (<code>L – M_DM</code>)<br>
+                            • 질량 – 금속함량 (<code>M* – O/H</code>) 및 BPT 도표
+                        </td>
+                        <td>
+                            • 단순 <code>SFR</code>은 은하 체급(크기) 효과가 섞여 있으므로 반드시 <strong>비별생성률(<code>sSFR = SFR/M*</code>)</strong> 또는 <strong>주계열 편차(<code>ΔMS</code>)</strong>로 변환 후 사용해야 함.<br>
+                            • <code>SFR – M_DM</code>은 제3변수인 항성질량(<code>M*</code>)을 통제한 편상관/3D 분석으로 검증 후 반영.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color:#f87171;">[3등급] 절대 사용 금지<br>(GEI 100% 배제)</strong></td>
+                        <td>
+                            • 거리 – 항성질량 (<code>Dist – M*</code>)<br>
+                            • 거리 – 별생성률 (<code>Dist – SFR</code>)<br>
+                            • 거리 – 암흑물질 (<code>Dist – M_DM</code>)<br>
+                            • 미정제 클리핑/결측 포함 도표
+                        </td>
+                        <td><strong>말름퀴스트 관측 선택 편향(Malmquist Bias, F = L / 4πD²)</strong>에 의한 가짜 양(+)의 상관임. 부피 완전 표본(<code>log₁₀ M* ≥ 10.3</code>, <code>60 ≤ D ≤ 240 Mpc</code>)으로 통제 시 상관계수가 <code>r = +0.34 → +0.005 ≈ 0</code>으로 즉시 소멸하므로 진화 지수에서 100% 배제함.</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </section>
 
-<!-- ═══════════════════════ 5. FILES ═══════════════════════ -->
-<section id="files">
-    <div class="container">
-        <h2 class="section-title">&#128193; 프로젝트 파일 구조</h2>
-        <p class="section-desc">주요 파일과 폴더의 역할을 안내합니다.</p>
-
-        <table class="info-table">
-            <tr><th>파일/폴더</th><th>설명</th></tr>
-            <tr><td><code>run_project.bat</code></td><td>통합 실행 파일 — 더블클릭으로 전체 파이프라인 + 서버 구동</td></tr>
-            <tr><td><code>launcher.html</code></td><td>이 페이지. 프로젝트 포털 및 사용 설명서</td></tr>
-            <tr><td><code>run_pipeline.py</code></td><td>파이프라인 오케스트레이터 (단계 1~6 순차 실행)</td></tr>
-            <tr><td><code>config.py</code></td><td>전역 경로·상수 설정 파일</td></tr>
-            <tr><td><code>data_fetcher.py</code></td><td>SDSS API 데이터 수집</td></tr>
-            <tr><td><code>data_processor.py</code></td><td>물리·화학적 특성 계산 및 마스터 데이터셋 생성</td></tr>
-            <tr><td><code>plot_generators.py</code></td><td>정적 산점도(PNG) 16장 자동 생성</td></tr>
-            <tr><td><code>plot_interactive.py</code></td><td>대화형 Plotly HTML 그래프 3종 생성</td></tr>
-            <tr><td><code>run_ml_pipeline.py</code></td><td>K-Means 군집화 + Random Forest 분류 학습</td></tr>
-            <tr><td><code>galaxy_classifier.py</code></td><td>머신러닝 모델 정의 및 학습 로직</td></tr>
-            <tr><td><code>spectrum_analyzer.py</code></td><td>Streamlit 기반 스펙트럼 분석 웹앱</td></tr>
-            <tr><td><code>validation_tool.py</code></td><td>실제 은하 데이터 기반 타당성 검증</td></tr>
-            <tr><td><code>dashboard/</code></td><td>웹 대시보드 (index.html + app.js + style.css)</td></tr>
-            <tr><td><code>data/raw/</code></td><td>SDSS 원시 CSV 데이터</td></tr>
-            <tr><td><code>data/processed/</code></td><td>가공된 마스터 데이터셋 (galaxy_master_200params.csv)</td></tr>
-            <tr><td><code>data/excel_exports/</code></td><td>물리/화학 분리 내보내기 (CSV 또는 Excel)</td></tr>
-            <tr><td><code>output/plots/</code></td><td>정적 다이어그램 PNG + interactive/ HTML</td></tr>
-            <tr><td><code>output/models/</code></td><td>학습된 ML 모델 파일 (.joblib)</td></tr>
-        </table>
-    </div>
-</section>
-
-<!-- ═══════════════════════ 6. FAQ ═══════════════════════ -->
+<!-- 4. 핵심 방법론 Q&A -->
 <section id="faq">
     <div class="container">
-        <h2 class="section-title">&#10067; FAQ 및 문제 해결 가이드</h2>
-        <p class="section-desc">오류 발생 시 다음 지침을 참고하십시오.</p>
+        <h2 class="section-title">💡 4. 핵심 연구 방법론 8대 문답 (보정 방식 · 통계 · 프로그램 설계)</h2>
+        <p class="section-desc">질문을 클릭하면 상세한 수학적·천체물리학적 설명이 펼쳐집니다. (전체 내용은 상단 PDF 정리집에서도 확인 가능)</p>
 
         <div class="faq-item">
-            <button class="faq-q">웹 대시보드에 접속이 안 됩니다.</button>
-            <div class="faq-a">
+            <button class="faq-q open">1. 말름퀴스트 편향(Malmquist Bias)은 어떻게 보정했나요?</button>
+            <div class="faq-a open">
                 <div class="faq-inner">
-                본 웹페이지는 자급식 오프라인 렌더링 시스템을 사용하므로 외부 서버가 필요하지 않습니다.<br>
-                화면이 보이지 않는다면 브라우저의 캐시를 비우고 새로고침을 시도하십시오.
+                    빛의 역제곱 법칙 <code>F = L / (4πD²)</code>에 의해 망원경의 검출 한계 플럭스 <code>F_lim</code>이 존재하면, 거리 <code>D</code>에서 관측 가능한 최소 은하 질량이 <code>log₁₀ M_*,lim(D) ∝ 2 log₁₀ D</code>로 상승하여 먼 거리에서는 밝고 무거운 은하만 검출됩니다(전체 표본 <code>r = +0.34</code>). 이를 보정하기 위해 최대 분석 거리 240 Mpc에서도 100% 검출 가능한 <strong>완결 질량 문턱값 <code>log₁₀(M*/M☉) ≥ 10.3</code> 및 <code>60 ≤ D ≤ 240 Mpc</code>의 부피 완전 표본(Volume-Limited Complete Subsample)</strong>을 추출한 결과 상관계수가 <strong><code>r = +0.005 ≈ 0</code></strong>으로 소멸함을 증명했고, GEI 수식에서 거리 항을 완전히 배제했습니다.
                 </div>
             </div>
         </div>
+
         <div class="faq-item">
-            <button class="faq-q">천체 스펙트럼 분석기를 웹에서 실행할 수 있습니까?</button>
+            <button class="faq-q">2. 피어슨 선형 상관계수(r)와 스피어만 순위 상관계수(ρ)를 왜 둘 다 사용했나요?</button>
             <div class="faq-a">
                 <div class="faq-inner">
-                <strong>[시스템 안내]</strong> 해당 애플리케이션은 파이썬 연산 코어가 필요한 로컬 전용 도구입니다.<br>
-                로컬 PC에 코드를 다운로드 받아 <code>run_project.bat</code>을 실행해야 정상적으로 작동합니다.
+                    <strong>피어슨 상관계수(r)</strong>는 상용로그 변환된 두 물리량이 얼마나 직선(멱법칙 <code>Y ∝ X^a</code>)에 가까운지 측정하지만 소수의 극단적 이상치에 취약합니다. 반면 <strong>스피어만 순위 상관계수(ρ)</strong>는 실제 수치 대신 크기 순위(Rank)만 사용하므로 비선형 곡선 진화 경향이나 이상치에 흔들리지 않습니다. 두 지표를 비교함으로써 질량-광도(<code>r=0.96, ρ=0.96</code>)처럼 단일 선형 법칙을 따르는 관계와 질량-별생성률처럼 고질량 소광 은하 분리(Bimodality)가 일어나는 관계를 정량적으로 구분했습니다.
                 </div>
             </div>
         </div>
+
         <div class="faq-item">
-            <button class="faq-q">인터랙티브 HTML 그래프 카드들은 작동합니까?</button>
+            <button class="faq-q">3. JWST CEERS 자료는 왜 천문대 관측 기준 및 8대 상관 분석에서 제외했나요?</button>
             <div class="faq-a">
                 <div class="faq-inner">
-                네. 하단의 <code>인터랙티브 그래프</code> 카드 3종은 웹에서도 즉시 렌더링되도록 모두 정적(Static) 파일 형식으로 동기화되어 있습니다. 안심하고 열람하십시오.
+                    ① <strong>우주 시대(Cosmic Epoch) 불일치</strong>: NED/SDSS는 <code>z &lt; 0.1</code> 현대 국소 우주 은하인 반면, CEERS는 <code>z = 0.5 ~ 10</code> 초기 우주 은하로 우주 배경 가스 밀도와 별생성률이 현대보다 10~30배 높아 두 표본을 섞으면 시대 교란이 발생합니다. ② <strong>관측 방식 이질성</strong>: CEERS는 적외선 측광(SED 피팅) 자료로 직접 분광 측정된 회전속도(<code>V_rot</code>)가 없습니다. ③ <strong>지상 천문대 관측 범위 정합성</strong>: 우리 팀이 지상 천문대에서 직접 관측 가능한 은하는 국소 우주 은하이므로 기준 모집단도 국소 우주(NED-LVS + SDSS DR18)로 통일했습니다.
                 </div>
             </div>
         </div>
+
         <div class="faq-item">
-            <button class="faq-q">PC(로컬)에서 데이터를 재분석하고 싶습니다.</button>
+            <button class="faq-q">4. 이상치 및 파이프라인 클리핑 제거 필터와 Hexbin 밀도(log₁₀ N)는 어떻게 적용했나요?</button>
             <div class="faq-a">
                 <div class="faq-inner">
-                로컬 환경에서 <code>data/raw/sdss_100k_raw.csv</code> 파일을 삭제한 후 배치 파일을 재실행하십시오.<br>
-                SDSS 서버에서 최신 관측 데이터를 다시 수집하여 파이프라인을 처음부터 재가동합니다.
+                    • <strong>이상치·클리핑 제거 필터</strong>: ① 거리 미측정 결측치(<code>D ≤ 0.5 Mpc</code>) 제거, ② SDSS 파이프라인 상·하한 그리드 클리핑(<code>log SFR = ±4.0</code>) 및 <code>SFR = 0</code> 왜곡을 막기 위한 <code>-3.8 &lt; log₁₀ SFR &lt; +3.5</code> 필터, ③ 구간별 표본수 <code>N ≥ 20</code> 이상인 구간만 중앙값(Binned Median)과 사분위 범위(IQR) 산출.<br>
+                    • <strong>Hexbin(육각형 격자 상용로그 밀도)</strong>: 수만 개 은하가 중심부에 겹쳐 찍히는 과밀 중첩 포화(Overplotting)를 해결하기 위해 45×45 정육각형 격자 안에 들어가는 은하 수를 <code>log₁₀ N</code> 색상으로 표현하여 1개(외곽 희귀 은하)부터 1,000개(주계열 핵심 능선)까지의 밀도 구조를 왜곡 없이 시각화했습니다.
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
 <footer>
     <div class="container">
-        YSC 2026 과학탐구 대회 — 은하 진화 다차원 분석 프로젝트<br>
-        이 페이지는 오프라인에서도 열 수 있습니다. 서버 없이도 프로젝트 안내와 그래프 접근이 가능합니다.
+        YSC 2026 과학탐구대회 — 은하 진화 지수(GEI v2.0) 개발 · 3차원 다양체 분석 · 천문대 직접 관측 은하 진화 판별 플랫폼
     </div>
 </footer>
 
-<!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
 <script>
-    // FAQ Accordion
     document.querySelectorAll('.faq-q').forEach(btn => {
         btn.addEventListener('click', () => {
             const answer = btn.nextElementSibling;
             const isOpen = answer.classList.contains('open');
-
-            // close all
-            document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
-            document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
-
-            if (!isOpen) {
-                answer.classList.add('open');
-                btn.classList.add('open');
-            }
+            btn.classList.toggle('open', !isOpen);
+            answer.classList.toggle('open', !isOpen);
         });
     });
 </script>
-
 </body>
 </html>

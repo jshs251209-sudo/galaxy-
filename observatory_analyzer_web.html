@@ -33,48 +33,62 @@
         header {
             background: rgba(15, 23, 42, 0.92);
             border-bottom: 1px solid var(--border-color);
-            padding: 18px 32px;
+            padding: 14px 28px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
             position: sticky;
             top: 0;
             z-index: 100;
             backdrop-filter: blur(12px);
         }
         .header-title h1 {
-            font-size: 1.38rem;
+            font-size: 1.32rem;
             font-weight: 800;
             background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .header-title p {
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
             margin-top: 2px;
         }
         .header-badges {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
+            align-items: center;
         }
         .badge-pill {
             font-size: 0.76rem;
-            font-family: 'JetBrains Mono', monospace;
-            padding: 5px 12px;
-            border-radius: 999px;
+            font-family: 'Noto Sans KR', 'JetBrains Mono', sans-serif;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
             background: rgba(56, 189, 248, 0.12);
             border: 1px solid rgba(56, 189, 248, 0.35);
-            color: #7dd3fc;
+            color: #bae6fd;
+            text-decoration: none;
+            transition: all 0.18s;
+        }
+        a.badge-pill:hover {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
         }
         .main-layout {
             display: grid;
-            grid-template-columns: 390px 1fr;
+            grid-template-columns: 400px minmax(0, 1fr);
             gap: 20px;
             max-width: 1860px;
             margin: 20px auto;
             padding: 0 22px 40px;
+        }
+        .left-col, .right-content, .card, .plots-grid-2 > * {
+            min-width: 0;
         }
         @media (max-width: 1200px) {
             .main-layout { grid-template-columns: 1fr; }
@@ -85,15 +99,18 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
         }
         .card-title {
-            font-size: 1.02rem;
+            font-size: 1.0rem;
             font-weight: 700;
             color: #e2e8f0;
             margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
             border-bottom: 1px solid rgba(148, 163, 184, 0.15);
             padding-bottom: 8px;
         }
@@ -440,9 +457,10 @@
         <p>우리 팀 직접 관측 데이터(겉보기 등급·각반경·색지수·분광) 입력 기반 Unified GEI v2.0 산출 및 국소 우주(NED-LVS · SDSS DR18) 3D 다양체 비교 시스템</p>
     </div>
     <div class="header-badges">
-        <span class="badge-pill">Direct Observatory Input Mode</span>
-        <span class="badge-pill">Unified GEI v2.0 Engine</span>
-        <span class="badge-pill">NED-LVS + SDSS Local Universe 3D (CEERS 제외)</span>
+        <a href="index.html" class="badge-pill">← 통합 포털</a>
+        <a href="galaxy_analyzer_web.html" class="badge-pill" style="border-color:rgba(16,185,129,0.5); color:#a7f3d0;">📸 천체사진·분광(BPT) 분석기</a>
+        <a href="dashboard_real_data.html" class="badge-pill">📊 SDSS 10만 은하 대시보드</a>
+        <a href="은하진화연구_보정방식_수식_및_방법론_핵심정리.pdf" target="_blank" class="badge-pill" style="border-color:rgba(245,158,11,0.55); color:#fde68a;">📄 보정방식·수식 PDF</a>
     </div>
 </header>
 
@@ -1255,9 +1273,9 @@ function drawGEICurveAndBars() {
         paper_bgcolor: "rgba(0,0,0,0)",
         plot_bgcolor: "rgba(15,23,42,0.5)",
         font: { color: "#cbd5e1", size: 10.5 },
-        margin: { l: 44, r: 12, t: 12, b: 34 },
+        margin: { l: 44, r: 12, t: 38, b: 34 },
         yaxis: { title: "점수 [0~1]", range: [0, 1.08], gridcolor: "#334155" },
-        legend: { orientation: "h", x: 0.02, y: 1.14 }
+        legend: { orientation: "h", x: 0.02, y: 1.18 }
     };
     Plotly.newPlot("plot-5axis-bar", [barPast, barNow, barFut], layoutBar, { responsive: true, displayModeBar: false });
 }
@@ -1505,16 +1523,41 @@ function normalizeColumnRow(rawObj, fallbackName) {
     let mstar = pickNum(["log_mstar", "logmstar", "lgm_tot_p50", "log10_mstar_msun", "mstar", "mass", "항성질량"], "");
     if (mstar !== "" && mstar > 1e5) mstar = Math.log10(mstar); // 선형 M_sun 값이면 상용로그로 자동 변환
 
+    const m_r_app = pickNum(["m_r", "mr", "app_mag", "mag", "겉보기등급"], "");
+    const theta_arcsec = pickNum(["theta_arcsec", "theta", "ang_rad", "petror50_r", "각반경", "시직경"], "");
+    const v_rec = pickNum(["v_rec", "vrec", "vel_kms", "vr", "후퇴속도"], "");
+    let dist_mpc = pickNum(["dist_mpc", "distmpc", "distance", "dist", "d_mpc", "거리"], "");
+    let z = pickNum(["z", "redshift", "lp_z_best", "적색편이"], "");
+
+    if (dist_mpc === "" && v_rec !== "" && v_rec > 10) dist_mpc = v_rec / 70.0;
+    if (z === "" && v_rec !== "" && v_rec > 10) z = v_rec / 299792.458;
+    if (dist_mpc === "") dist_mpc = 12.5;
+    if (z === "") z = (dist_mpc * 70.0) / 299792.458;
+
+    let color_u_r = pickNum(["color_u_r", "u_r", "ur", "color", "색지수"], "");
+    if (mstar === "" && m_r_app !== "") {
+        const distMod = 5.0 * Math.log10(Math.max(dist_mpc, 0.05)) + 25.0;
+        const absMag = m_r_app - distMod;
+        const logL = -0.4 * (absMag - 4.64);
+        const urTmp = color_u_r !== "" ? color_u_r : 1.85;
+        mstar = clip(logL + (-0.42 + 0.35 * clip(urTmp, 0.6, 3.2)), 7.2, 12.1);
+    }
+
+    let radius_kpc = pickNum(["radius_kpc", "r_e_kpc", "rkpc", "radius", "re_kpc", "반경", "물리반경"], "");
+    if (radius_kpc === "" && theta_arcsec !== "" && theta_arcsec > 0) {
+        radius_kpc = clip((dist_mpc * theta_arcsec) / 206.265, 0.3, 65.0);
+    }
+
     let sfr = pickNum(["log_sfr", "logsfr", "sfr_tot_p50", "sfr", "별생성률"], "");
     return {
         name: pick(["name", "galaxy", "id", "objid", "target", "object", "은하이름", "은하명", "천체명"], fallbackName),
         log_mstar: mstar,
         log_sfr: sfr,
-        dist_mpc: pickNum(["dist_mpc", "distmpc", "distance", "dist", "d_mpc", "거리"], 12.5),
-        z: pickNum(["z", "redshift", "lp_z_best", "적색편이"], 0.003),
-        radius_kpc: pickNum(["radius_kpc", "r_e_kpc", "rkpc", "radius", "re_kpc", "반경", "물리반경"], ""),
+        dist_mpc: dist_mpc,
+        z: z,
+        radius_kpc: radius_kpc,
         v_rot: pickNum(["v_rot", "vrot", "v_max", "vmax", "vel_disp", "sigma", "회전속도"], ""),
-        color_u_r: pickNum(["color_u_r", "u_r", "ur", "color", "색지수"], ""),
+        color_u_r: color_u_r,
         d4000: pickNum(["d4000", "d4000_n", "dn4000"], ""),
         oh: pickNum(["oh", "oh_p50", "metallicity", "금속량"], ""),
         ha_flux: pickNum(["ha_flux", "ha", "halpha"], "")
@@ -1794,22 +1837,41 @@ multiRowSelect.addEventListener("change", (e) => {
 document.getElementById("btn-download-sample-csv").addEventListener("click", (e) => {
     e.stopPropagation();
     const csvLines = [
-        "name,log_mstar,log_sfr,dist_mpc,z,radius_kpc,v_rot,color_u_r,d4000,oh",
-        "M31 (안드로메다 관측표본),10.804,-0.45,0.80,0.0010,12.02,250.0,2.42,1.68,9.02",
-        "M51a (소용돌이 나선은하),10.927,0.65,8.58,0.0015,16.05,205.5,1.85,1.32,9.08",
-        "M82 (시가 폭발별생성은하),10.020,1.05,3.53,0.0007,3.80,135.0,1.38,1.12,8.75",
-        "M87 (처녀자리 거대타원은하),11.780,-1.85,16.40,0.0043,18.50,480.0,2.88,1.98,9.18",
-        "NGC 3198 (표준 회전곡선 은하),10.292,0.08,13.80,0.0022,16.70,150.0,1.72,1.31,8.80",
-        "CEERS-z5.2 (JWST 초기우주 은하),9.350,1.15,49500.0,5.2000,0.75,122.0,0.95,1.04,8.05"
+        "name,m_r,theta_arcsec,v_rec,color_u_r,log_mstar,log_sfr,dist_mpc,z,radius_kpc,v_rot,d4000,oh",
+        "우리팀_직접관측_은하01 (나선원반),10.25,115.0,820.0,1.76,10.35,0.22,11.71,0.0027,6.53,178.0,1.31,8.84",
+        "우리팀_직접관측_은하02 (폭발별생성),11.10,68.0,640.0,1.38,9.92,0.88,9.14,0.0021,3.01,132.0,1.12,8.68",
+        "우리팀_직접관측_은하03 (녹색계곡전이),9.80,140.0,1120.0,2.28,10.78,-0.42,16.00,0.0037,10.86,238.0,1.64,8.98",
+        "우리팀_직접관측_은하04 (소광타원은하),9.45,125.0,1350.0,2.74,11.35,-1.55,19.29,0.0045,11.69,340.0,1.92,9.12"
     ].join("\n");
     const blob = new Blob(["\uFEFF" + csvLines], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "천문대_관측은하_샘플데이터_업로드테스트용.csv";
+    a.download = "우리팀_직접관측_은하_입력양식.csv";
     a.click();
     URL.revokeObjectURL(url);
-    showUploadStatus("📥 <b>천문대_관측은하_샘플데이터_업로드테스트용.csv</b> 파일이 다운로드되었습니다! 그대로 업로드해 보세요.");
+    showUploadStatus("📥 <b>우리팀_직접관측_은하_입력양식.csv</b> 파일이 다운로드되었습니다! 관측값을 기록하여 업로드해 보세요.");
+});
+
+// Check URL query parameters (e.g. sent from galaxy_analyzer_web.html)
+(function loadFromQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("name") || params.has("log_mstar")) {
+        if (params.get("name")) document.getElementById("in-name").value = params.get("name");
+        if (params.get("log_mstar")) document.getElementById("in-mstar").value = params.get("log_mstar");
+        if (params.get("log_sfr")) document.getElementById("in-sfr").value = params.get("log_sfr");
+        if (params.get("radius_kpc")) document.getElementById("in-rkpc").value = params.get("radius_kpc");
+        if (params.get("color_u_r")) document.getElementById("in-color").value = params.get("color_u_r");
+        if (params.get("oh")) document.getElementById("in-oh").value = params.get("oh");
+        showUploadStatus(`🔗 <b>천체사진·분광 분석기에서 전달된 관측 데이터</b>가 자동 입력되었습니다!`);
+    }
+})();
+
+window.addEventListener("resize", () => {
+    ["plot-3d-main", "plot-gei-curve", "plot-5axis-bar", "plot-2d-phase"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) Plotly.Plots.resize(el);
+    });
 });
 
 // Initial render
