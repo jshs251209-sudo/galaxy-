@@ -226,11 +226,13 @@ def print_detailed_console_report(sim_result: dict):
 
 
 def run_interactive_cli():
-    """사용자가 콘솔에서 직접 천문대 관측 물리량을 입력하여 분석하는 대화형 모드"""
-    print("\n" + "=" * 80)
-    print(" 🔭 천문대 관측 은하 진화 단계 판별기 (대화형 입력 모드)")
-    print("    (값을 모르는 항목은 Enter를 누르면 천체물리 스케일링 법칙으로 자동 추정됩니다)")
-    print("=" * 80)
+    """사용자가 콘솔에서 직접 천문대 망원경·CCD 원시 관측값 또는 물리량을 입력하여 분석하는 대화형 모드"""
+    print("\n" + "=" * 84)
+    print(" 🔭 우리 팀 직접 관측 은하 입력 · 진화 단계(GEI v2.0) 판별기 (대화형 입력 모드)")
+    print("    • 망원경·CCD 원시 측정값(겉보기 등급 m_r, 각반경 arcsec, 후퇴속도 km/s)을 입력하면")
+    print("      물리량(항성질량 M*, 물리적 반경 R_kpc, 별생성률 SFR)으로 자동 환산합니다.")
+    print("    • 값을 모르는 항목은 Enter를 누르면 천체물리 스케일링 법칙으로 자동 추정됩니다.")
+    print("=" * 84)
 
     def ask_float(prompt_str, default_val=None):
         raw = input(prompt_str).strip()
@@ -241,25 +243,40 @@ def run_interactive_cli():
         except ValueError:
             return default_val
 
-    name = input("1. 관측 은하 이름 (예: M51, NGC 3198, 관측은하-1): ").strip() or "천문대_관측은하"
-    dist_mpc = ask_float("2. 은하 거리 D [Mpc] (예: 13.8, 모르면 Enter): ")
-    z = ask_float("3. 적색편이 z (예: 0.0022, 모르면 Enter): ")
-    log_mstar = ask_float("4. 항성 질량 log10(M*/M_sun) (예: 10.3, 모르면 Enter): ")
+    name = input("1. 직접 관측한 은하 이름/ID (예: 2026-관측은하-01): ").strip() or "우리팀_직접관측은하_01"
+    v_rec = ask_float("2. 분광 후퇴속도 v_r [km/s] (예: 1150, 모르면 Enter): ")
+    dist_mpc = ask_float("3. 은하 거리 D [Mpc] (예: 16.4, 모르면 Enter -> 후퇴속도로 자동 계산): ")
+    if dist_mpc is None and v_rec is not None and v_rec > 0:
+        dist_mpc = round(v_rec / 70.0, 2)
+        print(f"   -> 허블 법칙(H0=70 km/s/Mpc) 자동 환산 거리: D = {dist_mpc:.2f} Mpc")
+
+    m_r_app = ask_float("4. CCD 겉보기 등급 m_r [mag] (예: 10.4, 직접 log M* 입력 시 Enter): ")
+    theta_arcsec = ask_float("5. 사진 반빛 각반경 θ_e [arcsec] (예: 85.0, 직접 R_kpc 입력 시 Enter): ")
+    color_u_r = ask_float("6. 광학 색지수 (u - r) [mag] (예: 1.75, 모르면 Enter): ")
+
     abs_mag_r = None
-    if log_mstar is None:
-        abs_mag_r = ask_float("   -> r-밴드 절대등급 M_r (예: -20.8, 모르면 Enter): ")
-    radius_kpc = ask_float("5. 물리적 반경 R [kpc] (예: 15.0, 모르면 Enter): ")
-    v_rot = ask_float("6. 회전 속도 V_rot [km/s] (예: 180.0, 모르면 Enter): ")
-    log_sfr = ask_float("7. 별생성률 log10(SFR [M_sun/yr]) (예: 0.15, 모르면 Enter): ")
+    if m_r_app is not None and dist_mpc is not None and dist_mpc > 0:
+        abs_mag_r = m_r_app - 5.0 * np.log10(dist_mpc * 1e6 / 10.0)
+        print(f"   -> 거리 지수 공식 자동 환산 절대등급: M_r = {abs_mag_r:.2f} mag")
+
+    radius_kpc = None
+    if theta_arcsec is not None and dist_mpc is not None and dist_mpc > 0:
+        radius_kpc = dist_mpc * 1000.0 * (theta_arcsec / 206265.0)
+        print(f"   -> 삼각법 자동 환산 물리적 반경: R_e = {radius_kpc:.2f} kpc")
+
+    log_mstar = ask_float("7. 항성 질량 log10(M*/M_sun) (원시 등급으로 자동 환산하려면 Enter): ")
+    if radius_kpc is None:
+        radius_kpc = ask_float("8. 물리적 반경 R [kpc] (예: 6.8, 모르면 Enter): ")
+    v_rot = ask_float("9. 회전 속도 V_rot [km/s] (예: 175.0, 모르면 Enter): ")
+    log_sfr = ask_float("10. 별생성률 log10(SFR [M_sun/yr]) (자동 환산하려면 Enter): ")
     ha_flux = None
     if log_sfr is None:
-        ha_flux = ask_float("   -> H-alpha 관측 플럭스 [10^-17 erg/s/cm^2] (모르면 Enter): ")
-    color_u_r = ask_float("8. 광학 색지수 (u - r) [mag] (예: 1.85, 모르면 Enter): ")
+        ha_flux = ask_float("    -> H-alpha 관측 플럭스 [10^-17 erg/s/cm^2] (모르면 Enter): ")
 
     obs_input = {
         "name": name,
         "dist_mpc": dist_mpc,
-        "z": z,
+        "z": (v_rec / 299792.458) if v_rec is not None else None,
         "log_mstar": log_mstar,
         "abs_mag_r": abs_mag_r,
         "radius_kpc": radius_kpc,
@@ -278,14 +295,18 @@ def run_interactive_cli():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="천문대 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램")
-    parser.add_argument("--interactive", action="store_true", help="대화형 관측 물리량 입력 모드 실행")
-    parser.add_argument("--name", type=str, default=None, help="관측 은하 이름")
+    parser = argparse.ArgumentParser(description="우리 팀 직접 관측 은하 입력 · 진화 단계 판별 및 과거·미래 진화 예측 프로그램")
+    parser.add_argument("--interactive", action="store_true", help="대화형 직접 관측값 입력 모드 실행")
+    parser.add_argument("--benchmark", action="store_true", help="문헌 카탈로그 기준 은하 5종 알고리즘 검증 리포트 생성")
+    parser.add_argument("--name", type=str, default=None, help="직접 관측한 은하 이름/ID")
+    parser.add_argument("--m_r", type=float, default=None, help="CCD 관측 겉보기 등급 m_r [mag]")
+    parser.add_argument("--theta_arcsec", type=float, default=None, help="사진 관측 각반경 theta_e [arcsec]")
+    parser.add_argument("--v_rec", type=float, default=None, help="분광 후퇴속도 v_r [km/s]")
     parser.add_argument("--dist_mpc", type=float, default=None, help="거리 [Mpc]")
     parser.add_argument("--z", type=float, default=None, help="적색편이 z")
     parser.add_argument("--log_mstar", type=float, default=None, help="항성 질량 log10(M*/M_sun)")
     parser.add_argument("--abs_mag_r", type=float, default=None, help="r밴드 절대등급 M_r")
-    parser.add_argument("--radius_kpc", type=float, default=None, help="은하 반경 R [kpc]")
+    parser.add_argument("--radius_kpc", type=float, default=None, help="은하 물리적 반경 R [kpc]")
     parser.add_argument("--v_rot", type=float, default=None, help="회전 속도 V_rot [km/s]")
     parser.add_argument("--log_sfr", type=float, default=None, help="별생성률 log10(SFR [M_sun/yr])")
     parser.add_argument("--h_alpha_flux", type=float, default=None, help="H-alpha 플럭스 [10^-17 erg/s/cm^2]")
@@ -296,14 +317,24 @@ def main():
         run_interactive_cli()
         return
 
-    if args.name is not None or args.log_mstar is not None:
+    if any(v is not None for v in [args.name, args.log_mstar, args.m_r, args.theta_arcsec, args.v_rec]):
+        dist_mpc = args.dist_mpc
+        if dist_mpc is None and args.v_rec is not None and args.v_rec > 0:
+            dist_mpc = args.v_rec / 70.0
+        abs_mag_r = args.abs_mag_r
+        if abs_mag_r is None and args.m_r is not None and dist_mpc is not None and dist_mpc > 0:
+            abs_mag_r = args.m_r - 5.0 * np.log10(dist_mpc * 1e6 / 10.0)
+        radius_kpc = args.radius_kpc
+        if radius_kpc is None and args.theta_arcsec is not None and dist_mpc is not None and dist_mpc > 0:
+            radius_kpc = dist_mpc * 1000.0 * (args.theta_arcsec / 206265.0)
+
         obs_in = {
-            "name": args.name or "사용자_관측은하",
-            "dist_mpc": args.dist_mpc,
-            "z": args.z,
+            "name": args.name or "우리팀_직접관측은하",
+            "dist_mpc": dist_mpc,
+            "z": args.z if args.z is not None else ((args.v_rec / 299792.458) if args.v_rec else None),
             "log_mstar": args.log_mstar,
-            "abs_mag_r": args.abs_mag_r,
-            "radius_kpc": args.radius_kpc,
+            "abs_mag_r": abs_mag_r,
+            "radius_kpc": radius_kpc,
             "v_rot": args.v_rot,
             "log_sfr": args.log_sfr,
             "h_alpha_flux": args.h_alpha_flux,
@@ -314,18 +345,20 @@ def main():
         safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in obs_in["name"])
         out_png = os.path.join(REPORT_DIR, f"관측은하_진단리포트_{safe_name}.png")
         generate_single_galaxy_diagnostic_chart(sim, out_png)
-        print(f"[+] 개별 은하 진단 리포트 차트 저장 완료: {out_png}")
+        print(f"[+] 직접 관측 은하 진단 리포트 차트 저장 완료: {out_png}")
         return
 
-    # 기본 실행: 대표 천문대 관측 은하 5종(Stage I ~ V 대표) 상세 콘솔 출력 및 개별 진단 리포트 차트 생성
+    # 기본 안내 및 문헌 기준 은하(국소 우주 지상 관측 기준, CEERS 제외) 알고리즘 검증 실행
     print("=" * 88)
-    print(" 🔭 천문대 관측 은하 진화 단계 판별 프로그램 — 전 단계(Stage I~V) 대표 관측 은하 실증")
+    print(" 🔭 우리 팀 직접 관측 은하 진화 분석기 (observatory_galaxy_analyzer.py)")
+    print("    • 직접 관측값 대화형 입력: python observatory_galaxy_analyzer.py --interactive")
+    print("    • 원시 관측값 CLI 입력 예: python observatory_galaxy_analyzer.py --name '관측은하_01' --m_r 10.4 --theta_arcsec 85 --v_rec 1150 --color_u_r 1.75")
+    print("    • 아래는 GEI v2.0 알고리즘 검증용 국소 우주 표준 문헌 은하(CEERS 초기우주 제외) 5종 벤치마크 결과입니다.")
     print("=" * 88)
     showcase_keys = [
-        "CEERS-HighZ (JWST 초기우주 원시은하 z=5.2)",
+        "M82 (시가 은하 - 폭발적 별생성)",
         "M33 (삼각형자리 은하)",
         "M51a (소용돌이 은하)",
-        "NGC 3198 (표준 평탄 회전곡선 은하)",
         "M31 (안드로메다 은하)",
         "M87 (처녀자리 A 거대 타원은하)",
     ]
@@ -336,8 +369,9 @@ def main():
         short_id = sk.split(" (")[0].replace(" ", "_")
         out_png = os.path.join(REPORT_DIR, f"관측은하_진단리포트_{short_id}.png")
         generate_single_galaxy_diagnostic_chart(sim, out_png)
-        print(f"  -> [리포트 차트 생성 완료] {out_png}")
+        print(f"  -> [알고리즘 검증 리포트 생성 완료] {out_png}")
 
 
 if __name__ == "__main__":
     main()
+

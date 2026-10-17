@@ -436,37 +436,37 @@
 
 <header>
     <div class="header-title">
-        <h1>🔭 천문대 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램</h1>
-        <p>차세대 5축 통합 은하 진화 지수 (Unified GEI v2.0) · 3차원(3D) 다중 카탈로그 (NED-LVS 145만 · JWST CEERS 7.7만 · SDSS 5만) 비교 시스템</p>
+        <h1>🔭 천문대 직접 관측 은하 진화 단계 판별 및 과거·미래 진화 예측 프로그램</h1>
+        <p>우리 팀 직접 관측 데이터(겉보기 등급·각반경·색지수·분광) 입력 기반 Unified GEI v2.0 산출 및 국소 우주(NED-LVS · SDSS DR18) 3D 다양체 비교 시스템</p>
     </div>
     <div class="header-badges">
+        <span class="badge-pill">Direct Observatory Input Mode</span>
         <span class="badge-pill">Unified GEI v2.0 Engine</span>
-        <span class="badge-pill">Past (-10 Gyr) → Present → Future (+10 Gyr) ODE</span>
-        <span class="badge-pill">NED-LVS + JWST CEERS + SDSS 3D</span>
+        <span class="badge-pill">NED-LVS + SDSS Local Universe 3D (CEERS 제외)</span>
     </div>
 </header>
 
 <div class="main-layout">
-    <!-- Left Column: Observatory Inputs & Presets -->
+    <!-- Left Column: Direct Observatory Inputs & File Upload -->
     <div class="left-col">
         <div class="card">
             <div class="card-title">
-                <span>📂 0. 관측 파일 업로드 (자동 분석)</span>
-                <span style="font-size:0.72rem; color:#34d399;">이미지·FITS·CSV·JSON·TXT</span>
+                <span>📂 0. 직접 촬영한 관측 파일 업로드 (자동 측광·파싱)</span>
+                <span style="font-size:0.72rem; color:#34d399;">CCD사진·FITS·관측기록CSV</span>
             </div>
             <div class="upload-zone" id="obs-dropzone">
                 <input type="file" id="obs-file-input" accept="image/*,.fits,.fit,.fts,.csv,.tsv,.json,.txt" style="display:none;">
                 <div style="font-size:1.5rem; margin-bottom:2px;">📸 📄 🔭</div>
                 <div style="font-size:0.84rem; font-weight:700; color:#e2e8f0;">
-                    여기에 관측 파일을 드래그하거나 아래 버튼 클릭
+                    천문대에서 촬영한 은하 사진·FITS·관측표 업로드
                 </div>
                 <div style="font-size:0.73rem; color:#94a3b8; margin-top:2px;">
-                    • 은하 사진 (JPG, PNG, WebP, BMP) → 밝기·색지수·형태 자동 측광<br>
-                    • 천문 FITS 파일 (.fits, .fit) / 관측 표 (.csv, .tsv, .json, .txt) 지원
+                    • 직접 찍은 은하 사진 (JPG, PNG, WebP, BMP) → 밝기·색지수·반경 자동 측광<br>
+                    • 천문대 FITS 파일 (.fits, .fit) / 직접 기록한 관측 표 (.csv, .tsv, .json, .txt)
                 </div>
                 <div class="upload-btn-row">
-                    <button type="button" class="btn-mini-action" id="btn-trigger-upload">📁 내 컴퓨터에서 파일 선택</button>
-                    <button type="button" class="btn-mini-action" id="btn-download-sample-csv" style="border-color:rgba(16,185,129,0.5); color:#a7f3d0; background:rgba(16,185,129,0.15);">📥 샘플 관측 CSV 다운로드</button>
+                    <button type="button" class="btn-mini-action" id="btn-trigger-upload">📁 내 컴퓨터에서 관측 파일 선택</button>
+                    <button type="button" class="btn-mini-action" id="btn-download-sample-csv" style="border-color:rgba(16,185,129,0.5); color:#a7f3d0; background:rgba(16,185,129,0.15);">📥 관측 입력 양식(CSV) 다운로드</button>
                 </div>
             </div>
             <div class="upload-status-box" id="obs-upload-status"></div>
@@ -475,71 +475,117 @@
                 <div id="obs-preview-info" style="font-size:0.74rem; color:#cbd5e1; line-height:1.45;"></div>
             </div>
             <div id="multi-row-selector-wrap" style="display:none; margin-top:8px; margin-bottom:10px;">
-                <label style="font-size:0.75rem; color:#38bdf8; font-weight:700; display:block; margin-bottom:4px;">📋 업로드된 파일 내 관측 은하 선택:</label>
+                <label style="font-size:0.75rem; color:#38bdf8; font-weight:700; display:block; margin-bottom:4px;">📋 업로드된 관측 기록지 내 은하 선택:</label>
                 <select id="multi-row-select" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #38bdf8; padding:6px 9px; border-radius:7px; font-size:0.8rem;"></select>
             </div>
 
+            <!-- 1. Raw Telescope / CCD Measurement -> Physical Parameter Converter -->
             <div class="card-title" style="margin-top:12px;">
-                <span>1. 천문대 관측 대표 은하 프리셋 (12종)</span>
-                <span style="font-size:0.74rem; color:#38bdf8;">원클릭 로드</span>
+                <span>🔭 1. 천문대 망원경·CCD 원시 관측값 자동 환산기</span>
+                <span style="font-size:0.72rem; color:#fbbf24;">겉보기등급·각반경 → 질량·반경</span>
             </div>
-            <div class="preset-grid" id="preset-buttons"></div>
+            <div style="background:rgba(15,23,42,0.78); border:1px solid rgba(56,189,248,0.28); border-radius:10px; padding:10px; margin-bottom:14px;">
+                <div style="font-size:0.73rem; color:#94a3b8; margin-bottom:8px;">
+                    천문대에서 직접 측정한 <b>겉보기 등급(m)</b>, <b>각반경(θ)</b>, <b>색지수</b>, <b>거리/후퇴속도</b>를 입력하면 항성질량(log M*)과 물리적 반경(R_kpc)을 자동 계산합니다.
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>겉보기 등급 m_r (또는 m_V) [mag]</label>
+                        <input type="number" step="any" id="raw-app-mag" value="9.85" placeholder="예: 9.85">
+                    </div>
+                    <div class="form-group">
+                        <label>겉보기 각반경 θ [초각 arcsec]</label>
+                        <input type="number" step="any" id="raw-ang-rad" value="185.0" placeholder="예: 185">
+                    </div>
+                    <div class="form-group">
+                        <label>후퇴속도 v_r [km/s] (선택)</label>
+                        <input type="number" step="any" id="raw-vel-kms" value="580.0" placeholder="거리 미입력시 사용">
+                    </div>
+                    <div class="form-group">
+                        <label>측광 색지수 (u-r) [mag]</label>
+                        <input type="number" step="any" id="raw-color-ur" value="1.82" placeholder="예: 1.82">
+                    </div>
+                </div>
+                <button type="button" class="btn-mini-action" id="btn-convert-raw" style="width:100%; margin-top:8px; padding:8px; background:rgba(2,132,199,0.32); border-color:#38bdf8; color:#fff;">
+                    ⚡ 원시 관측값 → 물리량(log M*, R_kpc, log SFR) 자동 환산하여 아래 폼에 적용
+                </button>
+            </div>
 
-            <div class="card-title" style="margin-top:16px;">
-                <span>2. 관측 은하 물리량 직접 입력</span>
-                <span style="font-size:0.72rem; color:#94a3b8;">결측치 자동유도</span>
+            <div class="card-title" style="margin-top:12px;">
+                <span>✏️ 2. 직접 관측 은하 물리량 입력 및 분석</span>
+                <span style="font-size:0.72rem; color:#94a3b8;">결측 항목 자동 유도</span>
             </div>
             <form id="obs-form">
                 <div class="form-grid">
                     <div class="form-group full">
-                        <label>관측 은하 이름 (Galaxy ID / Name)</label>
-                        <input type="text" id="in-name" value="M31 (안드로메다 은하 / NGC 224)">
+                        <label>직접 관측한 은하 이름 / 관측 번호 (Observation ID)</label>
+                        <input type="text" id="in-name" value="천문대 직접 관측 은하 #1 (관측값 직접 입력)">
                     </div>
                     <div class="form-group">
                         <label>항성 질량 log₁₀(M*/M☉)</label>
-                        <input type="number" step="any" id="in-mstar" value="10.804" placeholder="모르면 비워두세요">
+                        <input type="number" step="any" id="in-mstar" value="10.42" placeholder="모르면 비워두세요">
                     </div>
                     <div class="form-group">
                         <label>별생성률 log₁₀(SFR [M☉/yr])</label>
-                        <input type="number" step="any" id="in-sfr" value="-0.45" placeholder="모르면 비워두세요">
+                        <input type="number" step="any" id="in-sfr" value="0.18" placeholder="모르면 비워두세요">
                     </div>
                     <div class="form-group">
                         <label>거리 D [Mpc]</label>
-                        <input type="number" step="any" id="in-dist" value="0.80">
+                        <input type="number" step="any" id="in-dist" value="8.28">
                     </div>
                     <div class="form-group">
                         <label>적색편이 z</label>
-                        <input type="number" step="any" id="in-z" value="0.0010">
+                        <input type="number" step="any" id="in-z" value="0.0019">
                     </div>
                     <div class="form-group">
                         <label>물리 반경 R [kpc]</label>
-                        <input type="number" step="any" id="in-rkpc" value="12.02">
+                        <input type="number" step="any" id="in-rkpc" value="7.42">
                     </div>
                     <div class="form-group">
                         <label>회전 속도 V_rot [km/s]</label>
-                        <input type="number" step="any" id="in-vrot" value="250.0">
+                        <input type="number" step="any" id="in-vrot" value="185.0">
                     </div>
                     <div class="form-group">
                         <label>광학 색지수 (u - r) [mag]</label>
-                        <input type="number" step="any" id="in-color" value="2.42">
+                        <input type="number" step="any" id="in-color" value="1.82">
                     </div>
                     <div class="form-group">
                         <label>4000Å 불연속면 D_n(4000)</label>
-                        <input type="number" step="any" id="in-d4000" value="1.68">
+                        <input type="number" step="any" id="in-d4000" value="1.34">
                     </div>
                     <div class="form-group">
                         <label>기체 금속량 12+log(O/H)</label>
-                        <input type="number" step="any" id="in-oh" value="9.02">
+                        <input type="number" step="any" id="in-oh" value="8.88">
                     </div>
                     <div class="form-group">
                         <label>Hα 플럭스 [10⁻¹⁷ erg/s/cm²] (선택)</label>
                         <input type="number" step="any" id="in-ha" placeholder="SFR 미입력시 사용">
                     </div>
                 </div>
-                <button type="submit" class="btn-analyze">🚀 은하 진화 지수(GEI) · 현재 진화단계 · 과거/미래 궤적 분석 실행</button>
+                <button type="submit" class="btn-analyze">🚀 직접 관측 은하 진화 지수(GEI) · 진화단계 · 과거/미래 궤적 분석</button>
+                <div class="upload-btn-row" style="margin-top:8px;">
+                    <button type="button" class="btn-mini-action" id="btn-add-log" style="flex:1; background:rgba(16,185,129,0.2); border-color:#10b981; color:#a7f3d0;">➕ 현재 은하를 [우리 팀 관측 일지]에 기록</button>
+                    <button type="button" class="btn-mini-action" id="btn-export-log" style="flex:1;">💾 내 관측 일지 CSV 저장</button>
+                </div>
             </form>
 
-            <div style="margin-top:16px; padding:12px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid rgba(148,163,184,0.18); font-size:0.77rem; color:#cbd5e1;">
+            <div id="my-obs-log-box" style="margin-top:10px; padding:9px; border-radius:8px; background:rgba(2,6,23,0.75); border:1px solid rgba(16,185,129,0.35); font-size:0.74rem; color:#cbd5e1; display:none;">
+                <div style="font-weight:700; color:#34d399; margin-bottom:4px;">📋 우리 팀 직접 관측 은하 기록장 (<span id="log-count">0</span>개 기록됨 — 3D 도표 동시 표시)</div>
+                <div id="my-obs-log-list" style="max-height:110px; overflow-y:auto; line-height:1.5;"></div>
+            </div>
+
+            <!-- Collapsible Literature Reference Selector (Clearly marked as NOT our own observation) -->
+            <details style="margin-top:12px; background:rgba(15,23,42,0.65); border:1px solid rgba(148,163,184,0.2); border-radius:8px; padding:8px 10px;">
+                <summary style="font-size:0.75rem; color:#94a3b8; cursor:pointer; font-weight:600;">
+                    🧪 (알고리즘 검증용) 표준 문헌 카탈로그 기준값 불러오기 (직접 관측 데이터 아님)
+                </summary>
+                <div style="font-size:0.71rem; color:#64748b; margin:6px 0;">
+                    ※ 아래 목록은 프로그램 수식 검증을 위한 NED/SDSS 문헌 참조값이며, 실제 연구 결과에는 위 입력란에 직접 관측한 데이터를 입력하여 사용합니다. (초기우주 CEERS는 지상 관측 대상이 아니므로 제외됨)
+                </div>
+                <div class="preset-grid" id="preset-buttons" style="margin-bottom:4px;"></div>
+            </details>
+
+            <div style="margin-top:12px; padding:12px; border-radius:10px; background:rgba(15,23,42,0.75); border:1px solid rgba(148,163,184,0.18); font-size:0.77rem; color:#cbd5e1;">
                 <strong style="color:#38bdf8;">■ 통합 은하 진화 지수 (Unified GEI v2.0) 수식</strong><br>
                 <code>GEI = 0.30·S_quench + 0.25·S_mass + 0.20·S_pop + 0.15·S_struct + 0.10·S_halo</code><br>
                 • <b>Stage I (0.00~0.28)</b>: 원시 은하 형성 및 폭발적 별생성기<br>
@@ -557,16 +603,16 @@
         <div class="stage-banner" id="stage-banner">
             <div class="gei-score-box">
                 <div class="gei-score-label">통합 은하 진화 지수 (GEI v2.0)</div>
-                <div class="gei-score-value" id="out-gei-val">0.702</div>
-                <div class="gei-score-sub" id="out-gei-100">백분율 환산: 70.2 / 100점</div>
+                <div class="gei-score-value" id="out-gei-val">0.534</div>
+                <div class="gei-score-sub" id="out-gei-100">백분율 환산: 53.4 / 100점</div>
             </div>
             <div class="stage-details">
-                <div style="font-size:0.82rem; color:#94a3b8;" id="out-gal-title">분석 대상: M31 (안드로메다 은하 / NGC 224)</div>
-                <h2 id="out-stage-name" style="color:#f59e0b;">4단계: 녹색 계곡 전이 및 별생성 감쇠기 (Stage IV)</h2>
-                <div style="font-size:0.85rem; color:#e2e8f0;" id="out-morph-typ">대응 형태학적 특징: 조기형 나선은하 (Sa / Sb) / 렌즈형 은하 (S0) / 활동은하핵</div>
+                <div style="font-size:0.82rem; color:#94a3b8;" id="out-gal-title">분석 대상: 천문대 직접 관측 은하 #1</div>
+                <h2 id="out-stage-name" style="color:#10b981;">3단계: 성숙 주계열 나선은하 안정기 (Stage III)</h2>
+                <div style="font-size:0.85rem; color:#e2e8f0;" id="out-morph-typ">대응 형태학적 특징: 정규 대형 나선은하 / 막대나선은하 (Sb / Sbc / SABb)</div>
                 <div class="stage-bar-wrap">
                     <div class="marker-pointer">
-                        <div class="marker-pin" id="gei-pin" style="left: 70.2%;">▼ GEI 0.702</div>
+                        <div class="marker-pin" id="gei-pin" style="left: 53.4%;">▼ GEI 0.534</div>
                     </div>
                     <div class="stage-segments">
                         <div class="seg" style="background:var(--stage1);" title="Stage I (0~0.28)"></div>
@@ -583,27 +629,27 @@
         <div class="kpi-grid">
             <div class="kpi-box">
                 <div class="lbl">항성 질량 log₁₀(M*/M☉)</div>
-                <div class="val" id="kpi-mstar">10.80</div>
+                <div class="val" id="kpi-mstar">10.42</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">비별생성률 log₁₀(sSFR [yr⁻¹])</div>
-                <div class="val" id="kpi-ssfr">-11.25</div>
+                <div class="val" id="kpi-ssfr">-10.24</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">총 동역학 질량 log₁₀(M_dyn/M☉)</div>
-                <div class="val" id="kpi-mdyn">11.24</div>
+                <div class="val" id="kpi-mdyn">10.77</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">실제 암흑물질 분율 f_DM [%]</div>
-                <div class="val" id="kpi-fdm">63.5%</div>
+                <div class="val" id="kpi-fdm">55.3%</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">항성 표면밀도 log₁₀(Σ* [M☉/kpc²])</div>
-                <div class="val" id="kpi-sigma">8.15</div>
+                <div class="val" id="kpi-sigma">7.88</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">완전 소광(Stage V) 도달 예측</div>
-                <div class="val" id="kpi-quench" style="font-size:0.92rem; color:#fda4af;">약 +4.0 Gyr 후</div>
+                <div class="val" id="kpi-quench" style="font-size:0.92rem; color:#fda4af;">약 +6.0 Gyr 후</div>
             </div>
         </div>
 
@@ -612,7 +658,7 @@
             <div class="timeline-card past">
                 <h4>
                     <span style="color:#38bdf8;">⏪ 과거 모습 복원 (-6 Gyr 전)</span>
-                    <span id="past-stage-badge" style="font-size:0.78rem; color:#7dd3fc;">GEI 0.570 (Stage III)</span>
+                    <span id="past-stage-badge" style="font-size:0.78rem; color:#7dd3fc;">GEI 0.412 (Stage II)</span>
                 </h4>
                 <p id="past-desc"></p>
                 <div class="timeline-metrics" id="past-metrics"></div>
@@ -620,7 +666,7 @@
             <div class="timeline-card present">
                 <h4>
                     <span style="color:#34d399;">📍 현재 진화 상태 진단 (0 Gyr)</span>
-                    <span id="present-stage-badge" style="font-size:0.78rem; color:#6ee7b7;">GEI 0.702 (Stage IV)</span>
+                    <span id="present-stage-badge" style="font-size:0.78rem; color:#6ee7b7;">GEI 0.534 (Stage III)</span>
                 </h4>
                 <p id="present-desc"></p>
                 <div class="timeline-metrics" id="present-metrics"></div>
@@ -628,7 +674,7 @@
             <div class="timeline-card future">
                 <h4>
                     <span style="color:#fb7185;">⏩ 미래 진화 경로 예측 (+6 Gyr 후)</span>
-                    <span id="future-stage-badge" style="font-size:0.78rem; color:#fda4af;">GEI 0.826 (Stage V)</span>
+                    <span id="future-stage-badge" style="font-size:0.78rem; color:#fda4af;">GEI 0.725 (Stage IV)</span>
                 </h4>
                 <p id="future-desc"></p>
                 <div class="timeline-metrics" id="future-metrics"></div>
@@ -639,13 +685,13 @@
         <div class="plots-grid-2">
             <div class="card">
                 <div class="card-title">
-                    <span>🌌 3차원(3D) 다중 카탈로그(NED-LVS · CEERS · SDSS) 비교 및 과거→현재→미래 3D 진화 궤적</span>
+                    <span>🌌 3차원(3D) 국소 우주 표준 모집단(NED-LVS · SDSS DR18) 비교 및 직접 관측 은하 3D 진화 궤적</span>
                     <div class="control-bar">
                         <select id="select-3d-mode">
-                            <option value="mass_ssfr_fdm">3D 모드 1: 항성질량(M*) – 비별생성률(sSFR) – 암흑물질비율(f_DM)</option>
-                            <option value="mass_radius_fdm">3D 모드 2: 항성질량(M*) – 물리반경(log R) – 암흑물질비율(f_DM)</option>
-                            <option value="z_sigma_fdm">3D 모드 3: 적색편이(z) – 표면밀도(log Σ*) – 암흑물질비율(f_DM)</option>
-                            <option value="mass_vrot_radius">3D 모드 4: 동역학 평면 (항성질량 M* – 회전속도 V_rot – 반경 R)</option>
+                            <option value="mass_sfr_mdm">3D 모드 1: 항성질량(log M*) – 별생성률(log SFR) – 암흑물질질량(log M_DM) [ΔMS 분석]</option>
+                            <option value="mass_ssfr_fdm">3D 모드 2: 항성질량(log M*) – 비별생성률(log sSFR) – 암흑물질분율(f_DM [%])</option>
+                            <option value="mass_radius_fdm">3D 모드 3: 항성질량(log M*) – 물리반경(log R) – 암흑물질분율(f_DM [%])</option>
+                            <option value="mass_vrot_radius">3D 모드 4: 동역학 평면 (항성질량 log M* – 회전속도 log V_rot – 반경 log R)</option>
                         </select>
                     </div>
                 </div>
@@ -745,23 +791,19 @@ const STAGES = [
 ];
 
 const BENCHMARKS = {
-    "M31 (안드로메다)": { name: "M31 (안드로메다 은하 / NGC 224)", z: 0.0010, dist_mpc: 0.80, log_mstar: 10.804, log_sfr: -0.45, radius_kpc: 12.02, v_rot: 250.0, color_u_r: 2.42, d4000: 1.68, oh: 9.02 },
-    "M33 (삼각형자리)": { name: "M33 (삼각형자리 은하 / NGC 598)", z: 0.0006, dist_mpc: 0.86, log_mstar: 9.592, log_sfr: -0.35, radius_kpc: 5.51, v_rot: 107.0, color_u_r: 1.48, d4000: 1.21, oh: 8.48 },
-    "M51a (소용돌이)": { name: "M51a (소용돌이 은하 / NGC 5194)", z: 0.0015, dist_mpc: 8.58, log_mstar: 10.927, log_sfr: 0.65, radius_kpc: 16.05, v_rot: 205.5, color_u_r: 1.85, d4000: 1.32, oh: 9.08 },
-    "M81 (보데 은하)": { name: "M81 (보데 은하 / NGC 3031)", z: 0.0008, dist_mpc: 3.63, log_mstar: 10.687, log_sfr: -0.22, radius_kpc: 12.15, v_rot: 244.2, color_u_r: 2.38, d4000: 1.64, oh: 8.98 },
-    "M82 (시가 폭발별생성)": { name: "M82 (시가 은하 / NGC 3034)", z: 0.0007, dist_mpc: 3.53, log_mstar: 10.02, log_sfr: 1.05, radius_kpc: 3.80, v_rot: 135.0, color_u_r: 1.38, d4000: 1.12, oh: 8.75 },
-    "M87 (거대 타원은하)": { name: "M87 (처녀자리 A / NGC 4486)", z: 0.0043, dist_mpc: 16.4, log_mstar: 11.78, log_sfr: -1.85, radius_kpc: 18.50, v_rot: 480.0, color_u_r: 2.88, d4000: 1.98, oh: 9.18 },
-    "M101 (바람개비)": { name: "M101 (바람개비 은하 / NGC 5457)", z: 0.0008, dist_mpc: 6.85, log_mstar: 10.651, log_sfr: 0.46, radius_kpc: 17.56, v_rot: 210.6, color_u_r: 1.65, d4000: 1.28, oh: 8.85 },
-    "NGC 3198 (표준곡선)": { name: "NGC 3198 (표준 평탄 회전곡선 은하)", z: 0.0022, dist_mpc: 13.8, log_mstar: 10.292, log_sfr: 0.08, radius_kpc: 16.70, v_rot: 150.0, color_u_r: 1.72, d4000: 1.31, oh: 8.80 },
-    "NGC 2403 (후기나선)": { name: "NGC 2403 (기린자리 나선은하)", z: 0.0005, dist_mpc: 3.18, log_mstar: 9.820, log_sfr: -0.12, radius_kpc: 7.67, v_rot: 114.6, color_u_r: 1.54, d4000: 1.24, oh: 8.56 },
-    "NGC 253 (조각가은하)": { name: "NGC 253 (조각가자리 은하)", z: 0.0008, dist_mpc: 3.56, log_mstar: 10.677, log_sfr: 0.68, radius_kpc: 13.79, v_rot: 218.2, color_u_r: 1.92, d4000: 1.36, oh: 8.96 },
-    "우리은하 (Milky Way)": { name: "우리은하 (Milky Way Galaxy)", z: 0.00001, dist_mpc: 0.008, log_mstar: 10.70, log_sfr: 0.22, radius_kpc: 14.0, v_rot: 220.0, color_u_r: 2.08, d4000: 1.48, oh: 8.95 },
-    "CEERS-HighZ (z=5.2)": { name: "CEERS-HighZ (JWST 초기우주 원시은하 z=5.2)", z: 5.20, dist_mpc: 49500.0, log_mstar: 9.35, log_sfr: 1.15, radius_kpc: 0.75, v_rot: 122.0, color_u_r: 0.95, d4000: 1.04, oh: 8.05 }
+    "M31 (문헌기준)": { name: "M31 (안드로메다 / 문헌 검증값)", z: 0.0010, dist_mpc: 0.80, log_mstar: 10.804, log_sfr: -0.45, radius_kpc: 12.02, v_rot: 250.0, color_u_r: 2.42, d4000: 1.68, oh: 9.02 },
+    "M33 (문헌기준)": { name: "M33 (삼각형자리 / 문헌 검증값)", z: 0.0006, dist_mpc: 0.86, log_mstar: 9.592, log_sfr: -0.35, radius_kpc: 5.51, v_rot: 107.0, color_u_r: 1.48, d4000: 1.21, oh: 8.48 },
+    "M51a (문헌기준)": { name: "M51a (소용돌이 / 문헌 검증값)", z: 0.0015, dist_mpc: 8.58, log_mstar: 10.927, log_sfr: 0.65, radius_kpc: 16.05, v_rot: 205.5, color_u_r: 1.85, d4000: 1.32, oh: 9.08 },
+    "M81 (문헌기준)": { name: "M81 (보데 은하 / 문헌 검증값)", z: 0.0008, dist_mpc: 3.63, log_mstar: 10.687, log_sfr: -0.22, radius_kpc: 12.15, v_rot: 244.2, color_u_r: 2.38, d4000: 1.64, oh: 8.98 },
+    "M82 (문헌기준)": { name: "M82 (시가 은하 / 문헌 검증값)", z: 0.0007, dist_mpc: 3.53, log_mstar: 10.02, log_sfr: 1.05, radius_kpc: 3.80, v_rot: 135.0, color_u_r: 1.38, d4000: 1.12, oh: 8.75 },
+    "M87 (문헌기준)": { name: "M87 (처녀자리 A / 문헌 검증값)", z: 0.0043, dist_mpc: 16.4, log_mstar: 11.78, log_sfr: -1.85, radius_kpc: 18.50, v_rot: 480.0, color_u_r: 2.88, d4000: 1.98, oh: 9.18 },
+    "M101 (문헌기준)": { name: "M101 (바람개비 / 문헌 검증값)", z: 0.0008, dist_mpc: 6.85, log_mstar: 10.651, log_sfr: 0.46, radius_kpc: 17.56, v_rot: 210.6, color_u_r: 1.65, d4000: 1.28, oh: 8.85 },
+    "NGC 3198 (문헌기준)": { name: "NGC 3198 (문헌 검증값)", z: 0.0022, dist_mpc: 13.8, log_mstar: 10.292, log_sfr: 0.08, radius_kpc: 16.70, v_rot: 150.0, color_u_r: 1.72, d4000: 1.31, oh: 8.80 }
 };
 
 function clip(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
-// Generate realistic background clouds representing NED-LVS, CEERS, and SDSS statistical distributions
+// Generate realistic background clouds representing local universe NED-LVS and SDSS DR18 distributions (CEERS excluded)
 function generateCatalogClouds() {
     let seed = 12345;
     function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
@@ -772,53 +814,46 @@ function generateCatalogClouds() {
         return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
     }
 
-    const ceers = { m: [], ssfr: [], r: [], fdm: [], sig: [], z: [], vrot: [] };
-    for (let i = 0; i < 420; i++) {
-        const z = clip(1.5 + Math.abs(randn() * 2.2), 0.5, 9.8);
-        const m = clip(8.6 + randn() * 0.75, 7.2, 11.0);
-        const ssfr = clip(-8.85 + 0.35 * Math.log10(1 + z) + randn() * 0.38, -10.8, -7.9);
-        const r = clip(1.2 * Math.pow(Math.pow(10, m - 10), 0.22) * Math.pow(1 + z, -0.65) * Math.exp(randn() * 0.22), 0.18, 6.5);
-        const fdm = clip(13.5 + 8.0 * Math.log10(r + 0.5) + randn() * 4.5, 5.0, 42.0);
-        const sig = m - Math.log10(2 * Math.PI * r * r);
-        const mdyn = Math.pow(10, m) / (1 - fdm / 100.0);
-        const vrot = Math.sqrt(G_ASTRO * mdyn / r);
-        ceers.m.push(m); ceers.ssfr.push(ssfr); ceers.r.push(Math.log10(r));
-        ceers.fdm.push(fdm); ceers.sig.push(sig); ceers.z.push(z); ceers.vrot.push(Math.log10(vrot));
-    }
-
-    const ned = { m: [], ssfr: [], r: [], fdm: [], sig: [], z: [], vrot: [] };
-    for (let i = 0; i < 480; i++) {
+    const ned = { m: [], sfr: [], ssfr: [], r: [], fdm: [], mdm: [], sig: [], z: [], vrot: [], dms: [] };
+    for (let i = 0; i < 520; i++) {
         const z = clip(0.035 + Math.abs(randn() * 0.04), 0.001, 0.25);
-        const m = clip(10.55 + randn() * 0.65, 8.2, 11.9);
+        const m = clip(10.45 + randn() * 0.68, 8.2, 11.9);
         const isQuenched = (rand() < (m > 10.6 ? 0.55 : 0.22));
         const ssfr = isQuenched ? clip(-11.45 + randn() * 0.45, -12.7, -10.4) : clip(-10.05 - 0.18 * (m - 10) + randn() * 0.35, -11.0, -8.8);
+        const sfr = m + ssfr;
+        const dms = sfr - (0.75 * (m - 10.0) - 0.08);
         const r = clip(9.5 * Math.pow(Math.pow(10, m - 10.5), 0.28) * Math.exp(randn() * 0.22), 1.5, 38.0);
         const fdm = clip(51.0 + 18.0 * Math.log10(r / 8.0) - 6.0 * (m - 10.5) + randn() * 8.5, 18.0, 88.0);
         const sig = m - Math.log10(2 * Math.PI * r * r);
         const mdyn = Math.pow(10, m) / (1 - fdm / 100.0);
+        const mdm = Math.log10(Math.max(0.15 * Math.pow(10, m), mdyn - Math.pow(10, m)));
         const vrot = Math.sqrt(G_ASTRO * mdyn / r);
-        ned.m.push(m); ned.ssfr.push(ssfr); ned.r.push(Math.log10(r));
-        ned.fdm.push(fdm); ned.sig.push(sig); ned.z.push(z); ned.vrot.push(Math.log10(vrot));
+        ned.m.push(m); ned.sfr.push(sfr); ned.ssfr.push(ssfr); ned.r.push(Math.log10(r));
+        ned.fdm.push(fdm); ned.mdm.push(mdm); ned.sig.push(sig); ned.z.push(z); ned.vrot.push(Math.log10(vrot)); ned.dms.push(dms);
     }
 
-    const sdss = { m: [], ssfr: [], r: [], fdm: [], sig: [], z: [], vrot: [] };
-    for (let i = 0; i < 450; i++) {
+    const sdss = { m: [], sfr: [], ssfr: [], r: [], fdm: [], mdm: [], sig: [], z: [], vrot: [], dms: [] };
+    for (let i = 0; i < 520; i++) {
         const z = clip(0.07 + Math.abs(randn() * 0.05), 0.005, 0.30);
-        const m = clip(10.35 + randn() * 0.68, 8.0, 11.8);
+        const m = clip(10.30 + randn() * 0.68, 8.0, 11.8);
         const isQuenched = (rand() < (m > 10.5 ? 0.48 : 0.18));
         const ssfr = isQuenched ? clip(-11.55 + randn() * 0.42, -12.7, -10.5) : clip(-9.95 - 0.20 * (m - 10) + randn() * 0.35, -10.9, -8.6);
+        const sfr = m + ssfr;
+        const dms = sfr - (0.72 * (m - 10.0) - 0.10);
         const r = clip(4.8 * Math.pow(Math.pow(10, m - 10.3), 0.25) * Math.exp(randn() * 0.20), 0.8, 22.0);
         const fdm = clip(44.0 + 16.0 * Math.log10(r / 4.5) + randn() * 9.0, 14.0, 85.0);
         const sig = m - Math.log10(2 * Math.PI * r * r);
         const mdyn = Math.pow(10, m) / (1 - fdm / 100.0);
+        const mdm = Math.log10(Math.max(0.15 * Math.pow(10, m), mdyn - Math.pow(10, m)));
         const vrot = Math.sqrt(G_ASTRO * mdyn / r);
-        sdss.m.push(m); sdss.ssfr.push(ssfr); sdss.r.push(Math.log10(r));
-        sdss.fdm.push(fdm); sdss.sig.push(sig); sdss.z.push(z); sdss.vrot.push(Math.log10(vrot));
+        sdss.m.push(m); sdss.sfr.push(sfr); sdss.ssfr.push(ssfr); sdss.r.push(Math.log10(r));
+        sdss.fdm.push(fdm); sdss.mdm.push(mdm); sdss.sig.push(sig); sdss.z.push(z); sdss.vrot.push(Math.log10(vrot)); sdss.dms.push(dms);
     }
-    return { ceers, ned, sdss };
+    return { ned, sdss };
 }
 
 const CLOUDS = generateCatalogClouds();
+let myObservedGalaxies = [];
 
 function computeUnifiedGEI(raw) {
     let z = parseFloat(raw.z);
@@ -850,14 +885,15 @@ function computeUnifiedGEI(raw) {
 
     let m_dyn = (v_rot * v_rot) * radius_kpc / G_ASTRO;
     if (m_dyn < mstar * 1.05) m_dyn = mstar * 1.08;
-    let m_dm = Math.max(0, m_dyn - mstar);
-    let f_dm = (m_dm / m_dyn) * 100.0;
+    let m_dm = Math.max(0.15 * mstar, m_dyn - mstar);
+    let f_dm = (m_dm / (m_dm + mstar)) * 100.0;
     if (!isNaN(raw.f_dm_percent)) {
         f_dm = clip(parseFloat(raw.f_dm_percent), 2.0, 96.0);
         m_dyn = mstar / Math.max(1.0 - f_dm / 100.0, 0.03);
-        m_dm = m_dyn - mstar;
+        m_dm = Math.max(0.15 * mstar, m_dyn - mstar);
     }
     const log_mdyn = Math.log10(m_dyn);
+    const log_mdm = Math.log10(m_dm);
     const log_sigma = log_mstar - Math.log10(2.0 * Math.PI * radius_kpc * radius_kpc);
 
     let log_sfr = parseFloat(raw.log_sfr);
@@ -909,10 +945,10 @@ function computeUnifiedGEI(raw) {
     }
 
     return {
-        name: raw.name || "관측 은하",
+        name: raw.name || "직접 관측 은하",
         z, dist_mpc, cosmic_age,
         log_mstar, log_sfr, log_ssfr,
-        radius_kpc, v_rot, log_mdyn, f_dm_percent: f_dm, log_sigma,
+        radius_kpc, v_rot, log_mdyn, log_mdm, f_dm_percent: f_dm, log_sigma,
         color_u_r, d4000, oh,
         s_quench, s_mass, s_pop, s_struct, s_halo,
         gei, gei_100: gei * 100.0,
@@ -1079,32 +1115,28 @@ function draw3DPlot() {
     const { cur, snaps } = currentSim;
     const mode = document.getElementById("select-3d-mode").value;
 
-    let xC, yC, zC, xN, yN, zN, xS, yS, zS, xT, yT, zT, curX, curY, curZ;
+    let xN, yN, zN, xS, yS, zS, xT, yT, zT, curX, curY, curZ;
     let xTitle, yTitle, zTitle;
 
-    if (mode === "mass_ssfr_fdm") {
-        xC = CLOUDS.ceers.m; yC = CLOUDS.ceers.ssfr; zC = CLOUDS.ceers.fdm;
+    if (mode === "mass_sfr_mdm") {
+        xN = CLOUDS.ned.m;   yN = CLOUDS.ned.sfr;   zN = CLOUDS.ned.mdm;
+        xS = CLOUDS.sdss.m;  yS = CLOUDS.sdss.sfr;  zS = CLOUDS.sdss.mdm;
+        xT = snaps.map(s => s.log_mstar); yT = snaps.map(s => s.log_sfr); zT = snaps.map(s => s.log_mdm);
+        curX = cur.log_mstar; curY = cur.log_sfr; curZ = cur.log_mdm;
+        xTitle = "항성질량 log(M*/M☉)"; yTitle = "별생성률 log(SFR)"; zTitle = "암흑물질 log(M_DM/M☉)";
+    } else if (mode === "mass_ssfr_fdm") {
         xN = CLOUDS.ned.m;   yN = CLOUDS.ned.ssfr;   zN = CLOUDS.ned.fdm;
         xS = CLOUDS.sdss.m;  yS = CLOUDS.sdss.ssfr;  zS = CLOUDS.sdss.fdm;
         xT = snaps.map(s => s.log_mstar); yT = snaps.map(s => s.log_ssfr); zT = snaps.map(s => s.f_dm_percent);
         curX = cur.log_mstar; curY = cur.log_ssfr; curZ = cur.f_dm_percent;
         xTitle = "항성질량 log(M*/M☉)"; yTitle = "비별생성률 log(sSFR)"; zTitle = "암흑물질 f_DM [%]";
     } else if (mode === "mass_radius_fdm") {
-        xC = CLOUDS.ceers.m; yC = CLOUDS.ceers.r; zC = CLOUDS.ceers.fdm;
         xN = CLOUDS.ned.m;   yN = CLOUDS.ned.r;   zN = CLOUDS.ned.fdm;
         xS = CLOUDS.sdss.m;  yS = CLOUDS.sdss.r;  zS = CLOUDS.sdss.fdm;
         xT = snaps.map(s => s.log_mstar); yT = snaps.map(s => Math.log10(s.radius_kpc)); zT = snaps.map(s => s.f_dm_percent);
         curX = cur.log_mstar; curY = Math.log10(cur.radius_kpc); curZ = cur.f_dm_percent;
         xTitle = "항성질량 log(M*/M☉)"; yTitle = "물리반경 log(R [kpc])"; zTitle = "암흑물질 f_DM [%]";
-    } else if (mode === "z_sigma_fdm") {
-        xC = CLOUDS.ceers.z; yC = CLOUDS.ceers.sig; zC = CLOUDS.ceers.fdm;
-        xN = CLOUDS.ned.z;   yN = CLOUDS.ned.sig;   zN = CLOUDS.ned.fdm;
-        xS = CLOUDS.sdss.z;  yS = CLOUDS.sdss.sig;  zS = CLOUDS.sdss.fdm;
-        xT = snaps.map(s => s.z); yT = snaps.map(s => s.log_sigma); zT = snaps.map(s => s.f_dm_percent);
-        curX = cur.z; curY = cur.log_sigma; curZ = cur.f_dm_percent;
-        xTitle = "적색편이 z"; yTitle = "표면밀도 log(Σ*)"; zTitle = "암흑물질 f_DM [%]";
     } else {
-        xC = CLOUDS.ceers.m; yC = CLOUDS.ceers.vrot; zC = CLOUDS.ceers.r;
         xN = CLOUDS.ned.m;   yN = CLOUDS.ned.vrot;   zN = CLOUDS.ned.r;
         xS = CLOUDS.sdss.m;  yS = CLOUDS.sdss.vrot;  zS = CLOUDS.sdss.r;
         xT = snaps.map(s => s.log_mstar); yT = snaps.map(s => Math.log10(s.v_rot)); zT = snaps.map(s => Math.log10(s.radius_kpc));
@@ -1114,34 +1146,42 @@ function draw3DPlot() {
 
     const traces = [
         {
-            x: xC, y: yC, z: zC, mode: "markers", type: "scatter3d",
-            name: "JWST CEERS (초기~중기 우주)",
-            marker: { size: 3, color: "#f59e0b", opacity: 0.5 }
-        },
-        {
             x: xN, y: yN, z: zN, mode: "markers", type: "scatter3d",
-            name: "NASA NED-LVS (국소 우주 145만)",
-            marker: { size: 3, color: "#3b82f6", opacity: 0.45 }
+            name: "NASA NED-LVS (국소 우주 표준 모집단)",
+            marker: { size: 3, color: "#3b82f6", opacity: 0.42 }
         },
         {
             x: xS, y: yS, z: zS, mode: "markers", type: "scatter3d",
-            name: "SDSS DR18 (국소 정밀분광)",
-            marker: { size: 3, color: "#10b981", opacity: 0.45 }
+            name: "SDSS DR18 (국소 우주 정밀분광 모집단)",
+            marker: { size: 3, color: "#10b981", opacity: 0.42 }
         },
         {
             x: xT, y: yT, z: zT, mode: "lines+markers", type: "scatter3d",
-            name: "관측 은하 과거→현재→미래 궤적",
+            name: "현재 관측 은하 과거→현재→미래 궤적",
             line: { color: "#f43f5e", width: 6 },
             marker: { size: 4, color: "#fda4af" }
         },
         {
             x: [curX], y: [curY], z: [curZ], mode: "markers+text", type: "scatter3d",
-            name: `현재 위치: ${cur.name.split(" (")[0]}`,
+            name: `현재 분석: ${cur.name.split(" (")[0]}`,
             text: [`★ ${cur.name.split(" (")[0]} (GEI=${cur.gei.toFixed(2)})`],
             textposition: "top center",
             marker: { size: 9, color: cur.stage.color, symbol: "diamond", line: { color: "#ffffff", width: 2 } }
         }
     ];
+
+    if (myObservedGalaxies.length > 0) {
+        traces.push({
+            x: myObservedGalaxies.map(g => g.log_mstar),
+            y: myObservedGalaxies.map(g => mode === "mass_sfr_mdm" ? g.log_sfr : (mode === "mass_ssfr_fdm" ? g.log_ssfr : (mode === "mass_radius_fdm" ? Math.log10(g.radius_kpc) : Math.log10(g.v_rot)))),
+            z: myObservedGalaxies.map(g => mode === "mass_sfr_mdm" ? g.log_mdm : (mode === "mass_vrot_radius" ? Math.log10(g.radius_kpc) : g.f_dm_percent)),
+            mode: "markers+text", type: "scatter3d",
+            name: `우리 팀 관측 일지 (${myObservedGalaxies.length}개)`,
+            text: myObservedGalaxies.map(g => `🔭 ${g.name}`),
+            textposition: "bottom center",
+            marker: { size: 7, color: "#fbbf24", symbol: "circle", line: { color: "#fff", width: 1.5 } }
+        });
+    }
 
     const layout = {
         paper_bgcolor: "rgba(0,0,0,0)",
@@ -1223,16 +1263,16 @@ function drawGEICurveAndBars() {
 }
 
 function draw2DPhasePlot() {
-    const { cur, snaps, pastRep, futRep } = currentSim;
+    const { cur, snaps } = currentSim;
     const bgSDSS = {
         x: CLOUDS.sdss.m, y: CLOUDS.sdss.ssfr,
-        mode: "markers", name: "SDSS 배경 은하",
+        mode: "markers", name: "SDSS 국소 우주 모집단",
         marker: { size: 5, color: "#475569", opacity: 0.4 }
     };
-    const bgCEERS = {
-        x: CLOUDS.ceers.m, y: CLOUDS.ceers.ssfr,
-        mode: "markers", name: "CEERS 초기 은하",
-        marker: { size: 5, color: "#f59e0b", opacity: 0.35 }
+    const bgNED = {
+        x: CLOUDS.ned.m, y: CLOUDS.ned.ssfr,
+        mode: "markers", name: "NED-LVS 국소 우주 모집단",
+        marker: { size: 5, color: "#3b82f6", opacity: 0.35 }
     };
     const trajLine = {
         x: snaps.map(s => s.log_mstar),
@@ -1244,11 +1284,23 @@ function draw2DPhasePlot() {
     };
     const ptNow = {
         x: [cur.log_mstar], y: [cur.log_ssfr],
-        mode: "markers+text", name: "현재 위치",
+        mode: "markers+text", name: "현재 관측 은하",
         text: [`★ ${cur.name.split(" (")[0]}`],
         textposition: "top right",
         marker: { size: 14, color: cur.stage.color, symbol: "star", line: { color: "#fff", width: 1.5 } }
     };
+    const traces2D = [bgSDSS, bgNED, trajLine, ptNow];
+    if (myObservedGalaxies.length > 0) {
+        traces2D.push({
+            x: myObservedGalaxies.map(g => g.log_mstar),
+            y: myObservedGalaxies.map(g => g.log_ssfr),
+            mode: "markers+text",
+            name: `우리 팀 관측 일지 (${myObservedGalaxies.length}개)`,
+            text: myObservedGalaxies.map(g => g.name),
+            textposition: "bottom right",
+            marker: { size: 10, color: "#fbbf24", symbol: "diamond", line: { color: "#fff", width: 1 } }
+        });
+    }
     const layout2D = {
         paper_bgcolor: "rgba(0,0,0,0)",
         plot_bgcolor: "rgba(15,23,42,0.5)",
@@ -1262,15 +1314,15 @@ function draw2DPhasePlot() {
             { type: "line", x0: 7.2, x1: 12.3, y0: -11.2, y1: -11.2, line: { color: "#ef4444", dash: "dot", width: 1.5 } }
         ]
     };
-    Plotly.newPlot("plot-2d-phase", [bgSDSS, bgCEERS, trajLine, ptNow], layout2D, { responsive: true, displayModeBar: false });
+    Plotly.newPlot("plot-2d-phase", traces2D, layout2D, { responsive: true, displayModeBar: false });
 }
 
-// Init Preset Buttons
+// Init Reference Literature Buttons (inside collapsible details)
 const presetContainer = document.getElementById("preset-buttons");
-Object.entries(BENCHMARKS).forEach(([label, data], idx) => {
+Object.entries(BENCHMARKS).forEach(([label, data]) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "preset-btn" + (idx === 0 ? " active" : "");
+    btn.className = "preset-btn";
     btn.textContent = label;
     btn.addEventListener("click", () => {
         document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
@@ -1289,6 +1341,85 @@ Object.entries(BENCHMARKS).forEach(([label, data], idx) => {
         runFormAnalysis();
     });
     presetContainer.appendChild(btn);
+});
+
+// Raw Telescope Measurement -> Physical Parameter Converter
+document.getElementById("btn-convert-raw").addEventListener("click", () => {
+    const appMag = parseFloat(document.getElementById("raw-app-mag").value);
+    const angArcsec = parseFloat(document.getElementById("raw-ang-rad").value);
+    const velKms = parseFloat(document.getElementById("raw-vel-kms").value);
+    const colorUR = parseFloat(document.getElementById("raw-color-ur").value);
+
+    let distMpc = parseFloat(document.getElementById("in-dist").value);
+    let zVal = parseFloat(document.getElementById("in-z").value);
+    if (!isNaN(velKms) && velKms > 10) {
+        distMpc = velKms / 70.0;
+        zVal = velKms / 299792.458;
+    } else if (isNaN(distMpc) || distMpc <= 0) {
+        distMpc = 10.0;
+        zVal = 0.0023;
+    }
+
+    // 거리 지수 μ = 5 log10(D_Mpc) + 25 -> 절대등급 M_r = m_r - μ -> 광도 log(L_r/L_sun) = -0.4*(M_r - 4.64)
+    const distMod = 5.0 * Math.log10(Math.max(distMpc, 0.05)) + 25.0;
+    const absMag = (!isNaN(appMag) ? appMag : 10.5) - distMod;
+    const logL = -0.4 * (absMag - 4.64);
+    const ur = !isNaN(colorUR) ? colorUR : 1.85;
+    // Bell+2003 색지수 기반 질량대광도비 log(M*/L_r) ≈ -0.42 + 0.35*(u-r)
+    const logML = -0.42 + 0.35 * clip(ur, 0.6, 3.2);
+    const logMstar = clip(logL + logML, 7.2, 12.1);
+
+    // 각반경(arcsec) -> 물리적 반경 R_kpc = D_Mpc * θ_arcsec / 206.265
+    const rKpc = !isNaN(angArcsec) && angArcsec > 0 ? clip((distMpc * angArcsec) / 206.265, 0.3, 65.0) : clip(4.5 * Math.pow(Math.pow(10, logMstar - 10), 0.25), 0.5, 45.0);
+    const vRot = clip(Math.pow(10, 2.14 + 0.275 * (logMstar - 10.0)), 30.0, 480.0);
+    const logSSFR = clip(-10.12 - 0.85 * (ur - 1.95), -12.4, -8.5);
+    const logSFR = logMstar + logSSFR;
+    const d4000 = clip(1.45 + 0.32 * (ur - 1.95), 1.0, 2.2);
+    const oh = clip(8.88 + 0.30 * (logMstar - 10.0), 7.8, 9.25);
+
+    document.getElementById("in-mstar").value = logMstar.toFixed(3);
+    document.getElementById("in-sfr").value = logSFR.toFixed(3);
+    document.getElementById("in-dist").value = distMpc.toFixed(2);
+    document.getElementById("in-z").value = zVal.toFixed(4);
+    document.getElementById("in-rkpc").value = rKpc.toFixed(2);
+    document.getElementById("in-vrot").value = vRot.toFixed(1);
+    document.getElementById("in-color").value = ur.toFixed(2);
+    document.getElementById("in-d4000").value = d4000.toFixed(2);
+    document.getElementById("in-oh").value = oh.toFixed(2);
+    runFormAnalysis();
+    showUploadStatus(`⚡ <b>원시 관측값 자동 환산 완료!</b> (절대등급 M_r=${absMag.toFixed(2)} → log M*=${logMstar.toFixed(2)}, 물리반경 R=${rKpc.toFixed(2)} kpc)`);
+});
+
+// My Observation Log (Add & Export CSV)
+document.getElementById("btn-add-log").addEventListener("click", () => {
+    if (!currentSim) return;
+    const c = currentSim.cur;
+    myObservedGalaxies.push({ ...c, timestamp: new Date().toLocaleString("ko-KR") });
+    const logBox = document.getElementById("my-obs-log-box");
+    const logList = document.getElementById("my-obs-log-list");
+    document.getElementById("log-count").textContent = myObservedGalaxies.length;
+    logBox.style.display = "block";
+    logList.innerHTML = myObservedGalaxies.map((g, i) =>
+        `<div><b>[${i + 1}] ${g.name}</b> — log M*=${g.log_mstar.toFixed(2)}, R=${g.radius_kpc.toFixed(1)}kpc, f_DM=${g.f_dm_percent.toFixed(1)}%, <span style="color:${g.stage.color};font-weight:700;">GEI=${g.gei.toFixed(3)} (${g.stage.code})</span></div>`
+    ).join("");
+    draw3DPlot();
+    draw2DPhasePlot();
+});
+
+document.getElementById("btn-export-log").addEventListener("click", () => {
+    const listToExport = myObservedGalaxies.length > 0 ? myObservedGalaxies : (currentSim ? [currentSim.cur] : []);
+    if (listToExport.length === 0) return;
+    const headers = "obs_index,name,z,dist_mpc,log_mstar,log_sfr,log_ssfr,radius_kpc,v_rot_kms,log_mdyn,log_mdm,f_dm_percent,color_u_r,d4000,oh,GEI_v2,stage_code,stage_name_kr";
+    const rows = listToExport.map((g, idx) =>
+        `${idx + 1},"${g.name}",${g.z.toFixed(5)},${g.dist_mpc.toFixed(2)},${g.log_mstar.toFixed(3)},${g.log_sfr.toFixed(3)},${g.log_ssfr.toFixed(3)},${g.radius_kpc.toFixed(2)},${g.v_rot.toFixed(1)},${g.log_mdyn.toFixed(3)},${g.log_mdm.toFixed(3)},${g.f_dm_percent.toFixed(2)},${g.color_u_r.toFixed(2)},${g.d4000.toFixed(2)},${g.oh.toFixed(2)},${g.gei.toFixed(4)},${g.stage.code},"${g.stage.name_kr}"`
+    );
+    const blob = new Blob(["\uFEFF" + headers + "\n" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "우리팀_천문대_직접관측_은하진화분석_기록장.csv";
+    a.click();
+    URL.revokeObjectURL(url);
 });
 
 function runFormAnalysis() {
