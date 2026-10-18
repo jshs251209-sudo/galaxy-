@@ -968,7 +968,7 @@ function computeUnifiedGEI(raw) {
     const s_struct = clip((log_sigma - 6.2) / 3.8, 0.0, 1.0);
     // 가중치 = 말름퀴스트 보정(부피 제한: log M*≥9.5, D≤300 Mpc, SDSS N=32,212) 후
     //          세 변수 주성분분석(PCA) 제1성분 기여도. 광도는 M/L 보정 없이는 질량과 중복(r=0.95)이라 제외.
-    const gei = clip(0.36 * s_mass + 0.31 * s_quench + 0.33 * s_halo, 0.0, 1.0);
+    const gei = clip(0.36 * s_mass + 0.31 * s_quench + 0.33 * s_halo, 0.0, 1.0);  // 부트스트랩·보정방법 민감도: ±0.01/±0.03/±0.03
     let st = STAGES[4];
     for (const s of STAGES) {
         if (gei >= s.min && gei < s.max) { st = s; break; }
