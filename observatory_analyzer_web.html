@@ -1054,9 +1054,9 @@ function simulateTrajectory(obs) {
     for (const s of snaps) { if (s.dt >= 4.5 && s.dt <= 6.5) { futRep = s; break; } }
 
     let quenchStr = `소광 척도 τ ≈ ${tau_quench.toFixed(1)} Gyr`;
-    if (cur.gei >= 0.78) quenchStr = "이미 도달 완료 (Stage V)";
+    if (cur.gei >= STAGES[4].min) quenchStr = "이미 도달 완료 (Stage V)";
     else {
-        const qSnap = snaps.find(s => s.dt > 0 && s.gei >= 0.78);
+        const qSnap = snaps.find(s => s.dt > 0 && s.gei >= STAGES[4].min);
         if (qSnap) quenchStr = `약 +${qSnap.dt} Gyr 후 진입`;
     }
 
