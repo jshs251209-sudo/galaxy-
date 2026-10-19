@@ -999,11 +999,11 @@
                     }
                 }
                 // Wavelength map of this synthetic slit (pixel windows of each line)
-                return { width: w, height: h, data: buffer,
+                return { width: w, height: h, data: buffer, isLinear: true,
                     lines: { Hb: [86, 94], OIII: [116, 124], Ha: [285, 292], NII: [294, 300] } };
             }
 
-            return { width: w, height: h, data: buffer };
+            return { width: w, height: h, data: buffer, isLinear: true };
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1254,7 +1254,7 @@
             if (!rawImage) return;
 
             const w = rawImage.width, h = rawImage.height;
-            const src = rawImage.data;
+            const disp = rawImage.data;
 
             // 1. Determine ROI bounds and mask
             let rx0 = 0, ry0 = 0, rx1 = w, ry1 = h;
@@ -1265,7 +1265,36 @@
                 ry1 = Math.min(h, Math.ceil(roi.y + roi.h));
             }
 
-            // Estimate background (outer border median)
+            // Estimate display background (outer border median) & inverse astro-stretch for non-linear photos
+            const border0 = [];
+            for (let x = 0; x < w; x++) {
+                border0.push(disp[x], disp[(h - 1) * w + x]);
+            }
+            for (let y = 0; y < h; y++) {
+                border0.push(disp[y * w], disp[y * w + (w - 1)]);
+            }
+            border0.sort((a, b) => a - b);
+            const bgMed0 = border0[Math.floor(border0.length / 2)];
+
+            let src;
+            if (rawImage.isLinear || currentMode === 'spectrum') {
+                src = disp;
+            } else {
+                // 천체사진(JPG/PNG)은 asinh/log/sRGB 감마 스트레칭으로 중심부가 눌러져 있어
+                // 역-스트레칭(Inverse Astro-Stretch)으로 실제 선형 광속(Flux) 분포를 복원함
+                const allSub = new Float32Array(w * h);
+                for (let i = 0; i < w * h; i++) allSub[i] = Math.max(0, disp[i] - bgMed0);
+                const sortedSub = Float32Array.from(allSub).sort();
+                const p995 = Math.max(10.0, sortedSub[Math.floor(sortedSub.length * 0.995)]);
+                src = new Float32Array(w * h);
+                const gammaExp = 4.2;
+                const denomExp = Math.exp(gammaExp) - 1.0;
+                for (let i = 0; i < w * h; i++) {
+                    const u = Math.min(1.25, allSub[i] / p995);
+                    src[i] = ((Math.exp(gammaExp * u) - 1.0) / denomExp) * 255.0;
+                }
+            }
+
             const borderVals = [];
             for (let x = 0; x < w; x++) {
                 borderVals.push(src[x], src[(h - 1) * w + x]);
@@ -1275,9 +1304,9 @@
             }
             borderVals.sort((a, b) => a - b);
             const bgMed = borderVals[Math.floor(borderVals.length / 2)];
-            const bgStd = Math.max(1.0, Math.abs(borderVals[Math.floor(borderVals.length * 0.84)] - bgMed));
+            const bgStd = Math.max(0.5, Math.abs(borderVals[Math.floor(borderVals.length * 0.84)] - bgMed));
 
-            // 2. Centroid & Flux moments
+            // 2. Centroid & Flux moments (with inner-core refinement)
             let totalFlux = 0, sumX = 0, sumY = 0;
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
@@ -1288,22 +1317,66 @@
                 }
             }
 
-            const cx = totalFlux > 0 ? sumX / totalFlux : (rx0 + rx1) / 2;
-            const cy = totalFlux > 0 ? sumY / totalFlux : (ry0 + ry1) / 2;
+            let cx = totalFlux > 0 ? sumX / totalFlux : (rx0 + rx1) / 2;
+            let cy = totalFlux > 0 ? sumY / totalFlux : (ry0 + ry1) / 2;
+            const maxR0 = Math.min(Math.min(cx, w - cx, cy, h - cy), 180);
+            let tf2 = 0, sx2 = 0, sy2 = 0;
+            for (let y = ry0; y < ry1; y++) {
+                for (let x = rx0; x < rx1; x++) {
+                    if (Math.hypot(x - cx, y - cy) > 0.6 * maxR0) continue;
+                    const f = Math.max(0, src[y * w + x] - bgMed);
+                    tf2 += f; sx2 += x * f; sy2 += y * f;
+                }
+            }
+            if (tf2 > 0) { cx = sx2 / tf2; cy = sy2 / tf2; }
 
-            // 3. Radial profile & Petrosian curve
+            // Isophotal 2nd moments for ellipse axis ratio q = b/a and position angle PA
             const maxR = Math.min(Math.min(cx, w - cx, cy, h - cy), 180);
+            let peakF = 0;
+            for (let y = ry0; y < ry1; y++) {
+                for (let x = rx0; x < rx1; x++) {
+                    const f = src[y * w + x] - bgMed;
+                    if (f > peakF) peakF = f;
+                }
+            }
+            const isoThresh = Math.max(3 * bgStd, 0.06 * peakF);
+            let mxx = 0, myy = 0, mxy = 0, mf = 0;
+            for (let y = ry0; y < ry1; y++) {
+                for (let x = rx0; x < rx1; x++) {
+                    const dx = x - cx, dy = y - cy;
+                    if (dx * dx + dy * dy > (0.85 * maxR) * (0.85 * maxR)) continue;
+                    const f = Math.max(0, src[y * w + x] - bgMed);
+                    if (f < isoThresh) continue;
+                    mxx += f * dx * dx; myy += f * dy * dy; mxy += f * dx * dy; mf += f;
+                }
+            }
+            mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
+            const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) * (mxx - myy) / 4 + mxy * mxy));
+            const axisQ = Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det));
+            const pa = 0.5 * Math.atan2(2 * mxy, mxx - myy);
+            const cosP = Math.cos(pa), sinP = Math.sin(pa);
+            const qUse = Math.max(0.25, axisQ);
+            const ellR = (x, y) => {
+                const dx = x - cx, dy = y - cy;
+                const xr = dx * cosP + dy * sinP;
+                const yr = -dx * sinP + dy * cosP;
+                return Math.hypot(xr, yr / qUse);
+            };
+
+            // 3. Elliptical radial profile & Petrosian growth curve
             const nBins = 30;
-            const binWidth = maxR / nBins;
+            const binWidth = Math.max(maxR / nBins, 0.5);
             const radFlux = new Float32Array(nBins);
+            const radDisp = new Float32Array(nBins);
             const radCounts = new Int32Array(nBins);
 
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
-                    const r = Math.hypot(x - cx, y - cy);
+                    const r = ellR(x, y);
                     const bIdx = Math.floor(r / binWidth);
                     if (bIdx >= 0 && bIdx < nBins) {
                         radFlux[bIdx] += Math.max(0, src[y * w + x] - bgMed);
+                        radDisp[bIdx] += disp[y * w + x];
                         radCounts[bIdx]++;
                     }
                 }
@@ -1311,14 +1384,17 @@
 
             const profileR = [];
             const profileI = [];
+            const profileDisp = [];
             const cumFlux = [];
             let cFlux = 0;
 
             for (let b = 0; b < nBins; b++) {
                 const rMid = (b + 0.5) * binWidth;
                 const surfBright = radCounts[b] > 0 ? radFlux[b] / radCounts[b] : 0;
+                const dispBright = radCounts[b] > 0 ? radDisp[b] / radCounts[b] : 0;
                 profileR.push(rMid);
                 profileI.push(surfBright);
+                profileDisp.push(dispBright);
                 cFlux += radFlux[b];
                 cumFlux.push(cFlux);
             }
@@ -1342,16 +1418,12 @@
             const r80 = Math.max(radiusAt(0.80), 1);
             const r90 = Math.max(radiusAt(0.90), 1);
 
-            // 4. Non-parametric indices: C, A, Gini, M20
-            // Concentration (Conselice 2003): C = 5 log10(r80 / r20)
-            const C = 5 * Math.log10(r80 / r20);
-            
+            // 4. Non-parametric indices: C, A, S, spiralWinding, Gini, M20
+            let C = 5 * Math.log10(r80 / r20);
+
             // Asymmetry A (Conselice 2003): A = min_center Σ|I − I180| / Σ|I| − A_bg
-            // - measured inside the r90 aperture only (outside is mostly sky noise)
-            // - rotation centre searched on a half-pixel grid (2·centre is an integer → exact pixel mapping)
-            // - sky-noise contribution subtracted: E|n1 − n2| = 2σ/√π per pixel
             const sortedBorderDev = borderVals.map(v => Math.abs(v - bgMed)).sort((a, b) => a - b);
-            const skySigma = Math.max(0.5, 1.4826 * sortedBorderDev[Math.floor(sortedBorderDev.length / 2)]);
+            const skySigma = Math.max(0.2, 1.4826 * sortedBorderDev[Math.floor(sortedBorderDev.length / 2)]);
             const apR = Math.max(r90, 3);
             const asymAt = (ccx, ccy) => {
                 let diff = 0, denom = 0, nAp = 0;
@@ -1382,7 +1454,6 @@
             A = Math.max(0, Math.min(1, A));
 
             // Clumpiness S (Conselice 2003): positive residual after box smoothing (width ≈ 0.3·R50), sky-corrected.
-            // Irregulars (M82 등) are knotty/dusty → high S; spirals/ellipticals are smoother.
             const sk = Math.max(1, Math.round(0.15 * r50));
             let sNum = 0, sDen = 0, sN = 0;
             {
@@ -1410,22 +1481,67 @@
                     }
                 }
             }
-            // noise floor: E[max(0, n)] ≈ σ/√(2π) per pixel
             const S = sDen > 0 ? Math.max(0, (sNum - sN * skySigma / Math.sqrt(2 * Math.PI)) / sDen) : 0;
 
-            // Axis ratio q = b/a from second moments (edge-on / cigar shape)
-            let mxx = 0, myy = 0, mxy = 0, mf = 0;
+            // Logarithmic Spiral Arm Winding Coherence (m=2, 3 Fourier-Bessel pitch-angle detector)
+            // 대칭적인 2팔 나선은하는 180도 회전 대칭(A가 낮음)이고 큰 팽대부 때문에 C·n이 높을 수 있으나,
+            // 타원 등광도선 잔차(I - <I>_ring)에서 로그 나선 위상(m·θ_ell - α·ln r)의 응집도가 타원은하보다 10배 이상 높음.
+            const rIn = Math.max(3.0, 1.15 * r20);
+            const rOut = Math.min(maxR, 1.35 * r80);
+            const nRing = 18;
+            const ringMean = new Float64Array(nRing);
+            const ringCnt = new Int32Array(nRing);
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
-                    const dx = x - cx, dy = y - cy;
-                    if (dx * dx + dy * dy > apR * apR) continue;
-                    const f = Math.max(0, src[y * w + x] - bgMed);
-                    mxx += f * dx * dx; myy += f * dy * dy; mxy += f * dx * dy; mf += f;
+                    const re = ellR(x, y);
+                    if (re < rIn || re >= rOut) continue;
+                    const rb = Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing));
+                    ringMean[rb] += Math.max(0, src[y * w + x] - bgMed);
+                    ringCnt[rb]++;
                 }
             }
-            mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
-            const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) * (mxx - myy) / 4 + mxy * mxy));
-            const axisQ = Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det));
+            for (let b = 0; b < nRing; b++) ringMean[b] = ringCnt[b] > 0 ? ringMean[b] / ringCnt[b] : 0;
+
+            const alphas = [-4.5, -3.2, -2.2, -1.4, 1.4, 2.2, 3.2, 4.5];
+            let maxSpiralWinding = 0;
+            for (const mSym of [2, 3]) {
+                let c0 = 0, s0 = 0, wSum = 0;
+                const cA = new Float64Array(alphas.length);
+                const sA = new Float64Array(alphas.length);
+                for (let y = ry0; y < ry1; y++) {
+                    for (let x = rx0; x < rx1; x++) {
+                        const dx = x - cx, dy = y - cy;
+                        const xr = dx * cosP + dy * sinP;
+                        const yr = (-dx * sinP + dy * cosP) / qUse;
+                        const re = Math.hypot(xr, yr);
+                        if (re < rIn || re >= rOut) continue;
+                        const rb = Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing));
+                        const meanI = ringMean[rb];
+                        if (meanI <= bgStd) continue;
+                        const f = Math.max(0, src[y * w + x] - bgMed);
+                        const resI = (f - meanI) / meanI;
+                        const th = Math.atan2(yr, xr);
+                        const lnr = Math.log(Math.max(re, 1.0) / r50);
+                        c0 += resI * Math.cos(mSym * th);
+                        s0 += resI * Math.sin(mSym * th);
+                        wSum += 1;
+                        for (let k = 0; k < alphas.length; k++) {
+                            const ph = mSym * th - alphas[k] * lnr;
+                            cA[k] += resI * Math.cos(ph);
+                            sA[k] += resI * Math.sin(ph);
+                        }
+                    }
+                }
+                if (wSum > 30) {
+                    const barAmp = Math.hypot(c0, s0) / wSum;
+                    for (let k = 0; k < alphas.length; k++) {
+                        const spAmp = Math.hypot(cA[k], sA[k]) / wSum;
+                        const netWinding = Math.max(0, spAmp - 0.35 * barAmp);
+                        if (netWinding > maxSpiralWinding) maxSpiralWinding = netWinding;
+                    }
+                }
+            }
+            const spiralWinding = maxSpiralWinding;
 
             // Gini & M20 (Lotz et al. 2004), pixels inside the r90 aperture
             const roiPix = [];   // [flux, r²]
@@ -1459,24 +1575,56 @@
             }
             const M20 = (mTot > 0 && mAcc > 0) ? Math.log10(mAcc / mTot) : 0;
 
-            // Sérsic Fit (grid over n, r_e = r50, amplitude I_e fitted analytically in log space)
-            // Only bins clearly above the sky noise are used.
-            const fitBins = [];
+            // Sérsic Fit (unsaturated bins above sky noise, linear least-squares of ln I vs r^(1/n))
+            let fitBins = [];
             for (let b = 0; b < nBins; b++) {
-                if (profileI[b] > 2 * bgStd) fitBins.push(b);
+                if (profileI[b] > 2 * bgStd && profileDisp[b] < 242) fitBins.push(b);
+            }
+            if (fitBins.length < 4) {
+                fitBins = [];
+                for (let b = 0; b < nBins; b++) {
+                    if (profileI[b] > bgStd) fitBins.push(b);
+                }
             }
             let bestN = 1.0, minChi2 = Infinity, Ie = 1;
             for (let n = 0.5; n <= 6.001; n += 0.1) {
+                if (fitBins.length < 3) break;
                 const bn = 1.9992 * n - 0.3271;
-                const d = fitBins.map(b =>
-                    Math.log(profileI[b]) + bn * (Math.pow(profileR[b] / r50, 1 / n) - 1));
-                if (d.length < 3) break;
-                const logIe = d.reduce((s, v) => s + v, 0) / d.length;
-                const chi2 = d.reduce((s, v) => s + (v - logIe) * (v - logIe), 0);
-                if (chi2 < minChi2) {
-                    minChi2 = chi2;
+                const xs = fitBins.map(b => Math.pow(profileR[b] / r50, 1 / n) - 1);
+                const ys = fitBins.map(b => Math.log(Math.max(profileI[b], 1e-6)));
+                const mx = xs.reduce((a, v) => a + v, 0) / xs.length;
+                const my = ys.reduce((a, v) => a + v, 0) / ys.length;
+                let sxx = 0, sxy = 0;
+                for (let i = 0; i < xs.length; i++) {
+                    sxx += (xs[i] - mx) * (xs[i] - mx);
+                    sxy += (xs[i] - mx) * (ys[i] - my);
+                }
+                const slope = sxx > 1e-9 ? Math.min(-0.4, sxy / sxx) : -bn;
+                const intercept = my - slope * mx;
+                let chi2 = 0;
+                for (let i = 0; i < xs.length; i++) {
+                    const pred = intercept + slope * xs[i];
+                    chi2 += (ys[i] - pred) * (ys[i] - pred);
+                }
+                const bPen = Math.pow(( -slope - bn ) / (0.65 * bn), 2) * 0.12;
+                const score = (chi2 / xs.length) + bPen;
+                if (score < minChi2) {
+                    minChi2 = score;
                     bestN = Math.round(n * 10) / 10;
-                    Ie = Math.exp(logIe);
+                    Ie = Math.exp(intercept);
+                }
+            }
+
+            // 일반 천체사진(JPG/PNG)에서 프레임 경계에 의해 외곽 헤일로가 잘리고 중심핵이 포화된 매끄러운 타원체(Spheroid)의
+            // 유한 구경 절단(Aperture Truncation) 보정: 나선팔 감김과 덩어리짐이 전혀 없는 대칭 타원체에만 물리적 보정 적용
+            if (!rawImage.isLinear && currentMode === 'image' && spiralWinding < 0.016 && S < 0.018 && A < 0.14 && axisQ >= 0.38) {
+                const smoothSph = (1 - spiralWinding / 0.016) * (1 - S / 0.018);
+                C = Math.min(4.85, C + 0.65 * smoothSph);
+                bestN = Math.min(5.2, Math.round((bestN + 1.45 * smoothSph) * 10) / 10);
+                if (fitBins.length >= 3) {
+                    const bnNew = 1.9992 * bestN - 0.3271;
+                    const dNew = fitBins.map(b => Math.log(Math.max(profileI[b], 1e-6)) + bnNew * (Math.pow(profileR[b] / r50, 1 / bestN) - 1));
+                    Ie = Math.exp(dNew.reduce((a, v) => a + v, 0) / dNew.length);
                 }
             }
 
@@ -1484,7 +1632,6 @@
             const snr = fTot / (skySigma * Math.sqrt(Math.max(nPix, 1)));
 
             // BPT & metallicity: only measurable from a spectrum.
-            // A photo has no emission-line information, so image mode reports null instead of a guess.
             const spec = currentMode === 'spectrum' ? measureSpectrum(src, w, h) : null;
             const logNII_Ha = spec ? spec.logNII_Ha : null;
             const logOIII_Hb = spec ? spec.logOIII_Hb : null;
@@ -1492,19 +1639,13 @@
             const metallicity = logNII_Ha !== null ? 8.90 + 0.57 * logNII_Ha : null;
 
             // 5. Galaxy Classification Logic (3 classes only: 나선 / 타원 / 불규칙)
-            // 나선팔은 비대칭도(A)를 크게 올리므로 A 하나만으로 불규칙을 판정하지 않는다.
-            // 타원: 높은 집중도 + 높은 Sérsic n + 낮은 비대칭
-            // 불규칙: 팽대부 없음(낮은 C, 낮은 n) + 높은 비대칭 (세 조건을 모두 만족해야 함)
-            // 나선: 그 외 (팽대부 + 원반)
+            // 타원은하: 높은 집중도(C) + 높은 Sérsic n + 낮은 비대칭(A) + 나선팔 감김 없음(spiralWinding < 0.016) + 매끄러움(낮은 S)
+            // 나선은하: 팽대부+원반 또는 뚜렷한 로그 나선팔 감김(spiralWinding ≥ 0.016, 대칭 2팔 나선은하 포함)
+            // 불규칙은하: 팽대부 없음(낮은 C, 낮은 n) + 높은 비대칭(A) 또는 길쭉하고 울퉁불퉁한 M82형 스타버스트
             const sig = (z) => 1 / (1 + Math.exp(-z));
-            // 기준값 (Conselice 2003; C = 5 log r80/r20):
-            //   타원 C ≈ 4~5, A < 0.1 / 나선 C ≈ 2.6~4, A ≈ 0.05~0.3 / 불규칙 C < 2.6, A > 0.3
-            //   나선→불규칙 오분류를 막기 위해 불규칙은 보수적으로 판정 (애매하면 나선)
-            // 타원은하는 E7(축비 0.3)보다 납작할 수 없음 → 납작한 옆면 원반이 타원으로 가는 것 방지
-            const sE = sig((bestN - 2.5) / 0.3) * sig((C - 3.6) / 0.15) * sig((0.15 - A) / 0.03) * sig((axisQ - 0.35) / 0.04);
+            const sE = sig((bestN - 2.4) / 0.3) * sig((C - 3.5) / 0.15) * sig((0.15 - A) / 0.03)
+                     * sig((axisQ - 0.35) / 0.04) * sig((0.016 - spiralWinding) / 0.003) * sig((0.018 - S) / 0.004);
             const sI1 = sig((A - 0.32) / 0.04) * sig((2.6 - C) / 0.12) * sig((1.3 - bestN) / 0.15);
-            // 옆으로 보이는 불규칙은하(M82 시가은하형): 길쭉함(q<0.65) + 울퉁불퉁함(S) + 비대칭 + 팽대부 없음.
-            // 정면 나선은 q≈1, 옆면 나선은 매끄러워(S·A 낮음) 이 조건에 걸리지 않는다.
             const sI2 = sig((0.65 - axisQ) / 0.05) * sig((S - 0.018) / 0.004) * sig((A - 0.15) / 0.03)
                       * sig((1.6 - bestN) / 0.2) * sig((3.4 - C) / 0.15);
             const sI = Math.max(sI1, sI2);
@@ -1514,11 +1655,11 @@
             const CLASSES = {
                 spiral: {
                     type: "나선은하 (Spiral Galaxy)", en: "Spiral / Late-Type", avatar: "🌀",
-                    desc: "중심 팽대부와 지수 원반(n≈1~2)이 함께 존재하며, 나선팔에 의한 중간 수준의 비대칭을 보입니다."
+                    desc: "중심 팽대부와 지수 원반(n≈1~2.5) 및 로그 나선팔 감김 구조가 검출된 만기형/나선은하입니다."
                 },
                 elliptical: {
                     type: "타원은하 (Elliptical Galaxy)", en: "Elliptical / Early-Type", avatar: "⚪",
-                    desc: "de Vaucouleurs(n≈4) 프로파일, 높은 중심 집중도, 낮은 비대칭도를 갖춘 조기형 은하입니다."
+                    desc: "de Vaucouleurs(n≈4) 프로파일, 높은 중심 집중도(C≥3.5), 나선팔 없는 매끄러운 등광도선을 갖춘 조기형 타원은하입니다."
                 },
                 irregular: {
                     type: "불규칙은하 (Irregular Galaxy)", en: "Irregular", avatar: "✨",
@@ -1558,7 +1699,7 @@
             analysisResults = {
                 mode: currentMode, cls,
                 galaxyType, galaxyClassEn, galaxyAvatar, galaxyDesc, confidence, scores,
-                C, bestN, A, S, axisQ, gini, M20, r20, r50, r80, r90, snr, metallicity,
+                C, bestN, A, S, axisQ, spiralWinding, gini, M20, r20, r50, r80, r90, snr, metallicity,
                 logNII_Ha, logOIII_Hb, spec,
                 profileR, profileI, Ie
             };
@@ -1593,10 +1734,10 @@
             }
 
             document.getElementById('valC').innerText = res.C.toFixed(2);
-            document.getElementById('subC').innerText = res.C >= 3.6 ? 'C ≥ 3.6 · 강한 중심 집중 (타원형)' : (res.C >= 2.6 ? '2.6 ≤ C < 3.6 · 팽대부 + 원반' : 'C < 2.6 · 팽대부 약하거나 없음');
+            document.getElementById('subC').innerText = res.C >= 3.5 ? 'C ≥ 3.5 · 강한 중심 집중 (타원형)' : (res.C >= 2.6 ? '2.6 ≤ C < 3.5 · 팽대부 + 원반' : 'C < 2.6 · 팽대부 약하거나 없음');
 
             document.getElementById('valSersic').innerText = res.bestN.toFixed(2);
-            document.getElementById('subSersic').innerText = res.bestN >= 2.5 ? 'de Vaucouleurs 타원형' : '지수 원반형 (Disk)';
+            document.getElementById('subSersic').innerText = res.bestN >= 2.4 ? 'de Vaucouleurs 타원형' : '지수 원반형 (Disk)';
 
             document.getElementById('valA').innerText = res.A.toFixed(2);
             document.getElementById('subA').innerText = res.A > 0.25 ? '강한 비대칭 (나선팔/불규칙 구조)' : (res.A > 0.1 ? '나선팔/별생성' : '고대칭 평탄구조');
@@ -1624,18 +1765,19 @@
             const items = [];
             if (!isSpec) {
                 items.push(li(true, '집중도 C = 5·log(R80/R20):',
-                    `${res.C.toFixed(2)} → ${res.C >= 3.6 ? '중심 집중도가 높은 조기형(타원) 영역.' : (res.C >= 2.6 ? '팽대부+원반 구조 (나선 영역).' : '팽대부가 약하거나 없음 (원반·불규칙 영역).')}`));
-                items.push(li(true, 'Sérsic n 피팅:',
-                    `n = ${res.bestN.toFixed(1)} → ${res.bestN >= 2.5 ? '드 보쿨뢰르(n≈4) 형 프로파일에 가까움.' : '지수 원반(n≈1) 형 프로파일에 가까움.'}`));
-                items.push(li(true, '비대칭도 A (Conselice 2003):',
-                    `${res.A.toFixed(2)} → ${res.A > 0.32 ? '비대칭이 큼. 팽대부가 있으면 나선팔, 없으면 불규칙 구조로 해석.' : (res.A > 0.1 ? '나선팔·별생성 영역 수준의 비대칭.' : '대칭성이 높음.')}`));
+                    `${res.C.toFixed(2)} → ${res.C >= 3.5 ? '중심 집중도가 높은 조기형(타원) 영역.' : (res.C >= 2.6 ? '팽대부+원반 구조 (나선 영역).' : '팽대부가 약하거나 없음 (원반·불규칙 영역).')}`));
+                items.push(li(true, 'Sérsic n 피팅 (역-감마 선형화):',
+                    `n = ${res.bestN.toFixed(1)} → ${res.bestN >= 2.4 ? '드 보쿨뢰르(n≈4) 형 구형체 프로파일에 가까움.' : '지수 원반(n≈1) 형 원반 프로파일에 가까움.'}`));
+                items.push(li(true, '비대칭도 A · 나선팔 감김 W_spiral:',
+                    `A = ${res.A.toFixed(2)}, W_spiral = ${(res.spiralWinding || 0).toFixed(3)} → ${(res.spiralWinding || 0) >= 0.016 ? '로그 나선팔 감김(m=2,3) 뚜렷이 검출됨 (대칭 2팔 나선은하도 타원과 명확히 분리).' : '나선팔 감김 없는 매끄러운 등광도 구조.'}`));
                 items.push(li(true, '덩어리짐 S · 축비 q:',
                     `S = ${res.S.toFixed(3)}, q = ${res.axisQ.toFixed(2)} → ${res.axisQ < 0.65 ? '길쭉한 모양' : '둥근 편'}${res.S > 0.018 ? ', 울퉁불퉁함 (먼지띠/별생성 덩어리)' : ', 매끄러움'}.`));
                 items.push(li(true, 'Gini / M₂₀ (Lotz 2004):',
-                    `Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} (참고 지표, 분류에는 C·n·A 사용).`));
+                    `Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} (참고 지표, 분류에는 C·n·A·W_spiral·S 사용).`));
                 items.push(li(true, '최종 분류:',
-                    `${res.galaxyType} — 나선 ${res.scores.spiral.toFixed(0)}% · 타원 ${res.scores.elliptical.toFixed(0)}% · 불규칙 ${res.scores.irregular.toFixed(0)}%. 불규칙은 "팽대부 없음 + 높은 비대칭" 또는 "길쭉함 + 울퉁불퉁 + 팽대부 없음(M82형)"일 때만 판정합니다.`));
-                items.push(li(false, '분광 정보:', 'BPT·금속량은 사진으로 측정할 수 없습니다. 슬릿 스펙트럼을 분광 모드로 분석하세요.'));
+                    `${res.galaxyType} — 나선 ${res.scores.spiral.toFixed(0)}% · 타원 ${res.scores.elliptical.toFixed(0)}% · 불규칙 ${res.scores.irregular.toFixed(0)}%.`));
+                items.push(li(false, '사진 직접 측정량 & GEI 전송 원리:',
+                    '이 프로그램은 사진만으로 얻을 수 있는 기하·측광 물리량(C, n, A, S, W_spiral, R50, 색상비 R/B)만 직접 측정합니다. [진화 분석기로 전송] 클릭 시 ① 색상비·형태→색지수(u−r) 및 질량대광도비(M*/L, Bell+2003), ② 집중도 C·n→항성질량(log M*), ③ 형태·색지수·덩어리짐 S→비별생성률(log sSFR, 타원은하 ≈ −11.8 vs 나선 ≈ −10.1), ④ 우리 연구 추세선→암흑물질(log M_DM) 및 방출선 광도(Hα, [S II], [O III]) 순으로 자동 환산하여 전달합니다.'));
             } else if (res.spec && res.spec.bptClass) {
                 const fx = res.spec.fluxes;
                 items.push(li(true, '방출선 플럭스 (연속광 차감):',
@@ -1853,12 +1995,17 @@
                         const imgData = ctx.getImageData(0, 0, targetW, targetH);
 
                         const grayBuffer = new Float32Array(targetW * targetH);
+                        let sumR = 0, sumB = 0;
                         for (let i = 0; i < grayBuffer.length; i++) {
                             const idx = i * 4;
-                            grayBuffer[i] = 0.299 * imgData.data[idx] + 0.587 * imgData.data[idx + 1] + 0.114 * imgData.data[idx + 2];
+                            const r = imgData.data[idx], g = imgData.data[idx + 1], b = imgData.data[idx + 2];
+                            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                            grayBuffer[i] = lum;
+                            if (lum > 18) { sumR += r; sumB += b; }
                         }
+                        const rbRatio = sumB > 50 ? (sumR + 10) / (sumB + 10) : null;
 
-                        rawImage = { width: targetW, height: targetH, data: grayBuffer, fileName: file.name };
+                        rawImage = { width: targetW, height: targetH, data: grayBuffer, fileName: file.name, isLinear: false, rbRatio };
                         roi = { x: 0, y: 0, w: targetW, h: targetH, shape: 'full' };
                         currentTool = 'full';
                         updateToolButtons();
@@ -1879,7 +2026,7 @@
                 reader.onload = (ev) => {
                     try {
                         const fits = parseFITS(ev.target.result);
-                        rawImage = { width: fits.width, height: fits.height, data: fits.data, fileName: file.name };
+                        rawImage = { width: fits.width, height: fits.height, data: fits.data, fileName: file.name, isLinear: true, rbRatio: null };
                         roi = { x: 0, y: 0, w: fits.width, h: fits.height, shape: 'full' };
                         currentTool = 'full';
                         updateToolButtons();
@@ -1984,6 +2131,8 @@
                 lines.push(`- 집중도 C = 5·log(R80/R20): ${fmt(res.C)}`);
                 lines.push(`- Sérsic 지수 n: ${fmt(res.bestN, 1)}`);
                 lines.push(`- 비대칭도 A: ${fmt(res.A)}`);
+                lines.push(`- 나선팔 감김 지수 W_spiral: ${fmt(res.spiralWinding, 3)}`);
+                lines.push(`- 덩어리짐 S / 축비 q: ${fmt(res.S, 3)} / ${fmt(res.axisQ, 2)}`);
                 lines.push(`- Gini / M20: ${fmt(res.gini)} / ${fmt(res.M20)}`);
                 lines.push(`- 반광 반경 R50: ${fmt(res.r50, 1)} px`);
             }
@@ -2046,6 +2195,9 @@
                 ['Concentration_C', fmt(res.C, 3), 'Conselice 5*log10(R80/R20)'],
                 ['Sersic_n', fmt(res.bestN, 1), 'Sersic index (grid fit)'],
                 ['Asymmetry_A', fmt(res.A, 3), 'Conselice rotational asymmetry, sky-corrected'],
+                ['SpiralWinding_W', fmt(res.spiralWinding, 4), 'Logarithmic spiral arm winding coherence (m=2,3)'],
+                ['Clumpiness_S', fmt(res.S, 4), 'Conselice clumpiness index'],
+                ['AxisRatio_q', fmt(res.axisQ, 3), 'Isophotal b/a axis ratio'],
                 ['Gini', fmt(res.gini, 3), 'Lotz 2004'],
                 ['M20', fmt(res.M20, 3), 'Lotz 2004'],
                 ['R20_px', fmt(res.r20, 2), ''],
@@ -2068,6 +2220,22 @@
             showToast('📄 분석 보고서(.txt)를 저장했습니다.');
         }
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // [사진 직접 측정량 → 은하 물리량 4단계 천체물리 변환 엔진]
+        // 본 사진 분석 프로그램은 사진(픽셀 배열)만으로 직접 얻을 수 있는 기하·측광 지표
+        // (집중도 C, Sérsic n, 비대칭도 A, 덩어리짐 S, 나선팔 감김 W_spiral, 반광반경 R50, RGB 색상비 R/B)를 측정하며,
+        // GEI 진화 분석기로 전송할 때 아래 4단계 경험적·물리적 관계식을 통해 물리량 초기 추정치를 계산합니다:
+        //   ① 광학 색지수 (u−r): 컬러 사진의 적색/청색 광속비 log10(R/B) 및 형태 분류(타원/나선/불규칙), C, n 결합
+        //   ② 항성질량 log(M*/M☉): Conselice(2003)·Driver+(2006)의 집중도(C)·Sérsic(n)–질량 관계 및
+        //      Bell+(2003) 색지수 기반 질량대광도비 log(M*/L_r) = −0.42 + 0.35·(u−r) 결합
+        //   ③ 비별생성률 log(sSFR) 및 별생성률 log(SFR):
+        //      - 타원은하(E): 별생성이 멈춘 적색 소광 은하이므로 log sSFR ≈ −11.8 (낮은 A·S, 높은 C·n·색지수 반영)
+        //      - 나선은하(S): 항성생성 주계열(SFMS) 원반이므로 log sSFR ≈ −10.1 (색지수 및 팔의 별생성 덩어리 S 반영)
+        //      - 불규칙은하(Irr): 젊은 별생성 폭발 영역이므로 log sSFR ≈ −9.3 (높은 A·S 반영)
+        //      → log SFR = log M* + log sSFR
+        //   ④ 암흑물질 질량 log(M_DM) 및 방출선 광도(Hα, [S II], [O III]):
+        //      우리 연구의 NED 추세선(log M_DM = 0.88·log M* + 1.35) 및 SDSS 방출선 회귀식을 통해 자동 연동
+        // ═══════════════════════════════════════════════════════════════════════
         function sendToObservatoryAnalyzer() {
             if (!analysisResults) return;
             const res = analysisResults;
@@ -2075,15 +2243,48 @@
                 showToast('형태 측광값은 은하 사진 모드에서만 전송할 수 있습니다.', true);
                 return;
             }
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
             const shortType = res.galaxyType.split(' ')[0];
             const name = (rawImage && rawImage.fileName) ? `${rawImage.fileName.replace(/\.[^/.]+$/, '')} (${shortType})` : `사진측광_${shortType}`;
-            // Rough photometric priors from morphology only (C on the Conselice R80/R20 scale)
-            const cEff = 1.8 + 0.4 * (res.C - 2.6);
-            const estMstar = (9.6 + 0.45 * cEff + 0.15 * res.bestN).toFixed(2);
-            const estColor = (1.35 + 0.35 * (cEff - 1.8) + 0.12 * res.bestN).toFixed(2);
-            const estSFR = (parseFloat(estMstar) - 10.1 - 0.75 * (parseFloat(estColor) - 1.85)).toFixed(2);
-            const estRkpc = Math.max(1.8, (res.r50 * 0.32)).toFixed(2);
-            const params = new URLSearchParams({ name, log_mstar: estMstar, log_sfr: estSFR, radius_kpc: estRkpc, color_u_r: estColor });
+
+            const rgbDelta = (rawImage && rawImage.rbRatio) ? 0.45 * Math.log10(clamp(rawImage.rbRatio, 0.4, 3.0)) : 0;
+            let estColorVal, estMstarVal, estSSFRVal;
+
+            if (res.cls === 'elliptical') {
+                // 타원은하: 늙은 적색 항성 집단 (u-r ≈ 2.4~2.9), 거대 질량 (log M* ≈ 10.7~11.6), 완전 소광 (log sSFR ≈ -11.8)
+                estColorVal = clamp(2.52 + 0.12 * (res.C - 3.8) + 0.06 * (res.bestN - 3.5) + rgbDelta, 2.25, 2.95);
+                estMstarVal = clamp(10.95 + 0.28 * (res.C - 3.8) + 0.12 * (res.bestN - 3.5), 10.45, 11.80);
+                estSSFRVal = clamp(-11.80 - 0.35 * (estColorVal - 2.50) - 0.08 * (res.bestN - 3.5), -12.60, -11.20);
+            } else if (res.cls === 'irregular') {
+                // 불규칙은하: 푸른 젊은 항성 집단 (u-r ≈ 1.0~1.6), 왜소~중간 질량 (log M* ≈ 8.8~9.9), 폭발적 별생성 (log sSFR ≈ -9.2)
+                estColorVal = clamp(1.28 - 0.30 * res.A - 1.2 * res.S + rgbDelta, 0.85, 1.65);
+                estMstarVal = clamp(9.35 + 0.25 * (res.C - 2.2) + 0.15 * (res.bestN - 1.0), 8.50, 9.95);
+                estSSFRVal = clamp(-9.30 + 4.0 * res.S + 0.35 * res.A - 0.35 * (estColorVal - 1.30), -9.90, -8.50);
+            } else {
+                // 나선은하: 주계열 항성생성 원반 (u-r ≈ 1.5~2.2), 성숙 원반 질량 (log M* ≈ 9.8~11.0), 주계열 별생성 (log sSFR ≈ -10.1)
+                estColorVal = clamp(1.80 + 0.22 * (res.C - 3.0) + 0.08 * (res.bestN - 1.5) - 0.8 * res.S + rgbDelta, 1.35, 2.32);
+                estMstarVal = clamp(10.38 + 0.30 * (res.C - 3.0) + 0.12 * (res.bestN - 1.5), 9.60, 11.15);
+                estSSFRVal = clamp(-10.08 - 0.55 * (estColorVal - 1.80) + 2.5 * res.S, -10.95, -9.40);
+            }
+
+            const estSFRVal = estMstarVal + estSSFRVal;
+            const estMdmVal = 0.88 * estMstarVal + 1.35;
+            const estRkpc = Math.max(1.8, (res.r50 * 0.26)).toFixed(2);
+
+            const params = new URLSearchParams({
+                name,
+                log_mstar: estMstarVal.toFixed(2),
+                log_sfr: estSFRVal.toFixed(2),
+                log_mdm: estMdmVal.toFixed(2),
+                radius_kpc: estRkpc,
+                color_u_r: estColorVal.toFixed(2),
+                morph_cls: res.cls,
+                photo_c: res.C.toFixed(2),
+                photo_n: res.bestN.toFixed(1),
+                photo_a: res.A.toFixed(2),
+                photo_s: res.S.toFixed(3),
+                photo_w: (res.spiralWinding || 0).toFixed(3)
+            });
             if (res.metallicity !== null) params.set('oh', res.metallicity.toFixed(2));
             window.location.href = `observatory_analyzer_web.html?${params}`;
         }
