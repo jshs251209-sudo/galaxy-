@@ -6,9 +6,9 @@ observatory_galaxy_analyzer.py
 천문대에서 직접 관측한 은하(또는 관측 카탈로그 은하)의 물리량(질량/등급, 거리/적색편이,
 반경/시직경, 회전속도/속도분산, H-alpha 플럭스/별생성률, 광학 색지수, 방출선 플럭스비 등)을
 입력하면:
-  1. 결측된 보조 물리량(동역학 질량, 암흑물질 질량·분율, 비별생성률, 표면밀도 등)을 자동 유도하고,
-  2. 차세대 5축 통합 은하 진화 지수 (Unified GEI v2.0, 0.000~1.000 및 100점 환산)를 산출하며,
-  3. 현재 은하가 5단계 진화 단계(Stage I ~ Stage V) 중 어느 단계의 몇 % 지점에 있는지 판별하고,
+  1. 결측된 보조 물리량(동역학 질량, 암흑물질 질량·분율, 비별생성률, 표면밀도, 가스분율, 팽대부비 등)을 자동 유도하고,
+  2. 차세대 4축 통합 은하 진화 지수 (Unified GEI v3, 0.000~1.000 및 100점 환산)를 산출하며,
+  3. 현재 은하가 5단계 진화 단계(1단계~5단계) 중 어느 단계의 몇 % 지점에 있는지 판별하고,
   4. 미분방정식(ODE) 진화 모델을 통해 과거(-10 Gyr ~ 현재) 어떤 모습이었는지 복원하고
      향후(현재 ~ +10 Gyr) 어떻게 진화할 것인지 정량 예측 및 300 DPI 진단 리포트 차트를 생성합니다.
 
@@ -50,7 +50,7 @@ os.makedirs(REPORT_DIR, exist_ok=True)
 
 def generate_single_galaxy_diagnostic_chart(sim_result: dict, save_path: str):
     """
-    입력된 관측 은하 1개에 대해 현재 진화 지수(GEI v2.0), 5대 물리 축 분해,
+    입력된 관측 은하 1개에 대해 현재 진화 지수(GEI v3), 4대 핵심 물리 축 분해,
     과거(-10 Gyr) -> 현재(0 Gyr) -> 미래(+10 Gyr) 진화 궤적 및 3D 위상공간 위치를
     한 장의 300 DPI 고해상도 진단 리포트 이미지로 저장합니다.
     """
@@ -92,20 +92,19 @@ def generate_single_galaxy_diagnostic_chart(sim_result: dict, save_path: str):
     ax1.set_title("(A) 관측 은하의 과거 복원 · 현재 진화 단계 · 미래 진화 지수 곡선", fontsize=12.5, fontweight="bold", pad=10)
 
     # -------------------------------------------------------------------------
-    # Panel 2 (우상): 5대 핵심 물리 축 성숙도 분해 (5-Axis Physical Decomposition)
+    # Panel 2 (우상): 4대 핵심 물리 축 성숙도 분해 (4-Axis GEI v3 Decomposition)
     # -------------------------------------------------------------------------
     ax2 = fig.add_subplot(gs[0, 1])
     ax2.set_facecolor("#f8fafc")
     cats = [
-        "별생성 소광도\n$S_{\\mathrm{quench}}$ (30%)",
-        "항성질량 축적\n$S_{\\mathrm{mass}}$ (25%)",
-        "항성종족 노화\n$S_{\\mathrm{pop}}$ (20%)",
-        "구조적 표면밀도\n$S_{\\mathrm{struct}}$ (15%)",
-        "암흑물질 헤일로\n$S_{\\mathrm{halo}}$ (10%)"
+        "항성질량 성숙도\n$S_{\\mathrm{mass}}$ (26%)",
+        "별생성 소광도\n$S_{\\mathrm{quench}}$ (28%)",
+        "암흑물질 헤일로\n$S_{\\mathrm{DM}}$ (19%)",
+        "방출선 소광·이온화\n$S_{\\mathrm{line}}$ (27%)"
     ]
-    p_vals = [past_rep["s_quench"], past_rep["s_mass"], past_rep["s_pop"], past_rep["s_struct"], past_rep["s_halo"]]
-    c_vals = [cur["s_quench"], cur["s_mass"], cur["s_pop"], cur["s_struct"], cur["s_halo"]]
-    f_vals = [fut_rep["s_quench"], fut_rep["s_mass"], fut_rep["s_pop"], fut_rep["s_struct"], fut_rep["s_halo"]]
+    p_vals = [past_rep["s_mass"], past_rep["s_quench"], past_rep["s_halo"], past_rep["s_line"]]
+    c_vals = [cur["s_mass"], cur["s_quench"], cur["s_halo"], cur["s_line"]]
+    f_vals = [fut_rep["s_mass"], fut_rep["s_quench"], fut_rep["s_halo"], fut_rep["s_line"]]
 
     x_pos = np.arange(len(cats))
     w = 0.25
@@ -122,7 +121,7 @@ def generate_single_galaxy_diagnostic_chart(sim_result: dict, save_path: str):
     ax2.set_ylim(0, 1.15)
     ax2.grid(True, ls="--", alpha=0.4, axis="y")
     ax2.legend(loc="upper right", fontsize=9.0, frameon=True, facecolor="white")
-    ax2.set_title("(B) 5대 물리 축별 과거 · 현재 · 미래 성숙도 점수 비교", fontsize=12.5, fontweight="bold", pad=10)
+    ax2.set_title("(B) 4대 물리 축별 과거 · 현재 · 미래 성숙도 점수 비교 (GEI v3)", fontsize=12.5, fontweight="bold", pad=10)
 
     # -------------------------------------------------------------------------
     # Panel 3 (좌하): 위상공간 (log M_* vs log sSFR) 및 반경-암흑물질 진화 궤적
@@ -140,12 +139,12 @@ def generate_single_galaxy_diagnostic_chart(sim_result: dict, save_path: str):
     ax3.scatter([cur["log_mstar"]], [cur["log_ssfr"]], color=cur["stage_color"], edgecolors="black", s=230, marker="*", zorder=12, label="현재 관측 위치")
     ax3.scatter([fut_rep["log_mstar"]], [fut_rep["log_ssfr"]], color="#ef4444", s=110, marker="^", zorder=10, label=f"미래 (+{fut_rep['dt_gyr']:.0f} Gyr)")
 
-    ax3.axhline(-10.2, color="#10b981", ls="--", lw=1.4, label="주계열 / 녹색 계곡 경계")
-    ax3.axhline(-11.2, color="#ef4444", ls="--", lw=1.4, label="녹색 계곡 / 완전 소광 경계")
+    ax3.axhline(-10.2, color="#10b981", ls="--", lw=1.4, label="주계열 / 별 생성 감쇠 경계 (log sSFR = -10.2)")
+    ax3.axhline(-11.5, color="#ef4444", ls="--", lw=1.4, label="별 생성 감쇠 / 완전 소광 경계 (log sSFR = -11.5)")
     ax3.set_xlabel("항성 질량 $\\log_{10}(M_*/M_\\odot)$", fontsize=11, fontweight="bold")
     ax3.set_ylabel("비별생성률 $\\log_{10}(\\mathrm{sSFR}\\,[\\mathrm{yr}^{-1}])$", fontsize=11, fontweight="bold")
     ax3.set_xlim(8.0, 12.2)
-    ax3.set_ylim(-13.0, -7.8)
+    ax3.set_ylim(-14.2, -7.6)
     ax3.grid(True, ls="--", alpha=0.4)
     ax3.legend(loc="lower left", fontsize=8.8, frameon=True, facecolor="white")
     ax3.set_title("(C) 질량–비별생성률 위상공간 내 현재 위치 및 과거·미래 이동 경로", fontsize=12.5, fontweight="bold", pad=10)
@@ -155,15 +154,16 @@ def generate_single_galaxy_diagnostic_chart(sim_result: dict, save_path: str):
     # -------------------------------------------------------------------------
     ax4 = fig.add_subplot(gs[1, 1])
     ax4.axis("off")
+    key_feat_str = " · ".join(cur.get("stage_key_features", []))
     report_txt = (
         f"■ 관측 은하 정밀 진화 판독 리포트: {cur.get('name', '사용자 관측 은하')}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"▶ [현재 진화 단계 판별]\n"
-        f"  • 통합 은하 진화 지수 (GEI v2.0): {cur['gei_score']:.3f}  (100점 만점 기준 {cur['gei_100']:.1f}점)\n"
+        f"  • 통합 은하 진화 지수 (GEI v3): {cur['gei_score']:.3f}  (100점 만점 기준 {cur['gei_100']:.1f}점)\n"
         f"  • 판별 진화 단계: {cur['stage_name_kr']} (단계 내 진행도 {cur['stage_progress_pct']:.1f}%)\n"
-        f"  • 대응 형태학적 특징: {cur['morphology_typical']}\n"
-        f"  • 핵심 물리량: log(M*)={cur['log_mstar']:.2f} $M_\\odot$ | log(SFR)={cur['log_sfr']:.2f} | log(sSFR)={cur['log_ssfr']:.2f}\n"
-        f"                 반경 R={cur['radius_kpc']:.2f} kpc | V_rot={cur['v_rot']:.1f} km/s | 암흑물질 비율 f_DM={cur['f_dm_percent']:.1f}%\n\n"
+        f"  • 단계 핵심 특징: {key_feat_str}\n"
+        f"  • 핵심 물리량: log(M*)={cur['log_mstar']:.2f} $M_\\odot$ | log(sSFR)={cur['log_ssfr']:.2f} | 색지수(u-r)={cur['color_u_r']:.2f}\n"
+        f"                 가스분율 f_gas={cur['f_gas_percent']:.1f}% | 팽대부비 B/T={cur['bulge_to_total']:.2f} | log(M_DM)={cur['log_mdm']:.2f} $M_\\odot$\n\n"
         f"▶ [과거 모습 복원 ({past_rep['epoch_label']}, 우주 나이 {past_rep['cosmic_age_t_gyr']:.1f} Gyr)]\n"
         f"  • 과거 진화 지수: GEI = {past_rep['gei_score']:.3f} ({past_rep['stage_name_kr']})\n"
         f"  • 과거 물리 상태: log(M*)={past_rep['log_mstar']:.2f} $M_\\odot$, 반경 R={past_rep['radius_kpc']:.2f} kpc,\n"
@@ -199,16 +199,17 @@ def print_detailed_console_report(sim_result: dict):
     print("\n" + "=" * 88)
     print(f" 🔭 [천문대 관측 은하 진화 단계 분석 결과] : {cur.get('name', '관측 은하')}")
     print("=" * 88)
-    print(f"  • 통합 은하 진화 지수 (GEI v2.0) : {cur['gei_score']:.4f}  (100점 환산: {cur['gei_100']:.1f} / 100)")
+    print(f"  • 통합 은하 진화 지수 (GEI v3)   : {cur['gei_score']:.4f}  (100점 환산: {cur['gei_100']:.1f} / 100)")
     print(f"  • 현재 은하 진화 단계 판별       : {cur['stage_name_kr']} (단계 내 진행률: {cur['stage_progress_pct']:.1f}%)")
+    print(f"  • 단계별 핵심 구조 특징          : {' | '.join(cur.get('stage_key_features', []))}")
+    print(f"  • 구조/가스 진단 물리량          : 가스분율 f_gas={cur['f_gas_percent']:.1f}%, 팽대부비 B/T={cur['bulge_to_total']:.2f}, 유입/SFR 평형비={cur['inflow_sfr_ratio']:.2f}")
     print(f"  • 전형적 형태 분류               : {cur['morphology_typical']}")
     print("-" * 88)
-    print("  [5대 물리 축 정규화 점수 분해]")
-    print(f"    1) 별생성 소광도 (S_quench, 30%) : {cur['s_quench']:.3f}   (log sSFR = {cur['log_ssfr']:.2f} yr^-1)")
-    print(f"    2) 항성질량 성숙도 (S_mass, 25%) : {cur['s_mass']:.3f}   (log M* = {cur['log_mstar']:.2f} M_sun)")
-    print(f"    3) 항성종족/화학 (S_pop, 20%)    : {cur['s_pop']:.3f}   (u-r = {cur['color_u_r']:.2f}, D4000 = {cur['d4000']:.2f}, 12+log(O/H) = {cur['oh_metallicity']:.2f})")
-    print(f"    4) 구조적 밀집도 (S_struct, 15%) : {cur['s_struct']:.3f}   (log Σ* = {cur['log_sigma_star']:.2f} M_sun/kpc^2, R = {cur['radius_kpc']:.2f} kpc)")
-    print(f"    5) 암흑물질 헤일로 (S_halo, 10%) : {cur['s_halo']:.3f}   (f_DM = {cur['f_dm_percent']:.1f}%, log M_dyn = {cur['log_mdyn']:.2f} M_sun)")
+    print("  [4대 핵심 물리 축 정규화 점수 분해 (GEI v3)]")
+    print(f"    1) 항성질량 성숙도 (S_mass, 26%)   : {cur['s_mass']:.3f}   (log M* = {cur['log_mstar']:.2f} M_sun)")
+    print(f"    2) 별생성 소광도 (S_quench, 28%)   : {cur['s_quench']:.3f}   (log sSFR = {cur['log_ssfr']:.2f} yr^-1)")
+    print(f"    3) 암흑물질 헤일로 (S_DM, 19%)     : {cur['s_halo']:.3f}   (log M_DM = {cur['log_mdm']:.2f} M_sun, f_DM = {cur['f_dm_percent']:.1f}%)")
+    print(f"    4) 방출선 소광·이온화 (S_line, 27%): {cur['s_line']:.3f}   (S_Ha={cur['s_ha']:.2f}, S_SII={cur['s_sii']:.2f}, S_OIII={cur['s_oiii']:.2f})")
     print("-" * 88)
     print("  [과거 모습 복원 · 현재 상태 · 미래 진화 예측 요약]")
     print(f"    • {nar['past_narrative_kr']}")
@@ -228,7 +229,7 @@ def print_detailed_console_report(sim_result: dict):
 def run_interactive_cli():
     """사용자가 콘솔에서 직접 천문대 망원경·CCD 원시 관측값 또는 물리량을 입력하여 분석하는 대화형 모드"""
     print("\n" + "=" * 84)
-    print(" 🔭 우리 팀 직접 관측 은하 입력 · 진화 단계(GEI v2.0) 판별기 (대화형 입력 모드)")
+    print(" 🔭 우리 팀 직접 관측 은하 입력 · 진화 단계(GEI v3) 판별기 (대화형 입력 모드)")
     print("    • 망원경·CCD 원시 측정값(겉보기 등급 m_r, 각반경 arcsec, 후퇴속도 km/s)을 입력하면")
     print("      물리량(항성질량 M*, 물리적 반경 R_kpc, 별생성률 SFR)으로 자동 환산합니다.")
     print("    • 값을 모르는 항목은 Enter를 누르면 천체물리 스케일링 법칙으로 자동 추정됩니다.")
@@ -353,7 +354,7 @@ def main():
     print(" 🔭 우리 팀 직접 관측 은하 진화 분석기 (observatory_galaxy_analyzer.py)")
     print("    • 직접 관측값 대화형 입력: python observatory_galaxy_analyzer.py --interactive")
     print("    • 원시 관측값 CLI 입력 예: python observatory_galaxy_analyzer.py --name '관측은하_01' --m_r 10.4 --theta_arcsec 85 --v_rec 1150 --color_u_r 1.75")
-    print("    • 아래는 GEI v2.0 알고리즘 검증용 국소 우주 표준 문헌 은하(CEERS 초기우주 제외) 5종 벤치마크 결과입니다.")
+    print("    • 아래는 GEI v3 알고리즘 검증용 국소 우주 표준 문헌 은하(CEERS 초기우주 제외) 5종 벤치마크 결과입니다.")
     print("=" * 88)
     showcase_keys = [
         "M82 (시가 은하 - 폭발적 별생성)",

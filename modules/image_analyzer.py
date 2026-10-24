@@ -191,11 +191,15 @@ class GalaxyImageAnalyzer:
     # ── 기본 ─────────────────────────────────────────────
     @staticmethod
     def to_gray(arr):
-        arr = np.asarray(arr)
+        arr = np.asarray(arr, dtype=float)
+        if not np.all(np.isfinite(arr)):
+            finite_vals = arr[np.isfinite(arr)]
+            fill = float(np.median(finite_vals)) if finite_vals.size > 0 else 0.0
+            arr = np.nan_to_num(arr, nan=fill, posinf=fill, neginf=fill)
         if arr.ndim == 3:
-            rgb = arr[..., :3].astype(float)
+            rgb = arr[..., :3]
             return 0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]
-        return arr.astype(float)
+        return arr
 
     def background(self, gray, mask, ring=None):
         """배경: 마스크 주변 고리 영역(없으면 마스크 밖 전체)의 시그마 클리핑 중앙값"""
@@ -219,9 +223,17 @@ class GalaxyImageAnalyzer:
         else:
             vals = gray[ring & outside]
         if vals.size < 10:
-            return 0.0, robust_noise(gray)
+            # 전체 이미지가 마스크인 경우 가장자리(테두리) 픽셀에서 배경 추정
+            H, W = gray.shape
+            b_px = max(1, min(H, W) // 12)
+            border = np.zeros_like(gray, dtype=bool)
+            border[:b_px, :] = True; border[-b_px:, :] = True
+            border[:, :b_px] = True; border[:, -b_px:] = True
+            vals = gray[border]
+        if vals.size < 5:
+            return float(np.median(gray)), max(robust_noise(gray), 1e-6)
         _, med, sd = sigma_clipped_stats(vals)
-        return med, max(sd, 1e-9)
+        return med, max(sd, 1e-6)
 
     def region_stats(self, image_array, mask, subtract_bg=True):
         gray = self.to_gray(image_array)
@@ -340,7 +352,12 @@ class GalaxyImageAnalyzer:
     # ── 비모수 형태 지수 ─────────────────────────────────
     @staticmethod
     def _cutout(gray, mask, cx, cy, pad=2):
+        H, W = gray.shape
+        if not np.isfinite(cx) or not np.isfinite(cy):
+            cx, cy = W / 2.0, H / 2.0
         ys, xs = np.nonzero(mask)
+        if len(xs) == 0:
+            return gray.copy(), mask.copy()
         half = int(max(cx - xs.min(), xs.max() - cx, cy - ys.min(), ys.max() - cy)) + pad
         x0, x1 = int(round(cx)) - half, int(round(cx)) + half + 1
         y0, y1 = int(round(cy)) - half, int(round(cy)) + half + 1
@@ -459,8 +476,64 @@ class GalaxyImageAnalyzer:
     def _bn(n):
         return 2 * n - 1.0 / 3 + 4.0 / (405 * n) + 46.0 / (25515 * n ** 2)
 
+    @staticmethod
+    def spiral_winding(gray, cx, cy, r50, bg, bg_sd=1.0):
+        """방위각 푸리에 모드(m=2,3,4) 기반 나선팔 감김도 W_spiral 계산"""
+        if r50 is None or not np.isfinite(r50) or r50 < 2.0:
+            return 0.0
+        H, W = gray.shape
+        r_min = max(2.0, 0.35 * r50)
+        r_max = min(max(H, W) * 0.45, 3.0 * r50)
+        if r_max <= r_min + 2.0:
+            return 0.0
+        n_rings = 10
+        n_theta = 36
+        ring_amps = []
+        phases2 = []
+        radii = np.linspace(r_min, r_max, n_rings)
+        thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
+        for rad in radii:
+            xs = cx + rad * np.cos(thetas)
+            ys = cy + rad * np.sin(thetas)
+            valid = (xs >= 0) & (xs < W - 1) & (ys >= 0) & (ys < H - 1)
+            if valid.sum() < n_theta * 0.75:
+                continue
+            vals = np.maximum(0.0, ndimage.map_coordinates(gray, [ys, xs], order=1, mode='nearest') - bg)
+            a0 = np.mean(vals)
+            if a0 <= 0.5 * bg_sd:
+                continue
+            c2 = np.mean(vals * np.cos(2 * thetas))
+            s2 = np.mean(vals * np.sin(2 * thetas))
+            c3 = np.mean(vals * np.cos(3 * thetas))
+            s3 = np.mean(vals * np.sin(3 * thetas))
+            c4 = np.mean(vals * np.cos(4 * thetas))
+            s4 = np.mean(vals * np.sin(4 * thetas))
+            amp2 = np.hypot(c2, s2) / a0
+            amp3 = np.hypot(c3, s3) / a0
+            amp4 = np.hypot(c4, s4) / a0
+            ring_amps.append(amp2 + 0.6 * amp3 + 0.4 * amp4)
+            phases2.append(np.arctan2(s2, c2))
+        if len(ring_amps) < 3:
+            return 0.0
+        mean_amp = float(np.mean(ring_amps))
+        phase_diffs = []
+        for i in range(1, len(phases2)):
+            dp = phases2[i] - phases2[i - 1]
+            while dp > np.pi:
+                dp -= 2 * np.pi
+            while dp < -np.pi:
+                dp += 2 * np.pi
+            phase_diffs.append(abs(dp))
+        mean_wind = float(np.mean(phase_diffs)) if phase_diffs else 0.0
+        return float(mean_amp * (1.0 + 0.6 * min(1.5, mean_wind)))
+
     def sersic_fit(self, r, prof):
         good = (prof > 0) & np.isfinite(prof) & (r > 0)
+        if good.sum() >= 7:
+            pmax = np.nanmax(prof[good])
+            non_sat = good & ~((r < 3.5) & (prof > 0.92 * pmax))
+            if non_sat.sum() >= 5:
+                good = non_sat
         if good.sum() < 5:
             return None
         rr, pp = r[good], prof[good]
@@ -560,6 +633,13 @@ class GalaxyImageAnalyzer:
         if nn >= 4:
             irr += 1.0
             reasons.append('밝은 덩어리 %d개 → 덩어리진(clumpy) 별생성 구조' % nn)
+        W = m.get('W_spiral')
+        if W is not None and W >= 0.08 and (A is None or A < 0.38):
+            late += 0.8
+            reasons.append('나선팔 감김도 W=%.2f ≥ 0.08 → 방위각 푸리에 나선팔 패턴 검출' % W)
+        elif W is not None and W < 0.04 and (A is not None and A <= 0.12):
+            early += 0.4
+            reasons.append('나선팔 감김도 W=%.2f < 0.04 → 매끄러운 타원형 등광도선' % W)
         if S is not None and S > 0.15:
             irr += 0.3
             late += 0.3
@@ -571,18 +651,28 @@ class GalaxyImageAnalyzer:
             '조기형 (타원/렌즈형)': early / tot, '만기형 (나선/원반)': late / tot,
             '불규칙': irr / tot, '병합/상호작용 후보': merger / tot,
         }
+        tot3 = max(early + late + (irr + 0.5 * merger), 1e-6)
+        scores_3 = {
+            '타원은하 (Elliptical)': early / tot3,
+            '나선은하 (Spiral)': late / tot3,
+            '불규칙은하 (Irregular)': (irr + 0.5 * merger) / tot3,
+        }
         cls = max(scores, key=scores.get)
+        cls_3 = max(scores_3, key=scores_3.get)
         en = {'조기형 (타원/렌즈형)': 'Early-type', '만기형 (나선/원반)': 'Late-type',
               '불규칙': 'Irregular', '병합/상호작용 후보': 'Merger candidate'}[cls]
-        return {'class': cls, 'class_en': en, 'scores': scores, 'reasons': reasons}
+        return {'class': cls, 'class_en': en, 'class_3': cls_3, 'scores': scores, 'scores_3': scores_3, 'reasons': reasons}
 
     # ── 통합 ─────────────────────────────────────────────
     @staticmethod
     def linearize_image(image_array, mode='srgb'):
-        """8비트 사진(sRGB 감마≈2.2) → 근사 선형 광량. mode: 'srgb' | 'auto' | 'none'"""
+        """8비트 사진 → 근사 선형 광량. mode: 'srgb'(2.2) | 'astro'(4.2) | 'auto' | 'none'"""
         arr = np.asarray(image_array)
-        if mode in ('srgb', 'auto') and arr.dtype == np.uint8:
-            return ((arr.astype(float) / 255.0) ** 2.2) * 255.0
+        if arr.dtype == np.uint8:
+            if mode == 'astro':
+                return ((arr.astype(float) / 255.0) ** 4.2) * 255.0
+            if mode in ('srgb', 'auto'):
+                return ((arr.astype(float) / 255.0) ** 2.2) * 255.0
         return arr.astype(float)
 
     def analyze(self, image_array, mask, linearize='auto'):
@@ -633,19 +723,22 @@ class GalaxyImageAnalyzer:
         G = self.gini(np.clip(gray[seg] - bg, 0, None))
         M20 = self.m20(gray, seg, bg)
         sersic = self.sersic_fit(ra, pa_)
+        W_spiral = self.spiral_winding(gray, cx, cy, R50, bg, bg_sd)
         metrics = {
             'R20_px': R20, 'R50_px': R50, 'R80_px': R80, 'R90_px': R90, 'R_petro_px': Rp,
             'C_cas': C_cas, 'C_sdss': C_sdss, 'asymmetry': A, 'smoothness': S,
             'gini': G, 'm20': M20, 'sersic_n': sersic['n'] if sersic else None,
             'sersic_Re_px': sersic['R_e'] if sersic else None,
+            'W_spiral': W_spiral,
             'n_nuclei': n_nuc, 'seg_pixels': int(seg.sum()),
         }
         morph = self.classify_morphology(metrics)
         snr = stats.get('snr')
         peak_sig = (float(np.max(gray[mask])) - bg) / bg_sd if mask.any() and bg_sd > 0 else 0.0
         if (snr is not None and np.isfinite(snr) and snr < 5) or stats.get('net_flux', 0) <= 0 \
-                or metrics['seg_pixels'] < 9 or peak_sig < 5:
-            morph = {'class': '유의미한 천체 없음 (배경/잡음)', 'class_en': 'No significant source', 'scores': {},
+                or stats.get('std', 0) < 1e-6 or metrics['seg_pixels'] < 9 or peak_sig < 5:
+            morph = {'class': '유의미한 천체 없음 (배경/잡음)', 'class_en': 'No significant source',
+                     'class_3': '유의미한 천체 없음', 'scores': {},
                      'reasons': ['영역 S/N=%.1f, 최대 밝기 유의도 %.1fσ, 분할 영역 %d픽셀 → 형태 지수를 신뢰할 수 없음'
                                  % (snr if snr is not None else float('nan'), peak_sig, metrics['seg_pixels']),
                                  '은하가 영역 안에 들어오도록 다시 그려 보세요.']}

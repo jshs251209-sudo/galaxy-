@@ -343,19 +343,20 @@ class GalaxyPredictor:
         return fig
 
     def create_evolution_gauge(self, gei_score: float) -> go.Figure:
+        score_100 = float(gei_score) * 100.0 if float(gei_score) <= 1.0 else float(gei_score)
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=gei_score,
-            title={'text': "은하 진화 지수 (GEI)"},
+            value=score_100,
+            title={'text': "은하 진화 지수 (GEI v3)"},
             gauge={
                 'axis': {'range': [0, 100]},
                 'bar': {'color': "white"},
                 'steps': [
-                    {'range': [0, 25], 'color': "#1d4ed8"},
-                    {'range': [25, 45], 'color': "#0ea5e9"},
-                    {'range': [45, 65], 'color': "#22c55e"},
-                    {'range': [65, 85], 'color': "#f59e0b"},
-                    {'range': [85, 100], 'color': "#dc2626"}
+                    {'range': [0, 28], 'color': "#06b6d4"},
+                    {'range': [28, 46], 'color': "#3b82f6"},
+                    {'range': [46, 64], 'color': "#10b981"},
+                    {'range': [64, 78], 'color': "#f59e0b"},
+                    {'range': [78, 100], 'color': "#ef4444"}
                 ],
             }
         ))

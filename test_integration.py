@@ -420,6 +420,55 @@ test('app_sample_flow', test_app_sample_flow)
 
 # ============================================
 print()
+print('=== 9. GEI v3 Evolution Engine ===')
+# ============================================
+from modules.gei_evolution_engine import (
+    OBSERVATORY_BENCHMARK_GALAXIES,
+    compute_unified_gei,
+    compute_gei_vectorized,
+    simulate_galaxy_evolution_trajectory,
+)
+
+
+def test_gei_v3_engine():
+    assert len(OBSERVATORY_BENCHMARK_GALAXIES) >= 14, 'expected 14 benchmark galaxies'
+    lmc = compute_unified_gei(OBSERVATORY_BENCHMARK_GALAXIES['LMC (대마젤란은하)'])
+    m33 = compute_unified_gei(OBSERVATORY_BENCHMARK_GALAXIES['M33 (삼각형자리 은하)'])
+    m51 = compute_unified_gei(OBSERVATORY_BENCHMARK_GALAXIES['M51a (소용돌이 은하)'])
+    m31 = compute_unified_gei(OBSERVATORY_BENCHMARK_GALAXIES['M31 (안드로메다 은하)'])
+    m87 = compute_unified_gei(OBSERVATORY_BENCHMARK_GALAXIES['M87 (처녀자리 A 거대 타원은하)'])
+    assert lmc['stage_id'] == 1 and 0.00 <= lmc['gei_score'] < 0.28
+    assert m33['stage_id'] == 2 and 0.28 <= m33['gei_score'] < 0.46
+    assert m51['stage_id'] == 3 and 0.46 <= m51['gei_score'] < 0.64
+    assert m31['stage_id'] == 4 and 0.64 <= m31['gei_score'] < 0.78
+    assert m87['stage_id'] == 5 and 0.78 <= m87['gei_score'] <= 1.00
+    assert lmc['f_gas_percent'] > m51['f_gas_percent'] > m31['f_gas_percent'] > m87['f_gas_percent']
+    assert lmc['bulge_to_total'] < m51['bulge_to_total'] < m31['bulge_to_total'] < m87['bulge_to_total']
+    assert 'stage_key_features' in lmc and len(lmc['stage_key_features']) >= 2
+    sim = simulate_galaxy_evolution_trajectory(OBSERVATORY_BENCHMARK_GALAXIES['M31 (안드로메다 은하)'])
+    tdf = sim['trajectory_df']
+    assert len(tdf) >= 10 and tdf['gei_score'].iloc[-1] > tdf['gei_score'].iloc[0]
+    assert tdf['f_dm_percent'].nunique() > 3, 'f_dm_percent was overwritten with static values'
+    gei_v, st_v, _, _ = compute_gei_vectorized(
+        [9.15, 9.592, 10.927, 10.804, 11.78],
+        [-0.15, -0.35, 0.65, -0.45, -1.85],
+        [3.0, 5.51, 16.05, 12.02, 18.5],
+        [50, 50, 50, 50, 50],
+        [10, 10.3, 11, 11.2, 12],
+        [0.001, 0.0006, 0.0015, 0.001, 0.004]
+    )
+    assert list(st_v) == [1, 2, 3, 4, 5]
+    print('    LMC=%.3f(1단계)  M33=%.3f(2단계)  M51a=%.3f(3단계)  M31=%.3f(4단계)  M87=%.3f(5단계)' % (
+        lmc['gei_score'], m33['gei_score'], m51['gei_score'], m31['gei_score'], m87['gei_score']))
+    print('    f_gas(%%): LMC=%.1f > M51a=%.1f > M31=%.1f > M87=%.1f | B/T: LMC=%.2f < M51a=%.2f < M31=%.2f < M87=%.2f' % (
+        lmc['f_gas_percent'], m51['f_gas_percent'], m31['f_gas_percent'], m87['f_gas_percent'],
+        lmc['bulge_to_total'], m51['bulge_to_total'], m31['bulge_to_total'], m87['bulge_to_total']))
+
+
+test('gei_v3_engine', test_gei_v3_engine)
+
+# ============================================
+print()
 print('=' * 50)
 print('RESULTS: %d errors found' % len(errors))
 print('=' * 50)

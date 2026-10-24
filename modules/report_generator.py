@@ -103,15 +103,20 @@ class ReportGenerator:
         # 진화
         cluster = a.get('evolution_cluster', '미상')
         gei = a.get('gei_score')
+        gei_100 = (float(gei) * 100.0 if float(gei) <= 1.0 else float(gei)) if gei is not None else None
         stage = a.get('evolution_stage', '미상')
-        evo_interp = "현재 데이터(질량·색·SFR·금속량 중 일부 누락)로는 GEI를 산출할 수 없습니다."
-        if gei is not None:
-            if gei < 30:
-                evo_interp = "활발한 별 생성 단계로, 풍부한 가스를 바탕으로 성장 중인 젊은 은하입니다 (Blue Cloud)."
-            elif gei < 65:
-                evo_interp = "별 생성률이 감소하는 전이기 은하로 추정됩니다 (Green Valley)."
+        evo_interp = "현재 데이터(질량·별생성률 중 일부 누락)로는 GEI v3를 산출할 수 없습니다."
+        if gei_100 is not None:
+            if gei_100 < 28.0:
+                evo_interp = "가스 분율과 비별생성률(sSFR)이 높고 청색(u-r < 1.4)을 띠는 1단계(원시 폭발적 별 생성기) 은하입니다."
+            elif gei_100 < 46.0:
+                evo_interp = "나선팔 원반이 확장되며 주계열 상단에서 별생성이 활발한 2단계(초기 은하 원반 성장기) 은하입니다."
+            elif gei_100 < 64.0:
+                evo_interp = "원반과 팽대부가 공존하며 SFR과 가스유입이 평형을 이룬 3단계(성숙 나선 구조 안정기) 은하입니다."
+            elif gei_100 < 78.0:
+                evo_interp = "차가운 가스가 고갈되기 시작하고 중심 팽대부가 비대해지며 별 생성이 급감하는 4단계(별 생성 감쇠기) 은하입니다."
             else:
-                evo_interp = "가스가 대부분 고갈되어 별 생성이 거의 멈춘 성숙한 은하입니다 (Red Sequence)."
+                evo_interp = "log sSFR < -11.5 및 거대 암흑물질 헤일로를 지닌 적색 계열 5단계(소광 거대 타원 은하)입니다."
 
         md = []
         md.append("# 🌌 천체 분석 보고서\n")
@@ -186,7 +191,7 @@ class ReportGenerator:
         md.append("## %d. 은하 진화 단계 진단" % sec)
         sec += 1
         md.append("- **진화 군집**: %s" % cluster)
-        md.append("- **은하 진화 지수 (GEI)**: %s / 100" % (f(gei, "{:.1f}") if gei is not None else "N/A"))
+        md.append("- **은하 진화 지수 (GEI v3)**: %s / 100" % (f(gei_100, "{:.1f}") if gei_100 is not None else "N/A"))
         md.append("- **진화 단계**: %s" % stage)
         sfms = a.get('sfms')
         if sfms:
@@ -323,7 +328,8 @@ class ReportGenerator:
                             'delta': '태양(8.69) 대비 %+.2f' % (met - 8.69)})
         gei = a.get('gei_score')
         if gei is not None:
-            metrics.append({'label': '진화 지수 (GEI)', 'value': "%.1f/100" % gei, 'delta': a.get('evolution_stage')})
+            gei_100 = float(gei) * 100.0 if float(gei) <= 1.0 else float(gei)
+            metrics.append({'label': '진화 지수 (GEI v3)', 'value': "%.1f/100" % gei_100, 'delta': a.get('evolution_stage')})
         metrics.append({'label': 'AI 예측 유형', 'value': str(a.get('predicted_type', '미분류')).split(' (')[0],
                         'delta': "신뢰도 %s" % self._pct(a.get('confidence', 0))})
         return {

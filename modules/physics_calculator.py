@@ -40,13 +40,17 @@ class PhysicsCalculator:
         if flux is None or ebv is None or wavelength is None:
             return None
         
-        # 근사적인 k_lambda 매핑 (Angstrom)
+        # 근사적인 k_lambda 매핑 (Angstrom, Cardelli 1989 R_V=3.1)
         if 6500 <= wavelength <= 6600:
             k_lambda = 2.53  # H_alpha, [NII]
+        elif 6700 <= wavelength <= 6750:
+            k_lambda = 2.46  # [SII] 6717, 6731
         elif 4800 <= wavelength <= 4900:
             k_lambda = 3.61  # H_beta
         elif 4950 <= wavelength <= 5050:
             k_lambda = 3.50  # [OIII] 5007
+        elif 3700 <= wavelength <= 3750:
+            k_lambda = 4.77  # [OII] 3727
         else:
             k_lambda = 3.0
             
@@ -80,9 +84,11 @@ class PhysicsCalculator:
             return None
             
         try:
-            luminosity = 4 * math.pi * (dl_cm ** 2) * ha_flux_corrected
+            # SDSS 관습 단위(1e-17 erg/s/cm^2)가 스케일링 없이 큰 숫자(>1e-5)로 들어온 경우 자동 환산
+            f_cgs = ha_flux_corrected * 1e-17 if ha_flux_corrected > 1e-5 else ha_flux_corrected
+            luminosity = 4 * math.pi * (dl_cm ** 2) * f_cgs
             sfr = 7.9e-42 * luminosity
-            if sfr <= 0:
+            if sfr <= 0 or not math.isfinite(sfr):
                 return None
             return math.log10(sfr)
         except Exception:
@@ -187,56 +193,63 @@ class PhysicsCalculator:
             return None
         return log_sfr - log_mass
 
-    def calculate_gei(self, log_mass: float, log_ssfr: float, metallicity: float, color_ur: float,
-                      mass_range: tuple = (8.0, 12.5), ssfr_range: tuple = (-13.0, -8.0),
-                      z_range: tuple = (7.5, 9.5), color_range: tuple = (1.0, 3.5)) -> Optional[float]:
-        """Galaxy Evolution Index (0-100 scale).
-        GEI = (0.30*norm_mass + 0.30*norm_ssfr_inv + 0.20*norm_z + 0.20*norm_color) * 100
-        Higher GEI = more evolved (older, redder, metal-rich, quenched)"""
-        if any(v is None or math.isnan(v) for v in [log_mass, log_ssfr, metallicity, color_ur]):
+    def calculate_gei(self, log_mass: float, log_ssfr: float, metallicity: Optional[float] = None,
+                      color_ur: Optional[float] = None, log_mdm: Optional[float] = None,
+                      log_lha: Optional[float] = None, log_lsii: Optional[float] = None,
+                      log_loiii: Optional[float] = None, **kwargs) -> Optional[float]:
+        """Galaxy Evolution Index GEI v3 (0-100 scale).
+        GEI = (0.26*S_mass + 0.28*S_quench + 0.19*S_DM + 0.27*S_line) * 100
+        Higher GEI = more evolved (massive, quenched, halo-grown, emission-quenched/AGN)"""
+        if any(v is None or math.isnan(v) for v in [log_mass, log_ssfr]):
             return None
-            
-        def normalize(val: float, min_val: float, max_val: float) -> float:
-            norm = (val - min_val) / (max_val - min_val)
-            return max(0.0, min(1.0, norm))
 
-        norm_mass = normalize(log_mass, mass_range[0], mass_range[1])
-        
-        # sSFR 역산 (작을수록 진화됨)
-        norm_ssfr_inv = 1.0 - normalize(log_ssfr, ssfr_range[0], ssfr_range[1])
-        
-        norm_z = normalize(metallicity, z_range[0], z_range[1])
-        norm_color = normalize(color_ur, color_range[0], color_range[1])
-        
-        gei = (0.30 * norm_mass + 0.30 * norm_ssfr_inv + 0.20 * norm_z + 0.20 * norm_color) * 100
+        def clamp01(val: float) -> float:
+            return max(0.0, min(1.0, float(val)))
+
+        log_sfr = log_mass + log_ssfr
+        mdm = float(log_mdm) if (log_mdm is not None and not math.isnan(log_mdm)) else (0.88 * log_mass + 1.35)
+        lha = float(log_lha) if (log_lha is not None and not math.isnan(log_lha)) else (40.05 + 0.72 * log_sfr)
+        lsii = float(log_lsii) if (log_lsii is not None and not math.isnan(log_lsii)) else (39.38 + 0.58 * log_sfr)
+        loiii = float(log_loiii) if (log_loiii is not None and not math.isnan(log_loiii)) else (39.08 + 0.26 * log_sfr + 0.12 * (mdm - 9.8))
+
+        s_mass = clamp01((log_mass - 7.5) / 4.3)
+        s_quench = clamp01((-8.8 - log_ssfr) / 3.4)
+        s_halo = clamp01((mdm - 8.0) / 4.5)
+        s_ha = clamp01((30.6 - (lha - log_mass)) / 2.6)
+        s_sii = clamp01((30.0 - (lsii - log_mass)) / 2.4)
+        s_oiii = clamp01(((loiii - lha) + 1.0) / 1.3)
+        s_line = clamp01(0.50 * s_ha + 0.30 * s_sii + 0.20 * s_oiii)
+
+        gei = (0.26 * s_mass + 0.28 * s_quench + 0.19 * s_halo + 0.27 * s_line) * 100.0
         return gei
 
     def diagnose_evolution_stage(self, gei: float) -> dict:
-        """Interpret GEI score into evolution stage.
-        0-25: 초기 형성기 (Early Formation) - Blue, high SFR
-        25-45: 성장기 (Growth Phase) - Active star formation
-        45-65: 전이기 (Transition/Green Valley) - Declining SFR  
-        65-85: 성숙기 (Mature Phase) - Mostly quenched
-        85-100: 진화 완료 (Fully Evolved) - Red & dead
+        """Interpret GEI v3 score into 5 evolution stages (supports both 0-1 and 0-100 scales).
+        0-28  (0.00-0.28): 1단계 (원시 폭발적 별 생성기) — 가스 분율 ↑, sSFR ↑, u-r < 1.4
+        28-46 (0.28-0.46): 2단계 (초기 은하 원반 성장기) — 나선팔 원반 확장, 주계열 상단 별생성 활발
+        46-64 (0.46-0.64): 3단계 (성숙 나선 구조 안정기) — 원반과 팽대부 공존, SFR·가스유입 평형
+        64-78 (0.64-0.78): 4단계 (별 생성 감쇠기) — 차가운 가스 고갈 시작, 중심 팽대부 비대, 별 생성 급감
+        78-100(0.78-1.00): 5단계 (소광 거대 타원 은하) — log sSFR < -11.5, 거대 암흑물질 헤일로, 적색 계열
         Returns: {'stage': str, 'stage_en': str, 'description': str, 'color': str (hex)}"""
         if gei is None or math.isnan(gei):
             return {
-                'stage': '알 수 없음', 
-                'stage_en': 'Unknown', 
-                'description': '진화 지수를 계산할 수 없습니다.', 
+                'stage': '알 수 없음',
+                'stage_en': 'Unknown',
+                'description': '진화 지수를 계산할 수 없습니다.',
                 'color': '#808080'
             }
-            
-        if gei <= 25:
-            return {'stage': '초기 형성기', 'stage_en': 'Early Formation', 'description': 'Blue, high SFR', 'color': '#0000FF'}
-        elif gei <= 45:
-            return {'stage': '성장기', 'stage_en': 'Growth Phase', 'description': 'Active star formation', 'color': '#00BFFF'}
-        elif gei <= 65:
-            return {'stage': '전이기', 'stage_en': 'Transition/Green Valley', 'description': 'Declining SFR', 'color': '#00FF00'}
-        elif gei <= 85:
-            return {'stage': '성숙기', 'stage_en': 'Mature Phase', 'description': 'Mostly quenched', 'color': '#FFA500'}
+
+        score_100 = gei * 100.0 if gei <= 1.0 else gei
+        if score_100 < 28.0:
+            return {'stage': '1단계 (원시 폭발적 별 생성기)', 'stage_en': 'Stage I: Primordial Starburst Phase', 'description': '가스 분율 ↑ · sSFR ↑ · u-r < 1.4', 'color': '#06b6d4'}
+        elif score_100 < 46.0:
+            return {'stage': '2단계 (초기 은하 원반 성장기)', 'stage_en': 'Stage II: Early Galaxy Disk Growth Phase', 'description': '나선팔 원반 확장 · 주계열 상단 별생성 활발', 'color': '#3b82f6'}
+        elif score_100 < 64.0:
+            return {'stage': '3단계 (성숙 나선 구조 안정기)', 'stage_en': 'Stage III: Mature Spiral Structure Equilibrium', 'description': '원반과 팽대부 공존 · SFR, 가스유입 평형', 'color': '#10b981'}
+        elif score_100 < 78.0:
+            return {'stage': '4단계 (별 생성 감쇠기)', 'stage_en': 'Stage IV: Star Formation Quenching Phase', 'description': '차가운 가스 고갈 시작 · 중심 팽대부 비대 · 별 생성 급감', 'color': '#f59e0b'}
         else:
-            return {'stage': '진화 완료', 'stage_en': 'Fully Evolved', 'description': 'Red & dead', 'color': '#FF0000'}
+            return {'stage': '5단계 (소광 거대 타원 은하)', 'stage_en': 'Stage V: Quenched Giant Elliptical Galaxy', 'description': 'log sSFR < -11.5 · 거대 암흑물질 헤일로 · 적색 계열', 'color': '#ef4444'}
 
     def classify_sii_bpt(self, log_sii_ha: float, log_oiii_hb: float) -> dict:
         """[SII]-BPT (Kewley et al. 2006): SF / Seyfert / LINER"""
@@ -289,6 +302,8 @@ class PhysicsCalculator:
         hb_corr = self.correct_extinction(hb, 4861.0, ebv) if ebv else hb
         oiii_corr = self.correct_extinction(oiii, 5007.0, ebv) if ebv else oiii
         nii_corr = self.correct_extinction(nii, 6584.0, ebv) if ebv else nii
+        sii1_corr = self.correct_extinction(sii1, 6717.0, ebv) if ebv else sii1
+        sii2_corr = self.correct_extinction(sii2, 6731.0, ebv) if ebv else sii2
 
         # SFR & Metallicity
         log_sfr = self.calculate_sfr_halpha(ha_corr, z)
@@ -304,8 +319,8 @@ class PhysicsCalculator:
             log_oiii_hb = math.log10(oiii_corr / hb_corr)
         else:
             log_oiii_hb = np.nan
-        sii_tot = (sii1 or 0) + (sii2 or 0)
-        log_sii_ha = math.log10(sii_tot / ha) if sii_tot > 0 and ha else np.nan
+        sii_tot_corr = (sii1_corr or 0) + (sii2_corr or 0)
+        log_sii_ha = math.log10(sii_tot_corr / ha_corr) if sii_tot_corr > 0 and ha_corr and ha_corr > 0 else np.nan
 
         bpt_info = self.classify_bpt(log_nii_ha, log_oiii_hb)
         sii_bpt = self.classify_sii_bpt(log_sii_ha, log_oiii_hb)
@@ -341,16 +356,20 @@ class PhysicsCalculator:
         if bpt_info['class_en'] in ('Seyfert', 'LINER', 'Composite') and best_metallicity is not None:
             results['metallicity_warning'] = 'AGN/복합 은하는 강선 금속량 보정식의 적용 범위를 벗어납니다 (참고값).'
 
-        if log_mass is not None:
+        if log_mass is not None and np.isfinite(log_mass):
             results['log_mass'] = log_mass
             results['log_stellar_mass'] = log_mass
-        if color_ur is not None:
+        else:
+            log_mass = None
+        if color_ur is not None and np.isfinite(color_ur):
             results['color_ur'] = color_ur
             results['color_u_r'] = color_ur
+        else:
+            color_ur = None
 
-        # Evolution Index
+        # Evolution Index (GEI v3)
         met_for_gei = best_metallicity if best_metallicity is not None else metal_n2
-        if log_mass is not None and color_ur is not None and log_sfr is not None and met_for_gei is not None:
+        if log_mass is not None and log_sfr is not None and np.isfinite(log_sfr):
             log_ssfr = self.calculate_log_ssfr(log_sfr, log_mass)
             gei = self.calculate_gei(log_mass, log_ssfr, met_for_gei, color_ur)
             stage_info = self.diagnose_evolution_stage(gei)

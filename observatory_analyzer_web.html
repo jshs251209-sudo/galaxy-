@@ -633,11 +633,11 @@
                 <code>GEI = 0.26·S_mass + 0.28·S_quench + 0.19·S_DM + 0.27·S_line</code> (말름퀴스트 부피제한 보정 후 PCA 가중치)<br>
                 • <code>S_mass = (log M* − 7.5)/4.3</code> · <code>S_quench = (−8.8 − log sSFR)/3.4</code> · <code>S_DM = (log M_DM − 8.0)/4.5</code><br>
                 • <code>S_line = 0.50·S_Hα + 0.30·S_[SII] + 0.20·S_[OIII]</code> (우리가 분석한 Hα·[S II] 6717·[O III] 광도 소광/이온화 지수)<br>
-                • <b>Stage I (0.00~0.30)</b>: 원시 은하 형성 및 폭발적 별생성기 (불규칙/스타버스트)<br>
-                • <b>Stage II (0.30~0.45)</b>: 초기 주계열 원반 성장기 (후기형 나선 Sc/Sd)<br>
-                • <b>Stage III (0.45~0.60)</b>: 성숙 주계열 나선은하 안정기 (정규 나선 Sb/Sbc)<br>
-                • <b>Stage IV (0.60~0.76)</b>: 녹색 계곡 전이 및 별생성 감쇠기 (조기형 나선 Sa/S0)<br>
-                • <b>Stage V (0.76~1.00)</b>: 진화 완료 적색 계열 / 거대 타원은하 (E0~E7/cD)
+                • <b>1단계 (0.00~0.28)</b>: 원시 폭발적 별 생성기 (가스 분율 ↑ · sSFR ↑ · u-r &lt; 1.4)<br>
+                • <b>2단계 (0.28~0.46)</b>: 초기 은하 원반 성장기 (나선팔 원반 확장 · 주계열 상단 별생성 활발)<br>
+                • <b>3단계 (0.46~0.64)</b>: 성숙 나선 구조 안정기 (원반과 팽대부 공존 · SFR, 가스유입 평형)<br>
+                • <b>4단계 (0.64~0.78)</b>: 별 생성 감쇠기 (차가운 가스 고갈 시작 · 중심 팽대부 비대 · 별 생성 급감)<br>
+                • <b>5단계 (0.78~1.00)</b>: 소광 거대 타원 은하 (log sSFR &lt; -11.5 · 거대 암흑물질 헤일로 · 적색 계열)
             </div>
         </div>
     </div>
@@ -648,8 +648,8 @@
         <div class="stage-banner" id="stage-banner">
             <div class="gei-score-box">
                 <div class="gei-score-label">통합 은하 진화 지수 (GEI v3)</div>
-                <div class="gei-score-value" id="out-gei-val">0.534</div>
-                <div class="gei-score-sub" id="out-gei-100">백분율 환산: 53.4 / 100점</div>
+                <div class="gei-score-value" id="out-gei-val">0.478</div>
+                <div class="gei-score-sub" id="out-gei-100">백분율 환산: 47.8 / 100점</div>
             </div>
             <div class="stage-details">
                 <div style="font-size:0.82rem; color:#94a3b8;" id="out-gal-title">분석 대상: 천문대 직접 관측 은하 #1</div>
@@ -657,14 +657,14 @@
                 <div style="font-size:0.85rem; color:#e2e8f0;" id="out-morph-typ">대응 형태학적 특징: 정규 대형 나선은하 / 막대나선은하 (Sb / Sbc / SABb)</div>
                 <div class="stage-bar-wrap">
                     <div class="marker-pointer">
-                        <div class="marker-pin" id="gei-pin" style="left: 53.4%;">▼ GEI 0.534</div>
+                        <div class="marker-pin" id="gei-pin" style="left: 47.8%;">▼ GEI 0.478</div>
                     </div>
                     <div class="stage-segments">
-                        <div class="seg" style="background:var(--stage1);" title="Stage I (0.00~0.30)"></div>
-                        <div class="seg" style="background:var(--stage2);" title="Stage II (0.30~0.45)"></div>
-                        <div class="seg" style="background:var(--stage3);" title="Stage III (0.45~0.60)"></div>
-                        <div class="seg" style="background:var(--stage4);" title="Stage IV (0.60~0.76)"></div>
-                        <div class="seg" style="background:var(--stage5);" title="Stage V (0.76~1.00)"></div>
+                        <div class="seg" style="background:var(--stage1);" title="1단계 (0.00~0.28)"></div>
+                        <div class="seg" style="background:var(--stage2);" title="2단계 (0.28~0.46)"></div>
+                        <div class="seg" style="background:var(--stage3);" title="3단계 (0.46~0.64)"></div>
+                        <div class="seg" style="background:var(--stage4);" title="4단계 (0.64~0.78)"></div>
+                        <div class="seg" style="background:var(--stage5);" title="5단계 (0.78~1.00)"></div>
                     </div>
                 </div>
             </div>
@@ -682,11 +682,11 @@
             </div>
             <div class="kpi-box">
                 <div class="lbl">암흑물질 질량 log₁₀(M_DM/M☉)</div>
-                <div class="val" id="kpi-mdyn">10.77</div>
+                <div class="val" id="kpi-mdyn">10.52</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">실제 암흑물질 분율 f_DM [%]</div>
-                <div class="val" id="kpi-fdm">55.3%</div>
+                <div class="val" id="kpi-fdm">55.7%</div>
             </div>
             <div class="kpi-box">
                 <div class="lbl">항성 표면밀도 log₁₀(Σ* [M☉/kpc²])</div>
@@ -694,7 +694,7 @@
             </div>
             <div class="kpi-box">
                 <div class="lbl">완전 소광(Stage V) 도달 예측</div>
-                <div class="val" id="kpi-quench" style="font-size:0.92rem; color:#fda4af;">약 +6.0 Gyr 후</div>
+                <div class="val" id="kpi-quench" style="font-size:0.92rem; color:#fda4af;">소광 척도 τ ≈ 3.5 Gyr</div>
             </div>
         </div>
 
@@ -703,7 +703,7 @@
             <div class="timeline-card past">
                 <h4>
                     <span style="color:#38bdf8;">⏪ 과거 모습 복원 (-6 Gyr 전)</span>
-                    <span id="past-stage-badge" style="font-size:0.78rem; color:#7dd3fc;">GEI 0.412 (Stage II)</span>
+                    <span id="past-stage-badge" style="font-size:0.78rem; color:#7dd3fc;">GEI 0.400 (Stage II)</span>
                 </h4>
                 <p id="past-desc"></p>
                 <div class="timeline-metrics" id="past-metrics"></div>
@@ -711,7 +711,7 @@
             <div class="timeline-card present">
                 <h4>
                     <span style="color:#34d399;">📍 현재 진화 상태 진단 (0 Gyr)</span>
-                    <span id="present-stage-badge" style="font-size:0.78rem; color:#6ee7b7;">GEI 0.534 (Stage III)</span>
+                    <span id="present-stage-badge" style="font-size:0.78rem; color:#6ee7b7;">GEI 0.478 (Stage III)</span>
                 </h4>
                 <p id="present-desc"></p>
                 <div class="timeline-metrics" id="present-metrics"></div>
@@ -719,7 +719,7 @@
             <div class="timeline-card future">
                 <h4>
                     <span style="color:#fb7185;">⏩ 미래 진화 경로 예측 (+6 Gyr 후)</span>
-                    <span id="future-stage-badge" style="font-size:0.78rem; color:#fda4af;">GEI 0.725 (Stage IV)</span>
+                    <span id="future-stage-badge" style="font-size:0.78rem; color:#fda4af;">GEI 0.616 (Stage IV)</span>
                 </h4>
                 <p id="future-desc"></p>
                 <div class="timeline-metrics" id="future-metrics"></div>
@@ -794,55 +794,55 @@ const T_UNIV = 13.8;
 
 const STAGES = [
     {
-        id: 1, code: "Stage I", name_kr: "1단계: 원시 은하 형성 및 폭발적 별생성기",
-        min: 0.00, max: 0.30, color: "#06b6d4",
-        morph: "초기 조밀 은하 (Blue Nugget) / 불규칙·폭발적 별생성 은하 (Irregular / Starburst)",
+        id: 1, code: "Stage I", name_kr: "1단계: 원시 폭발적 별 생성기",
+        min: 0.00, max: 0.28, color: "#06b6d4",
+        morph: "원시 폭발적 별 생성기 (가스 분율 ↑ · sSFR ↑ · u-r < 1.4)",
         past_sum: "암흑물질 미세 헤일로들이 최초 병합하며 원시 성간 가스 구름이 중력 수축을 막 시작한 태동기 상태였습니다.",
-        pres_sum: "차가운 중성·분자 가스가 매우 풍부하여 폭발적인 별생성(Starburst)과 강한 Hα·[S II] 방출선이 관측되며, 청색의 젊은 OB형 별들이 광도를 지배합니다.",
-        fut_sum: "풍부한 가스를 바탕으로 향후 수십억 년간 항성 질량이 빠르게 증가하며 안정적인 회전 원반을 갖춘 주계열 나선은하(Stage II~III)로 성장할 것입니다."
+        pres_sum: "차가운 가스 분율이 매우 높고 비별생성률(sSFR)이 폭발적이며, 청색 색지수(u-r < 1.4)와 강한 Hα·[S II] 방출선이 관측되는 원시 폭발적 별 생성기입니다.",
+        fut_sum: "풍부한 가스를 바탕으로 향후 수십억 년간 나선팔 원반을 확장하며 초기 은하 원반 성장기(2단계)로 성장할 것입니다."
     },
     {
-        id: 2, code: "Stage II", name_kr: "2단계: 초기 주계열 원반 성장기",
-        min: 0.30, max: 0.45, color: "#3b82f6",
-        morph: "후기형 나선은하 (Sc / Sd / 마젤란형 나선은하) / 활발한 별생성 원반",
-        past_sum: "과거 수십억 년 전에는 작고 불규칙한 가스 덩어리에서 급격한 별생성을 겪던 왜소 청색 은하(Stage I) 모습이었습니다.",
-        pres_sum: "은하 주계열(Star-Forming Main Sequence) 상단에 위치하며, 인사이드-아웃(Inside-Out) 원반 확장을 통해 나선팔 구조와 암흑물질 헤일로가 활발히 성장 중입니다.",
-        fut_sum: "지속적인 별생성과 화학적 중원소 농축을 통해 항성 질량 10^10 M☉ 이상의 성숙한 대형 주계열 나선은하(Stage III)로 진화할 것입니다."
+        id: 2, code: "Stage II", name_kr: "2단계: 초기 은하 원반 성장기",
+        min: 0.28, max: 0.46, color: "#3b82f6",
+        morph: "초기 은하 원반 성장기 (나선팔 원반 확장 · 주계열 상단 별생성 활발)",
+        past_sum: "과거 수십억 년 전에는 높은 가스 분율과 낮은 색지수(u-r < 1.4)를 지닌 원시 폭발적 별 생성기(1단계)였습니다.",
+        pres_sum: "나선팔 원반이 인사이드-아웃(Inside-Out)으로 확장되며, 은하 주계열(SFMS) 상단에서 별생성이 활발하게 일어나는 초기 은하 원반 성장기입니다.",
+        fut_sum: "중심 팽대부가 형성되고 가스 유입과 별생성률이 평형에 도달하면서 성숙 나선 구조 안정기(3단계)로 진화할 것입니다."
     },
     {
-        id: 3, code: "Stage III", name_kr: "3단계: 성숙 주계열 나선은하 안정기",
-        min: 0.45, max: 0.60, color: "#10b981",
-        morph: "정규 대형 나선은하 / 막대나선은하 (Sb / Sbc / SABb)",
-        past_sum: "초기 우주에서 바리온 핵 수축을 거쳐 청색 후기형 나선원반(Stage II)으로 오랫동안 활발하게 별을 만들며 질량을 키워왔습니다.",
-        pres_sum: "가스 유입률과 별생성률이 동적 평형을 이룬 성숙한 주계열 은하로, 뚜렷한 나선팔과 H II 영역 방출선(Hα·[S II]), 거대한 외곽 암흑물질 헤일로(평탄 회전곡선)를 보유하고 있습니다.",
-        fut_sum: "향후 20~40억 년 내에 중심부 가스 고갈 및 헤일로 가열이 시작되면서 별생성이 서서히 둔화되어 녹색 계곡 전이기(Stage IV)로 진입할 것입니다."
+        id: 3, code: "Stage III", name_kr: "3단계: 성숙 나선 구조 안정기",
+        min: 0.46, max: 0.64, color: "#10b981",
+        morph: "성숙 나선 구조 안정기 (원반과 팽대부 공존 · SFR, 가스유입 평형)",
+        past_sum: "초기 은하 원반 성장기(2단계)를 거치며 주계열 상단에서 나선팔 원반과 질량을 꾸준히 확장해 왔습니다.",
+        pres_sum: "나선 원반과 중심 팽대부가 공존하며, 별생성률(SFR)과 외부 가스 유입률이 동적 평형을 이룬 성숙 나선 구조 안정기입니다.",
+        fut_sum: "향후 20~40억 년 내에 차가운 가스가 고갈되기 시작하고 중심 팽대부가 비대해지면서 별 생성 감쇠기(4단계)로 진입할 것입니다."
     },
     {
-        id: 4, code: "Stage IV", name_kr: "4단계: 녹색 계곡 전이 및 별생성 감쇠기",
-        min: 0.60, max: 0.76, color: "#f59e0b",
-        morph: "조기형 나선은하 (Sa / Sab) / 렌즈형 은하 (S0) / 활동은하핵 (Seyfert·LINER)",
-        past_sum: "과거 30~60억 년 전에는 푸른 나선팔에서 활발히 별을 탄생시키던 성숙한 주계열 나선은하(Stage III)였습니다.",
-        pres_sum: "중심 초대질량블랙홀(AGN/LINER) 피드백 또는 임계 헤일로 질량 도달로 차가운 가스가 소진되며 Hα 방출선이 약화되고 [O III]/Hα 비가 상승하는 녹색 계곡(Green Valley) 전환기입니다.",
-        fut_sum: "남아 있는 잔여 가스가 향후 15~30억 년 내에 완전히 소진되면서 별생성이 멈추고, 늙은 적색 별들로 이루어진 진화 완료 은하(Stage V)로 정착할 것입니다."
+        id: 4, code: "Stage IV", name_kr: "4단계: 별 생성 감쇠기",
+        min: 0.64, max: 0.78, color: "#f59e0b",
+        morph: "별 생성 감쇠기 (차가운 가스 고갈 시작 · 중심 팽대부 비대 · 별 생성 급감)",
+        past_sum: "과거 30~60억 년 전에는 원반과 팽대부가 공존하며 SFR과 가스유입이 평형을 이루던 성숙 나선 구조 안정기(3단계)였습니다.",
+        pres_sum: "차가운 가스가 고갈되기 시작하고 중심 팽대부가 비대해지며, AGN 피드백과 헤일로 가열로 별 생성이 급감하는 별 생성 감쇠기입니다.",
+        fut_sum: "잔여 가스가 소진되면서 비별생성률이 log sSFR < -11.5 이하로 떨어져 소광 거대 타원 은하(5단계)로 정착할 것입니다."
     },
     {
-        id: 5, code: "Stage V", name_kr: "5단계: 진화 완료 적색 계열 / 거대 타원은하",
-        min: 0.76, max: 1.00, color: "#ef4444",
-        morph: "타원은하 (E0~E7) / 거대 중심은하 (cD) / 완전 소광 렌즈형 은하",
-        past_sum: "초기 우주에서 격렬한 폭발적 별생성(Stage I)과 다중 은하 병합(Major Merger), 강력한 AGN 피드백(Stage IV)을 일찍 겪으며 가스를 조기에 모두 소진했습니다.",
-        pres_sum: "새로운 별생성과 Hα·[S II] 별생성 방출선이 완전히 소광(Quenched)된 성숙 완료 단계로, 거대한 항성질량과 암흑물질 헤일로, 적색 색지수(u-r > 2.4)를 지닙니다.",
-        fut_sum: "추가적인 가스 유입 없이 수동적 노화(Passive Evolution)를 이어가며, 주변 위성은하들과의 건식 병합(Dry Merger)을 통해 외곽 크기가 완만하게 팽창할 것입니다."
+        id: 5, code: "Stage V", name_kr: "5단계: 소광 거대 타원 은하",
+        min: 0.78, max: 1.00, color: "#ef4444",
+        morph: "소광 거대 타원 은하 (log sSFR < -11.5 · 거대 암흑물질 헤일로 · 적색 계열)",
+        past_sum: "초기 폭발적 별 생성(1단계)과 은하 병합, 중심 팽대부 비대 및 별 생성 감쇠기(4단계)를 조기에 거치며 가스를 모두 소진했습니다.",
+        pres_sum: "비별생성률이 극도로 낮고(log sSFR < -11.5), 거대 암흑물질 헤일로와 붉은 색지수(u-r > 2.4)를 지닌 적색 계열 소광 거대 타원 은하입니다.",
+        fut_sum: "새로운 별 생성 없이 적색 계열에서 수동적 노화(Passive Evolution)와 건식 병합(Dry Merger)만을 이어갈 것입니다."
     }
 ];
 
 const BENCHMARKS = {
-    "LMC (문헌기준)": { name: "LMC (대마젤란은하 / 불규칙 SBm)", aliases: ["lmc", "대마젤란", "대마젤란은하", "eso056-115"], z: 0.0009, dist_mpc: 0.05, log_mstar: 9.43, log_sfr: -0.60, radius_kpc: 3.0, v_rot: 72.0, color_u_r: 1.32, d4000: 1.15, oh: 8.38 },
+    "LMC (문헌기준)": { name: "LMC (대마젤란은하 / 불규칙 SBm)", aliases: ["lmc", "대마젤란", "대마젤란은하", "eso056-115"], z: 0.0009, dist_mpc: 0.05, log_mstar: 9.15, log_sfr: -0.15, radius_kpc: 3.0, v_rot: 72.0, color_u_r: 1.32, d4000: 1.15, oh: 8.38 },
     "M82 (문헌기준)": { name: "M82 (시가 은하 / 폭발적 별생성 I0)", aliases: ["m82", "ngc3034", "ngc 3034", "시가은하", "시가 은하", "cigar"], z: 0.0007, dist_mpc: 3.53, log_mstar: 10.02, log_sfr: 1.05, radius_kpc: 3.80, v_rot: 135.0, color_u_r: 1.38, d4000: 1.12, oh: 8.75 },
     "M33 (문헌기준)": { name: "M33 (삼각형자리 은하 / 후기형 나선 Sc)", aliases: ["m33", "ngc598", "ngc 598", "삼각형자리", "삼각형자리은하", "triangulum"], z: 0.0006, dist_mpc: 0.86, log_mstar: 9.592, log_sfr: -0.35, radius_kpc: 5.51, v_rot: 107.0, color_u_r: 1.48, d4000: 1.21, oh: 8.48 },
     "NGC 3198 (문헌기준)": { name: "NGC 3198 (주계열 나선은하 Sc)", aliases: ["ngc3198", "ngc 3198", "ugc5572"], z: 0.0022, dist_mpc: 13.8, log_mstar: 10.292, log_sfr: 0.08, radius_kpc: 16.70, v_rot: 150.0, color_u_r: 1.72, d4000: 1.31, oh: 8.80 },
     "M101 (문헌기준)": { name: "M101 (바람개비 은하 / 대형 나선 Scd)", aliases: ["m101", "ngc5457", "ngc 5457", "바람개비", "바람개비은하", "pinwheel"], z: 0.0008, dist_mpc: 6.85, log_mstar: 10.651, log_sfr: 0.46, radius_kpc: 17.56, v_rot: 210.6, color_u_r: 1.65, d4000: 1.28, oh: 8.85 },
     "M51a (문헌기준)": { name: "M51a (소용돌이 은하 / 성숙 나선 Sbc)", aliases: ["m51", "m51a", "ngc5194", "ngc 5194", "소용돌이", "소용돌이은하", "whirlpool"], z: 0.0015, dist_mpc: 8.58, log_mstar: 10.927, log_sfr: 0.65, radius_kpc: 16.05, v_rot: 205.5, color_u_r: 1.85, d4000: 1.32, oh: 9.08 },
-    "M81 (문헌기준)": { name: "M81 (보데 은하 / 조기형 나선 Sab)", aliases: ["m81", "ngc3031", "ngc 3031", "보데", "보데은하", "bode"], z: 0.0008, dist_mpc: 3.63, log_mstar: 10.687, log_sfr: -0.22, radius_kpc: 12.15, v_rot: 244.2, color_u_r: 2.38, d4000: 1.64, oh: 8.98 },
+    "M81 (문헌기준)": { name: "M81 (보데 은하 / 조기형 나선 Sab)", aliases: ["m81", "ngc3031", "ngc 3031", "보데", "보데은하", "bode"], z: 0.0008, dist_mpc: 3.63, log_mstar: 10.687, log_sfr: -0.40, radius_kpc: 12.15, v_rot: 244.2, color_u_r: 2.38, d4000: 1.64, oh: 8.98 },
     "M31 (문헌기준)": { name: "M31 (안드로메다 은하 / 녹색계곡 나선 Sb)", aliases: ["m31", "ngc224", "ngc 224", "안드로메다", "안드로메다은하", "andromeda"], z: 0.0010, dist_mpc: 0.80, log_mstar: 10.804, log_sfr: -0.45, radius_kpc: 12.02, v_rot: 250.0, color_u_r: 2.42, d4000: 1.68, oh: 9.02 },
     "NGC 4472 (문헌기준)": { name: "NGC 4472 (M49 / 거대 타원은하 E2)", aliases: ["ngc4472", "ngc 4472", "m49", "메시에49"], z: 0.0033, dist_mpc: 16.7, log_mstar: 11.62, log_sfr: -1.55, radius_kpc: 16.20, v_rot: 410.0, color_u_r: 2.78, d4000: 1.94, oh: 9.15 },
     "M87 (문헌기준)": { name: "M87 (처녀자리 A / 초거대 타원은하 cD)", aliases: ["m87", "ngc4486", "ngc 4486", "처녀자리a", "처녀자리 a", "virgo a", "virgoa"], z: 0.0043, dist_mpc: 16.4, log_mstar: 11.78, log_sfr: -1.85, radius_kpc: 18.50, v_rot: 480.0, color_u_r: 2.88, d4000: 1.98, oh: 9.18 }
@@ -1049,6 +1049,16 @@ function computeUnifiedGEI(raw) {
         if (gei >= s.min && gei < s.max) { st = s; break; }
     }
 
+    const mu_gas = 0.38 * Math.pow(10, 0.55 * (log_ssfr + 10.0)) * Math.pow(1.0 + z, 0.6);
+    const f_gas_percent = Number(clip((mu_gas / (1.0 + mu_gas)) * 100.0, 0.2, 88.0).toFixed(1));
+    const log_mgas = Number((log_mstar + Math.log10(Math.max(mu_gas, 1e-4))).toFixed(3));
+    const q_bt = Math.pow(clip((-9.4 - log_ssfr) / 2.8, 0.0, 1.0), 1.45);
+    const m_bt = Math.pow(clip((log_mstar - 9.2) / 2.6, 0.0, 1.0), 1.35);
+    const gas_damp = Math.max(0.25, 1.0 - 0.70 * (f_gas_percent / 100.0));
+    const sig_bt = Math.pow(clip((log_sigma - 7.0) / 1.8, 0.0, 1.0), 1.25) * gas_damp;
+    const bulge_to_total = Number(clip(0.04 + 0.52 * q_bt + 0.24 * m_bt + 0.18 * sig_bt, 0.03, 0.96).toFixed(3));
+    const inflow_sfr_ratio = Number(clip(1.0 + 0.35 * (log_ssfr + 10.1), 0.05, 2.20).toFixed(2));
+
     return {
         name: raw.name || "직접 관측 은하",
         z, dist_mpc, cosmic_age,
@@ -1056,6 +1066,7 @@ function computeUnifiedGEI(raw) {
         log_lha, log_lsii, log_loiii,
         radius_kpc, v_rot, log_mdyn, log_mdm, f_dm_percent: f_dm, log_sigma,
         color_u_r, d4000, oh,
+        f_gas_percent, log_mgas, bulge_to_total, inflow_sfr_ratio,
         s_quench, s_mass, s_pop, s_struct, s_halo, s_line, s_ha, s_sii, s_oiii,
         gei, gei_100: gei * 100.0,
         stage: st
@@ -1089,10 +1100,11 @@ function simulateTrajectory(obs) {
             m_t = m_now + dm_sf + dm_merg;
         } else {
             const abs_dt = Math.abs(dt);
-            const t_ratio = Math.pow(t_c / t_now, 0.65);
-            const boost = Math.exp(Math.min(abs_dt / (tau_quench * 1.15), 0.85));
-            m_t = Math.max(3e7, m_now * Math.pow(t_c / t_now, 0.95));
-            sfr_t = clip(sfr_now * t_ratio * boost * (m_t / m_now * 1.35), m_t * 1e-12, m_t * Math.pow(10, -8.2));
+            const t_ratio = Math.pow(t_c / t_now, 0.55);
+            const boost = Math.exp(Math.min(abs_dt / (tau_quench * 1.25), 2.2));
+            m_t = Math.max(1e7, m_now * Math.pow(t_c / t_now, 0.85));
+            const min_sfr = Math.max(1e-4, Math.min(sfr_now * 0.2, m_t * 1e-14));
+            sfr_t = clip(sfr_now * t_ratio * boost * Math.pow(m_t / m_now, 0.65), min_sfr, m_t * Math.pow(10, -8.15));
         }
         const log_m_t = Math.log10(m_t);
         const log_sfr_t = Math.log10(sfr_t);

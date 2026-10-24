@@ -17,18 +17,17 @@ plt.rcParams['axes.unicode_minus'] = False
 sys.path.append(r"c:\Users\neato\Desktop\정현\03_과학탐구_대회\YSC_대회")
 import config
 
-CLASS_COLORS = {
-    "나선은하 (Spiral Galaxy)": "#2563eb",
-    "막대나선은하 (Barred Spiral Galaxy)": "#0284c7",
-    "타원은하 (Elliptical Galaxy)": "#dc2626",
-    "렌즈형은하 (Lenticular Galaxy)": "#ea580c",
-    "마젤란형 은하 (Magellanic Galaxy)": "#10b981",
-    "고리은하 (Ring Galaxy)": "#8b5cf6",
-    "전파은하 (Radio Galaxy)": "#b91c1c",
-    "퀘이사 (Quasar)": "#d97706",
-    "세이퍼트은하 (Seyfert Galaxy)": "#9333ea",
-    "불규칙은하 (Irregular Galaxy)": "#059669",
-    "병합은하 (Merger Galaxy)": "#db2777"
+CLASS_MAPPING = {
+    "나선은하": ("#2563eb", "나선은하 (Spiral)"),
+    "막대나선은": ("#0284c7", "막대나선은하 (Barred Spiral)"),
+    "타원은하": ("#dc2626", "타원은하 (Elliptical)"),
+    "렌즈형은하": ("#ea580c", "렌즈형은하 (Lenticular)"),
+    "마젤란형": ("#10b981", "마젤란형 은하 (Magellanic)"),
+    "고리은하": ("#8b5cf6", "고리은하 (Ring)"),
+    "전파은하": ("#b91c1c", "전파은하 (Radio AGN)"),
+    "세이퍼트은": ("#9333ea", "세이퍼트 AGN (Seyfert)"),
+    "불규칙은하": ("#059669", "불규칙은하 (Irregular)"),
+    "퀘이사": ("#d97706", "퀘이사 (Quasar)"),
 }
 
 def generate_all_plots():
@@ -56,11 +55,10 @@ def generate_all_plots():
     plt.plot(x_kauff, y_kauff, 'k--', lw=2, label='Kauffmann et al. (2003) SF 경계')
     plt.plot(x_kewley, y_kewley, 'r-', lw=2, label='Kewley et al. (2001) 극대 광이온화')
     
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0:
-            short_name = gtype.split(" (")[0]
-            plt.scatter(sub['log_nii_ha'], sub['log_oiii_hb'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['log_nii_ha'], sub['log_oiii_hb'], s=14, alpha=0.55, color=color, label=label_name)
             
     plt.xlim(-1.8, 0.8)
     plt.ylim(-1.5, 1.6)
@@ -76,11 +74,10 @@ def generate_all_plots():
     # 2. 은하 주계열 (Main Sequence)
     print("[2/6] 은하 주계열 (Main Sequence) 생성 중...")
     plt.figure(figsize=(10, 8))
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0:
-            short_name = gtype.split(" (")[0]
-            plt.scatter(sub['lgm_tot_p50'], sub['sfr_tot_p50'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['sfr_tot_p50'], s=14, alpha=0.55, color=color, label=label_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
     plt.ylabel(r'별 생성률 $\log(\mathrm{SFR}\,[M_\odot/\mathrm{yr}])$', fontsize=13)
@@ -94,11 +91,10 @@ def generate_all_plots():
     # 3. 질량-금속량 관계 (MZR)
     print("[3/6] 질량-금속량 관계 (MZR) 생성 중...")
     plt.figure(figsize=(10, 8))
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0:
-            short_name = gtype.split(" (")[0]
-            plt.scatter(sub['lgm_tot_p50'], sub['oh_p50'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['oh_p50'], s=14, alpha=0.55, color=color, label=label_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
     plt.ylabel(r'기체 산소 풍부도 $12 + \log(\mathrm{O/H})$', fontsize=13)
@@ -112,11 +108,10 @@ def generate_all_plots():
     # 4. 색-질량 도표 (Color-Mass)
     print("[4/6] 색-질량 도표 (Color-Mass Diagram) 생성 중...")
     plt.figure(figsize=(10, 8))
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0:
-            short_name = gtype.split(" (")[0]
-            plt.scatter(sub['lgm_tot_p50'], sub['color_u_r'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['color_u_r'], s=14, alpha=0.55, color=color, label=label_name)
             
     plt.axhline(y=2.2, color='red', linestyle='--', alpha=0.7, label='Red Sequence 하한')
     plt.axhline(y=1.8, color='blue', linestyle='--', alpha=0.7, label='Blue Cloud 상한')
@@ -132,11 +127,10 @@ def generate_all_plots():
     # 5. 은하 회전곡선 및 툴리-피셔 관계 (Tully-Fisher: Mass vs Rotation Velocity)
     print("[5/6] 은하 회전곡선/툴리-피셔 도표 생성 중...")
     plt.figure(figsize=(10, 8))
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0:
-            short_name = gtype.split(" (")[0]
-            plt.scatter(sub['lgm_tot_p50'], sub['v_rot'], s=12, alpha=0.5, color=color, label=short_name)
+            plt.scatter(sub['lgm_tot_p50'], sub['v_rot'], s=14, alpha=0.55, color=color, label=label_name)
             
     plt.xlabel(r'항성 질량 $\log(M_* / M_\odot)$', fontsize=13)
     plt.ylabel(r'은하 회전속도 $V_{\mathrm{rot}}\,[\mathrm{km/s}]$', fontsize=13)
@@ -155,8 +149,8 @@ def generate_all_plots():
     ax = axes[0, 0]
     ax.plot(x_kauff, y_kauff, 'k--', lw=1.5)
     ax.plot(x_kewley, y_kewley, 'r-', lw=1.5)
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0: ax.scatter(sub['log_nii_ha'], sub['log_oiii_hb'], s=8, alpha=0.4, color=color)
     ax.set_xlim(-1.8, 0.8); ax.set_ylim(-1.5, 1.6)
     ax.set_xlabel(r'$\log([\mathrm{N\,II}]/\mathrm{H}\alpha)$')
@@ -166,8 +160,8 @@ def generate_all_plots():
 
     # Panel 2: MS
     ax = axes[0, 1]
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['sfr_tot_p50'], s=8, alpha=0.4, color=color)
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
     ax.set_ylabel(r'$\log(\mathrm{SFR})$')
@@ -176,8 +170,8 @@ def generate_all_plots():
 
     # Panel 3: Color-Mass
     ax = axes[1, 0]
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
         if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['color_u_r'], s=8, alpha=0.4, color=color)
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
     ax.set_ylabel(r'$(u - r)\,\mathrm{[mag]}$')
@@ -186,9 +180,9 @@ def generate_all_plots():
 
     # Panel 4: Dark Matter Fraction vs Mass
     ax = axes[1, 1]
-    for gtype, color in CLASS_COLORS.items():
-        sub = sample_df[sample_df['galaxy_type'] == gtype]
-        if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['dark_matter_fraction'] * 100, s=8, alpha=0.4, color=color, label=gtype.split(" (")[0])
+    for gtype, (color, label_name) in CLASS_MAPPING.items():
+        sub = sample_df[sample_df['galaxy_type'].astype(str).str.startswith(gtype)]
+        if len(sub) > 0: ax.scatter(sub['lgm_tot_p50'], sub['dark_matter_fraction'] * 100, s=8, alpha=0.4, color=color, label=label_name)
     ax.set_xlabel(r'$\log(M_* / M_\odot)$')
     ax.set_ylabel(r'암흑물질 분율 $f_{\mathrm{DM}}\,\,[\%]$')
     ax.set_title('(D) 회전곡선 유도 암흑물질 분율-항성 질량 진화 관계')

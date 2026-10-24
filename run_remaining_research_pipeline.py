@@ -711,11 +711,11 @@ def generate_gei_and_trajectory_diagrams(sdss_df, ned_dm, ceers_dm, bench_trajec
 
     # 단계별 영역 안내 텍스트 박스
     stage_boxes = [
-        (8.3, -8.7, "Stage I: 원시/폭발적 별생성기\n(GEI < 0.28)", "#06b6d4"),
-        (9.3, -9.4, "Stage II: 초기 주계열 성장기\n(0.28 ≤ GEI < 0.46)", "#2563eb"),
-        (10.4, -9.9, "Stage III: 성숙 주계열 안정기\n(0.46 ≤ GEI < 0.64)", "#059669"),
-        (10.7, -10.8, "Stage IV: 녹색 계곡 전이기\n(0.64 ≤ GEI < 0.78)", "#d97706"),
-        (11.2, -11.9, "Stage V: 진화 완료 적색 계열\n(GEI ≥ 0.78)", "#dc2626"),
+        (8.3, -8.7, "1단계: 원시 폭발적 별 생성기\n(GEI < 0.28)", "#06b6d4"),
+        (9.3, -9.4, "2단계: 초기 은하 원반 성장기\n(0.28 ≤ GEI < 0.46)", "#2563eb"),
+        (10.4, -9.9, "3단계: 성숙 나선 구조 안정기\n(0.46 ≤ GEI < 0.64)", "#059669"),
+        (10.7, -10.8, "4단계: 별 생성 감쇠기\n(0.64 ≤ GEI < 0.78)", "#d97706"),
+        (11.2, -11.9, "5단계: 소광 거대 타원 은하\n(GEI ≥ 0.78)", "#dc2626"),
     ]
     for bx, by, btxt, bcol in stage_boxes:
         ax1.text(bx, by, btxt, fontsize=8.8, fontweight="bold", color="white", ha="center", va="center",
@@ -783,7 +783,7 @@ def generate_gei_and_trajectory_diagrams(sdss_df, ned_dm, ceers_dm, bench_trajec
     # Panel D: 5대 진화 단계별 5대 물리 축(소광도, 질량, 항성종족, 표면밀도, 암흑물질 헤일로) 기여도 프로파일
     ax4 = fig.add_subplot(gs[1, 1])
     ax4.set_facecolor("#f8fafc")
-    stage_labels = ["Stage I\n(원시/폭발기)", "Stage II\n(초기주계열)", "Stage III\n(성숙주계열)", "Stage IV\n(녹색계곡)", "Stage V\n(진화완료)"]
+    stage_labels = ["1단계\n(원시 폭발적 별 생성기)", "2단계\n(초기 은하 원반 성장기)", "3단계\n(성숙 나선 구조 안정기)", "4단계\n(별 생성 감쇠기)", "5단계\n(소광 거대 타원 은하)"]
     x_idx = np.arange(5)
     # SDSS 표본에서 단계별 각 물리축 정규화 점수 평균 산출
     s_q_vals, s_m_vals, s_p_vals, s_st_vals, s_h_vals = [], [], [], [], []
@@ -1098,7 +1098,7 @@ def generate_presentation_charts(sdss_df, ned_dm, ceers_dm, comp_df, bench_sum_d
         )
 
     ax3.axhline(-10.2, color="#10b981", ls="--", lw=1.4, label="주계열 한계선 (log sSFR = -10.2)")
-    ax3.axhline(-11.2, color="#ef4444", ls="--", lw=1.4, label="완전 소광 경계선 (log sSFR = -11.2)")
+    ax3.axhline(-11.5, color="#ef4444", ls="--", lw=1.4, label="완전 소광 경계선 (log sSFR = -11.5)")
     ax3.set_xlabel("항성 표면질량밀도 $\\log_{10}(\\Sigma_*\\,[M_\\odot/\\mathrm{kpc}^2])$", fontsize=11, fontweight="bold")
     ax3.set_ylabel("비별생성률 $\\log_{10}(\\mathrm{sSFR}\\,[\\mathrm{yr}^{-1}])$", fontsize=11, fontweight="bold")
     ax3.set_xlim(6.8, 10.1)
@@ -1227,14 +1227,14 @@ def generate_presentation_charts(sdss_df, ned_dm, ceers_dm, comp_df, bench_sum_d
     summary_card_text = (
         "■ YSC 과학탐구대회 최종 연구 핵심 성과 요약\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "1. 차세대 5축 통합 은하 진화 지수 (Unified GEI v2.0) 개발\n"
-        "  • GEI = 0.30·S_quench(-sSFR) + 0.25·S_mass(M*) + 0.20·S_pop(색·금속·연령)\n"
-        "          + 0.15·S_struct(표면밀도 Σ*) + 0.10·S_halo(암흑물질 f_DM·M_dyn)\n"
+        "1. 차세대 4축 통합 은하 진화 지수 (Unified GEI v3) 개발\n"
+        "  • GEI = 0.26·S_mass(M*) + 0.28·S_quench(-sSFR) + 0.19·S_DM(M_DM)\n"
+        "          + 0.27·S_line(Hα·[SII]·[OIII] 방출선 소광·이온화)\n"
         "  • 4000Å 불연속면(D4000) 항성 연령 지표와 r = 0.86+ 초고도 상관 검증\n"
-        "  • 5단계 표준 진화 단계 정립:\n"
-        "    [Stage I] 원시/폭발기 (<0.28) → [Stage II] 초기 주계열 (0.28~0.46)\n"
-        "    → [Stage III] 성숙 주계열 (0.46~0.64) → [Stage IV] 녹색 계곡 (0.64~0.78)\n"
-        "    → [Stage V] 진화 완료 적색/거대타원 (≥0.78)\n\n"
+        "  • 5단계 표준 은하 진화 구조 정립:\n"
+        "    [1단계] 원시 폭발적 별 생성기 (0.00~0.28) → [2단계] 초기 은하 원반 성장기 (0.28~0.46)\n"
+        "    → [3단계] 성숙 나선 구조 안정기 (0.46~0.64) → [4단계] 별 생성 감쇠기 (0.64~0.78)\n"
+        "    → [5단계] 소광 거대 타원 은하 (0.78~1.00)\n\n"
         "2. 3차원(3D) 다중 카탈로그 우주 진화 비교 (총 158.4만 개 은하)\n"
         "  • JWST CEERS 초기 우주 (76,592개, z=0.5~11.9):\n"
         "    중심부 바리온 급격 수축(R_e ~ 0.88 kpc, f_DM ~ 11.7%), 중앙값 GEI = 0.278\n"
@@ -1245,8 +1245,8 @@ def generate_presentation_charts(sdss_df, ned_dm, ceers_dm, comp_df, bench_sum_d
         "3. 천문대 관측 은하 진화 단계 판별 및 과거·미래 예측 프로그램 개발\n"
         "  • 관측 물리량(질량/등급, 거리/z, 반경, 회전속도, Hα/SFR, 색지수) 입력 시\n"
         "    현재 GEI 지수·진화 단계 판별 + 과거(-10 Gyr) 복원 + 미래(+10 Gyr) 진화 궤적 출력\n"
-        "  • M31(Stage IV, GEI=0.702), 우리은하(Stage III, 0.602), M51(0.576),\n"
-        "    NGC 3198(0.509), M33(Stage II, 0.419), M87(Stage V, 0.893) 실증 완료"
+        "  • LMC(1단계, 0.202), M33(2단계, 0.339), M51a(3단계, 0.546),\n"
+        "    우리은하(3단계, 0.547), M31(4단계, 0.682), M87(5단계, 0.958) 실증 완료"
     )
     ax_p6.text(
         0.02, 0.98, summary_card_text, transform=ax_p6.transAxes, va="top", ha="left",

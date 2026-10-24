@@ -780,13 +780,17 @@ def finalize_props(base, aux, prefer_aux=False):
         p['sfr_tot_p50'] = p['log_sfr']
     if valid(p.get('log_sfr')) and valid(p.get('log_mass')):
         p['log_ssfr'] = p['log_sfr'] - p['log_mass']
-    if all(valid(p.get(k)) for k in ('log_mass', 'log_ssfr', 'metallicity', 'color_ur')):
-        gei = calc.calculate_gei(p['log_mass'], p['log_ssfr'], p['metallicity'], p['color_ur'])
+    if all(valid(p.get(k)) for k in ('log_mass', 'log_ssfr')):
+        gei = calc.calculate_gei(
+            p['log_mass'], p['log_ssfr'], p.get('metallicity'), p.get('color_ur'),
+            log_mdm=p.get('log_mdm'), log_lha=p.get('log_lha'),
+            log_lsii=p.get('log_lsii'), log_loiii=p.get('log_loiii')
+        )
         stg = calc.diagnose_evolution_stage(gei)
         p.update({'gei': gei, 'gei_score': gei, 'evolution_stage': stg['stage'],
                   'evolution_stage_en': stg['stage_en'], 'evolution_color': stg['color']})
     else:
-        # 필요한 4개 값이 없으면 GEI 를 표시하지 않음 (부분 입력으로 만든 잘못된 값 방지)
+        # 필요한 질량·비별생성률 값이 없으면 GEI 를 표시하지 않음 (부분 입력으로 만든 잘못된 값 방지)
         if not valid(p.get('gei')):
             for k in ('gei', 'gei_score', 'evolution_stage'):
                 p.pop(k, None)
@@ -1071,9 +1075,10 @@ def render_ai(p, key):
     with cA:
         if valid(p.get('gei')):
             st.plotly_chart(pred.create_evolution_gauge(float(p['gei'])), width='stretch', key=key + 'gei')
-            st.caption('진화 단계: **%s** — 질량·sSFR·금속량·색의 가중 합 (0=젊음, 100=진화 완료)' % p.get('evolution_stage', '-'))
+            desc_sfx = (' (%s)' % p['evolution_desc']) if p.get('evolution_desc') else ''
+            st.caption('진화 단계: **%s**%s — GEI v3 (0.26·S_mass + 0.28·S_quench + 0.19·S_DM + 0.27·S_line, 0=원시 폭발기, 100=소광 거대 타원)' % (p.get('evolution_stage', '-'), desc_sfx))
         else:
-            st.info('GEI 계산에는 log M★, log SFR, 금속량, u−r 이 모두 필요합니다.')
+            st.info('GEI v3 계산에는 항성질량(log M★)과 별생성률(log SFR)이 필요합니다.')
         if cl.get('membership'):
             mem = cl['membership']
             fig = go.Figure(go.Bar(x=[pred.CLUSTER_NAMES.get(i, str(i)).split(' (')[0] for i in range(len(mem))],

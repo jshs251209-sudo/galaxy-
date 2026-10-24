@@ -419,15 +419,15 @@ class PhaseSpaceMapper:
     # ═══════════════════════════════════════════════════
     TARGET_COLUMNS = {
         # 표시명: (대상 dict 키 후보들, 데이터 컬럼, 배율)
-        '항성질량 log M★': (['log_mass', 'log_stellar_mass', 'lgm_tot_p50'], 'lgm_tot_p50', 1.0),
+        '항성질량 log M★': (['log_mass', 'log_mstar', 'log_stellar_mass', 'lgm_tot_p50'], 'lgm_tot_p50', 1.0),
         '별생성률 log SFR': (['log_sfr', 'sfr_tot_p50'], 'sfr_tot_p50', 1.0),
         '비별생성률 log sSFR': (['log_ssfr'], 'log_ssfr', 1.0),
-        '금속량 12+log(O/H)': (['metallicity', 'metallicity_oh', 'oh_p50'], 'oh_p50', 1.0),
+        '금속량 12+log(O/H)': (['metallicity', 'oh_metallicity', 'metallicity_oh', 'oh_p50'], 'oh_p50', 1.0),
         'u−r 색지수': (['color_ur', 'color_u_r'], 'color_u_r', 1.0),
         'D4000': (['d4000_n', 'd4000'], 'd4000_n', 1.0),
         'log([NII]/Hα)': (['log_nii_ha'], 'log_nii_ha', 1.0),
         'log([OIII]/Hβ)': (['log_oiii_hb'], 'log_oiii_hb', 1.0),
-        'GEI': (['gei', 'gei_score'], 'GEI', 100.0),
+        'GEI': (['gei', 'gei_score', 'gei_01', 'gei_100'], 'GEI', 100.0),
     }
 
     @staticmethod
@@ -451,9 +451,14 @@ class PhaseSpaceMapper:
             return pd.DataFrame(rows)
         for label, (keys, col, mult) in self.TARGET_COLUMNS.items():
             v = self._get(target, keys)
-            if v is None or col not in self.df.columns:
+            if v is None:
                 continue
-            data = pd.to_numeric(self.df[col], errors='coerce').dropna() * mult
+            use_col = 'GEI_v2' if (col == 'GEI' and 'GEI_v2' in self.df.columns) else col
+            if use_col not in self.df.columns:
+                continue
+            if label == 'GEI' and v <= 1.0 and mult == 100.0:
+                v = v * 100.0
+            data = pd.to_numeric(self.df[use_col], errors='coerce').dropna() * mult
             if len(data) < 10:
                 continue
             pct = float((data < v).mean() * 100)
@@ -492,9 +497,9 @@ class PhaseSpaceMapper:
         if self.df.empty:
             return None
         feat_keys = {
-            'lgm_tot_p50': ['log_mass', 'log_stellar_mass', 'lgm_tot_p50'],
+            'lgm_tot_p50': ['log_mass', 'log_mstar', 'log_stellar_mass', 'lgm_tot_p50'],
             'sfr_tot_p50': ['log_sfr', 'sfr_tot_p50'],
-            'oh_p50': ['metallicity', 'metallicity_oh', 'oh_p50'],
+            'oh_p50': ['metallicity', 'oh_metallicity', 'metallicity_oh', 'oh_p50'],
             'color_u_r': ['color_ur', 'color_u_r'],
             'log_nii_ha': ['log_nii_ha'],
             'log_oiii_hb': ['log_oiii_hb'],
