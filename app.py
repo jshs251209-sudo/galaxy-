@@ -185,7 +185,8 @@ def _cap_size(arr):
         img = img.resize((int(w * f), int(h * f)), Image.LANCZOS)
         return np.array(img), f
     from scipy import ndimage
-    return ndimage.zoom(arr, f, order=1), f
+    zoom_factors = (f, f, 1.0) if arr.ndim == 3 else f
+    return ndimage.zoom(arr, zoom_factors, order=1), f
 
 
 def _spectrum_from_df(df):
@@ -246,11 +247,13 @@ def load_source(data: bytes, name: str) -> dict:
                             pass
                 else:
                     arr = np.asarray(d)
-                    while arr.ndim > 2:
+                    while arr.ndim > 3:
                         arr = arr[0]
+                    if arr.ndim == 3:
+                        arr = GalaxyImageAnalyzer._normalize_channels(arr)
                     if arr.ndim == 2 and min(arr.shape) == 1:
                         arr = arr.ravel()
-                    if arr.ndim == 2 and img is None:
+                    if arr.ndim in (2, 3) and img is None:
                         img = arr.astype(float)
                         img_hdr = _header_dict(hdu.header)
                     elif arr.ndim == 1 and spec is None and arr.size > 10:
@@ -358,6 +361,7 @@ def apply_stretch(x, mode):
 
 
 def to_gray(raw):
+    raw = GalaxyImageAnalyzer._normalize_channels(raw)
     if raw.ndim == 3:
         r = raw[..., :3].astype(float)
         return 0.299 * r[..., 0] + 0.587 * r[..., 1] + 0.114 * r[..., 2]
@@ -368,13 +372,19 @@ def to_gray(raw):
 def render_display(sig: str, _raw: np.ndarray, opts: tuple) -> Image.Image:
     """원본 → 화면 표시용 RGB (분석에는 사용하지 않음)"""
     o = dict(opts)
-    raw = _raw
+    raw = GalaxyImageAnalyzer._normalize_channels(_raw)
     if raw.ndim == 2 or o['force_gray']:
         data = to_gray(raw)
         lo, hi = compute_limits(data, o['cut'], o['p_lo'], o['p_hi'])
         x = (data - lo) / (hi - lo)
         x = apply_stretch(np.nan_to_num(x, nan=0.0), o['stretch'])
         rgb = mpl_colormaps[o['cmap']](x)[..., :3]
+    elif raw.dtype != np.uint8:
+        # 3채널 과학용 실수형 FITS ([0,1] 또는 ADU 스케일)
+        data = to_gray(raw)
+        lo, hi = compute_limits(data, o['cut'], o['p_lo'], o['p_hi'])
+        rgb = (raw[..., :3].astype(float) - lo) / max(hi - lo, 1e-9)
+        rgb = apply_stretch(np.nan_to_num(rgb, nan=0.0), o['stretch'])
     else:
         rgb = raw[..., :3].astype(float) / 255.0
         if o['stretch'] != 'linear':
@@ -725,21 +735,31 @@ def run_spectrum_fit(wave, flux, cfg, unit_scale):
         z_est = fitter.estimate_redshift(wave, flux_s, 0.0, cfg.get('z_max', 0.4))
         if z_est:
             z = z_est['z']
+            if z_est.get('mode') == 'absorption':
+                notes.append('방출선이 약해 광구 흡수선(Ca H&K·G-band·Mg b·Na D) 및 4000Å 단절 패턴으로 적색편이 z=%.4f 를 자동 추정했습니다.' % z)
         else:
-            notes.append('적색편이 자동 추정 실패(일치하는 방출선 패턴 없음) → 입력값 z=%.4f 사용' % z)
+            notes.append('적색편이 자동 추정 실패(일치하는 방출선/흡수선 패턴 없음) → 입력값 z=%.4f 사용' % z)
     fit = fitter.fit_all_lines(wave, flux_s, z=z, continuum_method=cfg.get('cont_method', 'median'),
                                snr_threshold=cfg.get('snr', 3.0))
     lines = fitter.extract_line_fluxes(fit)
-    phys = calc.compute_all(lines, z=z, flux_scale=unit_scale or 1.0)
-    if unit_scale is None:
+    phys = calc.compute_all(
+        lines, z=z, flux_scale=unit_scale or 1.0,
+        d4000=fit.get('d4000'), absorption_fits=fit.get('absorption_fits')
+    )
+    is_quiescent = bool(phys.get('is_quiescent_spectrum'))
+    if unit_scale is None and not is_quiescent:
         phys['log_sfr'] = None
         notes.append('플럭스가 임의 단위 → 비율 기반 양(BPT·금속량·소광)만 신뢰 가능, SFR 생략')
-    elif z <= 0:
+    elif z <= 0 and not is_quiescent:
         notes.append('z=0 → 거리를 알 수 없어 SFR 을 계산하지 않았습니다 (z 입력 필요)')
     rest = wave / (1 + z)
-    if not (rest.min() < 6563 < rest.max()) and not (rest.min() < 4861 < rest.max()):
+    if not (rest.min() < 6563 < rest.max()) and not (rest.min() < 4861 < rest.max()) and not is_quiescent:
         notes.append('정지 파장 범위(%.0f–%.0f Å)에 Hα·Hβ 가 없습니다 → 파장 교정/적색편이 확인' % (rest.min(), rest.max()))
-    if not lines:
+    if is_quiescent:
+        n_abs = len(fit.get('absorption_fits') or {})
+        notes.append('조기형 소광 타원은하 흡수선 스펙트럼 진단 (D4000=%s, 광구 흡수선 %d개 검출 · 무차원 단절/등가폭 기반 물리량 추정 적용).'
+                     % (fnum(fit.get('d4000')), n_abs))
+    elif not lines:
         notes.append('방출선이 검출되지 않았습니다 (S/N 임계값↓, 평활화↑, 교정 확인).')
     if fit.get('error'):
         notes.append('피팅 오류: %s' % fit['error'])
@@ -1141,7 +1161,8 @@ def render_report(R, p, ai, extra, key):
 # ═══════════════════════════════════════════════════════════
 def image_base_props(e, cfg):
     res = e['res']
-    base = dict(res.get('ml_features', {}))
+    base = dict(res.get('estimated_physics', {}))
+    base.update(res.get('ml_features', {}))
     ps = cfg.get('pixel_scale')
     m = res.get('metrics', {})
     if ps:
@@ -1157,6 +1178,8 @@ def image_base_props(e, cfg):
     if 'color_ur' not in aux and cfg.get('use_rgb_color', True) and res['stats'].get('color_GR') is not None:
         base['color_ur'] = GalaxyImageAnalyzer.estimate_ur_from_rgb(res['stats']['color_GR'])
         notes.append('u−r 은 RGB 사진 색(G−R)에서 추정한 근사값입니다 (교정되지 않은 필터).')
+    if res.get('estimated_physics'):
+        notes.append('미입력 물리량(log M★·log SFR·D4000·σ_v)은 형태 지수(집중도 C·Sérsic n) 및 색지수 기반 SDSS 경험식으로 추정되었습니다.')
     return base, notes
 
 
@@ -1304,13 +1327,19 @@ def render_spectrum_results(R, cfg):
     with tabs[ti]:
         st.plotly_chart(fig_spectrum(e, '%s 스펙트럼' % e['label']), width='stretch', key='spec_' + sel)
         lt = fitd.get('line_table')
+        at = fitd.get('absorption_table')
         c1, c2 = st.columns([3, 2])
         with c1:
             if lt is not None and not lt.empty:
+                st.markdown('**검출된 방출선**')
                 st.dataframe(lt.drop(columns=['key']).style.format({'적분플럭스': '{:.4g}', '오차': '{:.2g}'}, precision=2),
                              hide_index=True, width='stretch')
             else:
-                st.info('검출된 방출선이 없습니다.')
+                st.info('검출된 방출선이 없습니다 (소광 타원/조기형 은하일 경우 아래 광구 흡수선 표를 확인하세요).')
+            if at is not None and not at.empty:
+                st.markdown('**검출된 항성 광구 흡수선 (조기형 · 타원은하 지표)**')
+                st.dataframe(at.drop(columns=['key']).style.format({'흡수깊이': '{:.4g}'}, precision=2),
+                             hide_index=True, width='stretch')
         with c2:
             rows = [
                 ('Balmer 감소율 Hα/Hβ', fnum(p.get('balmer_decrement'), '%.2f') + ' (이론 2.86)'),
@@ -1372,7 +1401,10 @@ def render_spectrum_results(R, cfg):
     ti += 1
     with tabs[ti]:
         lt = fitd.get('line_table')
+        at = fitd.get('absorption_table')
         render_report(R, p, ai, {'line_table': lt.to_dict('records') if lt is not None and not lt.empty else None,
+                                 'absorption_table': at.to_dict('records') if at is not None and not at.empty else None,
+                                 'stellar_population': p.get('stellar_population'),
                                  'emission_lines': e['lines'], 'roi_description': e['desc'],
                                  'notes': e['notes']}, 'spec_rep_' + sel)
 
@@ -1551,6 +1583,9 @@ def stage_canvas(src, cfg, mode):
             st.session_state['canvas_reset'] = st.session_state.get('canvas_reset', 0) + 1
             st.session_state['n_objs'] = 0
             st.rerun()
+        auto_run = False
+        if mode == MODE_IMAGE:
+            auto_run = st.button('🎯 은하 자동 탐지 · 즉시 분석 (영역 미선택 시에도 가능)', width='stretch')
 
     with st.expander('🔍 Ginga 뷰어 — 픽셀 값 · 히스토그램 · 단면 · 헤더', expanded=False):
         vt = st.tabs(['픽셀 뷰어', '히스토그램', '단면 (Cuts)', 'FITS 헤더'])
@@ -1579,7 +1614,23 @@ def stage_canvas(src, cfg, mode):
             else:
                 st.info('FITS 헤더 없음 (일반 이미지)')
 
-    if run and rois:
+    if auto_run and mode == MODE_IMAGE:
+        with st.spinner('주 은하 타깃 자동 분리 및 형태·진화 분석 중...'):
+            an = GalaxyImageAnalyzer(cfg.get('pixel_scale') or 0.396)
+            try:
+                res = an.analyze(raw, mask=None, linearize='auto')
+            except Exception as ex:
+                res = {'stats': {}, 'error': '자동 분석 오류: %s' % ex}
+            stt = res.get('stats', {})
+            desc = ('자동 타깃 분리 (중심 %.0f, %.0f px · 전경별 %d개 마스킹)'
+                    % (stt.get('centroid_x', W / 2), stt.get('centroid_y', H / 2), stt.get('stars_masked', 0)))
+            st.session_state['R'] = {
+                'mode': 'image', 'name': src['name'],
+                'rois': [{'label': 'AUTO-1', 'color': PALETTE[0], 'kind': 'circle', 'desc': desc, 'res': res}],
+                'source_sig': src['sig'],
+                'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'notes': []
+            }
+    elif run and rois:
         with st.spinner('선택한 %d개 영역 분석 중...' % len(rois)):
             if mode == MODE_IMAGE:
                 analyze_image_rois(src, rois, cfg)

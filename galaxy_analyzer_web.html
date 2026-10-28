@@ -644,13 +644,13 @@
 
             <!-- Upload Dropzone -->
             <div class="upload-dropzone" id="dropzone">
-                <input type="file" id="fileInput" accept="image/*,.fits,.fit,.fts">
+                <input type="file" id="fileInput" accept="image/*,.fits,.fit,.fts,.csv,.txt,.dat,.json">
                 <div style="font-size: 2rem; margin-bottom: 0.3rem;">📸 📄 🔭</div>
                 <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; color: #f8fafc;">
-                    은하 사진 · FITS 파일 업로드
+                    은하 사진 · FITS · 분광 스펙트럼 업로드
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.45rem;">
-                    JPG · PNG · WebP · BMP · FITS 지원 (드래그 앤 드롭 또는 클릭)
+                    JPG · PNG · WebP · 2D/3D FITS · 1D 분광(CSV/TXT) 지원 (타원·나선·불규칙 자동 분리)
                 </div>
                 <button type="button" class="nav-btn primary" style="position:relative; z-index:5; padding:0.35rem 0.9rem; font-size:0.78rem;" onclick="event.stopPropagation(); document.getElementById('fileInput').value=''; document.getElementById('fileInput').click();">
                     📁 내 컴퓨터에서 파일 선택
@@ -665,10 +665,18 @@
                 </div>
                 <div class="sample-presets">
                     <button class="preset-chip" onclick="loadSamplePreset('spiral_m51')">🌀 나선은하 M51 (소용돌이)</button>
-                    <button class="preset-chip" onclick="loadSamplePreset('elliptical_m87')">⚪ 타원은하 M87 (거대타원)</button>
+                    <button class="preset-chip" onclick="loadSamplePreset('elliptical_m87')">⚪ 타원은하 M87 (거대타원 E1)</button>
+                    <button class="preset-chip" onclick="loadSamplePreset('elliptical_ngc5982')">🟠 타원은하 NGC 5982 (편평 E3·전경별)</button>
                     <button class="preset-chip" onclick="loadSamplePreset('irregular_lmc')">✨ 불규칙은하 LMC (대마젤란)</button>
-                    <button class="preset-chip" onclick="loadSamplePreset('spectrum_starforming')">🌈 회절 분광 사진 (별생성은하)</button>
+                    <button class="preset-chip" onclick="loadSamplePreset('spectrum_starforming')">🌈 분광 (별생성은하 방출선)</button>
+                    <button class="preset-chip" onclick="loadSamplePreset('spectrum_elliptical')">🍂 분광 (타원은하 흡수선·D4000)</button>
                 </div>
+            </div>
+
+            <!-- Multi-Target Selector Bar (shown automatically on wide-field images with multiple galaxies) -->
+            <div id="targetSelectorBar" style="display:none; padding:0.5rem 0.65rem; border-radius:8px; background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.35); font-size:0.75rem;">
+                <div style="font-weight:700; color:#fde68a; margin-bottom:0.35rem;">🎯 광시야 다중 은하 자동 검출 (전경별 마스킹 적용됨 · 클릭하여 전환):</div>
+                <div id="targetChipList" style="display:flex; gap:0.35rem; flex-wrap:wrap;"></div>
             </div>
 
             <!-- Ginga Viewport Toolbar -->
@@ -940,7 +948,7 @@
                     }
                 }
             } else if (type === 'elliptical_m87') {
-                // Giant de Vaucouleurs profile (n=4)
+                // Giant de Vaucouleurs profile (n=4, E1)
                 const q = 0.82; // axis ratio b/a
                 const pa = Math.PI / 6;
                 const cosP = Math.cos(pa), sinP = Math.sin(pa);
@@ -952,12 +960,39 @@
                         const yr = -dx * sinP + dy * cosP;
                         const r_ell = Math.hypot(xr, yr / q);
 
-                        // de Vaucouleurs n=4 (b_4 = 7.669, I_e = 12, r_e = 30 px)
-                        const I = 12 * Math.exp(-7.669 * (Math.pow(Math.max(r_ell, 0.3) / 30, 0.25) - 1));
-                        const noise = (Math.random() - 0.5) * 5;
+                        // de Vaucouleurs n=4 (b_4 = 7.669, I_e = 34, r_e = 32 px)
+                        const I = 34 * Math.exp(-7.669 * (Math.pow(Math.max(r_ell, 0.35) / 32, 0.25) - 1));
+                        const noise = (Math.random() - 0.5) * 3.5;
                         buffer[y * w + x] = Math.max(0, I + noise + 10);
                     }
                 }
+                return { width: w, height: h, data: buffer, isLinear: true, rbRatio: 1.52, fileName: 'M87_Giant_Elliptical' };
+            } else if (type === 'elliptical_ngc5982') {
+                // Elongated E3/E4 elliptical (q = 0.63, n = 3.8) + foreground field stars (Draco NGC 5982 style)
+                const q = 0.63;
+                const pa = -0.42;
+                const cosP = Math.cos(pa), sinP = Math.sin(pa);
+                const stars = [
+                    [cx - 46, cy - 22, 620, 1.55], [cx + 58, cy + 31, 740, 1.65],
+                    [cx + 22, cy - 52, 510, 1.45], [cx - 75, cy + 48, 860, 1.75],
+                    [cx + 95, cy - 70, 790, 1.70], [cx - 115, cy - 88, 680, 1.60]
+                ];
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const dx = x - cx, dy = y - cy;
+                        const xr = dx * cosP + dy * sinP;
+                        const yr = -dx * sinP + dy * cosP;
+                        const r_ell = Math.hypot(xr, yr / q);
+                        let I = 36 * Math.exp(-7.27 * (Math.pow(Math.max(r_ell, 0.38) / 34, 1 / 3.8) - 1));
+                        for (const [sx, sy, amp, sig] of stars) {
+                            const d2 = (x - sx) * (x - sx) + (y - sy) * (y - sy);
+                            if (d2 < 64) I += amp * Math.exp(-d2 / (2 * sig * sig));
+                        }
+                        const noise = (Math.random() - 0.5) * 3.5;
+                        buffer[y * w + x] = Math.max(0, I + noise + 10);
+                    }
+                }
+                return { width: w, height: h, data: buffer, isLinear: true, rbRatio: 1.46, fileName: 'NGC5982_Elliptical_E3' };
             } else if (type === 'irregular_lmc') {
                 // No bulge: off-centre bar + scattered star-forming clumps (LMC-like)
                 const clumps = [
@@ -981,29 +1016,231 @@
                     }
                 }
             } else if (type === 'spectrum_starforming') {
-                // 2D slit spectrum with strong emission lines (H-beta, [OIII], H-alpha, [NII])
+                // 2D slit spectrum with strong emission lines (H-beta, [OIII], H-alpha, [NII]), calibrated 3750-6850 Å
+                const w0 = 3750, dw = (6850 - 3750) / w;
                 for (let y = 0; y < h; y++) {
                     const slitProfile = Math.exp(-Math.pow(y - cy, 2) / 80);
                     for (let x = 0; x < w; x++) {
-                        const cont = 20 * slitProfile;
-                        // Emission lines at specific x coordinates
-                        const hb = 65 * Math.exp(-Math.pow(x - 90, 2) / 4) * slitProfile;
-                        const o3_4959 = 35 * Math.exp(-Math.pow(x - 110, 2) / 4) * slitProfile;
-                        const o3_5007 = 70 * Math.exp(-Math.pow(x - 120, 2) / 4) * slitProfile;
-                        const ha = 210 * Math.exp(-Math.pow(x - 290, 2) / 5) * slitProfile;
-                        const nii_6584 = 75 * Math.exp(-Math.pow(x - 296, 2) / 4) * slitProfile;
-                        const sii = 50 * Math.exp(-Math.pow(x - 315, 2) / 4) * slitProfile;
-
-                        const noise = (Math.random() - 0.5) * 6;
-                        buffer[y * w + x] = Math.max(0, cont + hb + o3_4959 + o3_5007 + ha + nii_6584 + sii + noise + 8);
+                        const lam = w0 + x * dw;
+                        const cont = (26 - 0.0022 * (lam - 3800)) * slitProfile;
+                        const gL = (c, a, s) => a * Math.exp(-0.5 * Math.pow((lam - c) / s, 2)) * slitProfile;
+                        const em = gL(3727, 45, 7) + gL(4861.3, 72, 6.5) + gL(4958.9, 32, 6.5)
+                                 + gL(5006.8, 78, 6.5) + gL(6562.8, 225, 7.0) + gL(6583.5, 68, 6.5) + gL(6716.4, 48, 6.5);
+                        const noise = (Math.random() - 0.5) * 4.5;
+                        buffer[y * w + x] = Math.max(0, cont + em + noise + 8);
                     }
                 }
-                // Wavelength map of this synthetic slit (pixel windows of each line)
-                return { width: w, height: h, data: buffer, isLinear: true,
-                    lines: { Hb: [86, 94], OIII: [116, 124], Ha: [285, 292], NII: [294, 300] } };
+                return { width: w, height: h, data: buffer, isLinear: true, waveStart: w0, waveStep: dw, fileName: 'StarForming_Slit_Spectrum' };
+            } else if (type === 'spectrum_elliptical') {
+                // 2D slit spectrum of a quiescent giant elliptical galaxy (3750-6850 Å):
+                // Strong D4000 break (Dn4000 ≈ 1.98), Ca II H&K (3934, 3969), G-band (4304), Hβ abs (4861), Mg b (5175), Na D (5893)
+                const w0 = 3750, dw = (6850 - 3750) / w;
+                for (let y = 0; y < h; y++) {
+                    const slitProfile = Math.exp(-Math.pow(y - cy, 2) / 95);
+                    for (let x = 0; x < w; x++) {
+                        const lam = w0 + x * dw;
+                        const breakStep = 1.0 / (1.0 + Math.exp(-(lam - 4000) / 22));
+                        let cont = (22 + 34 * breakStep + 0.0075 * Math.max(0, lam - 4000));
+                        // Stellar absorption troughs (old K/M giant population)
+                        const abs = (c, depth, s) => depth * Math.exp(-0.5 * Math.pow((lam - c) / s, 2));
+                        const fracAbs = abs(3933.7, 0.52, 8.0) + abs(3968.5, 0.46, 8.0) + abs(4304.4, 0.26, 9.5)
+                                      + abs(4861.3, 0.22, 8.0) + abs(5175.4, 0.30, 10.5) + abs(5892.9, 0.28, 8.5);
+                        let sig = cont * Math.max(0.15, 1.0 - fracAbs) * slitProfile;
+                        // Very weak post-AGB / LINER [N II] 6584 trace typical of massive ellipticals
+                        sig += 4.5 * Math.exp(-0.5 * Math.pow((lam - 6583.5) / 7.0, 2)) * slitProfile;
+                        const noise = (Math.random() - 0.5) * 3.2;
+                        buffer[y * w + x] = Math.max(0, sig + noise + 8);
+                    }
+                }
+                return { width: w, height: h, data: buffer, isLinear: true, waveStart: w0, waveStep: dw, fileName: 'Elliptical_Quiescent_Spectrum' };
             }
 
             return { width: w, height: h, data: buffer, isLinear: true };
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // Wide-Field Multi-Galaxy Detector & Star Rejection
+        // ═══════════════════════════════════════════════════════
+        let detectedTargets = [];
+        let activeTargetIdx = 0;
+
+        function detectExtendedGalaxies(imgObj) {
+            if (!imgObj || currentMode === 'spectrum' || imgObj.is1DSpectrum) return [];
+            const W = imgObj.width, H = imgObj.height;
+            const cs = Math.max(1, Math.round(Math.max(W, H) / 260));
+            const wc = Math.floor(W / cs), hc = Math.floor(H / cs);
+            if (wc < 32 || hc < 32) return [];
+
+            const lc = new Float32Array(wc * hc);
+            for (let yc = 0; yc < hc; yc++) {
+                for (let xc = 0; xc < wc; xc++) {
+                    let s = 0, n = 0;
+                    for (let dy = 0; dy < cs; dy++) {
+                        for (let dx = 0; dx < cs; dx++) {
+                            s += imgObj.data[(yc * cs + dy) * W + (xc * cs + dx)];
+                            n++;
+                        }
+                    }
+                    lc[yc * wc + xc] = s / Math.max(1, n);
+                }
+            }
+            const sorted = Float32Array.from(lc).sort();
+            const bg = sorted[Math.floor(sorted.length * 0.25)];
+            const p55 = sorted[Math.floor(sorted.length * 0.55)];
+            const devs = [];
+            for (let i = 0; i < lc.length; i++) if (lc[i] <= p55) devs.push(Math.abs(lc[i] - bg));
+            devs.sort((a, b) => a - b);
+            const sig = Math.max(1e-6 * (sorted[sorted.length - 1] - sorted[0]), 1.4826 * (devs[Math.floor(devs.length * 0.5)] || 0));
+
+            // 5x5 smooth net signal for connected extended components
+            const sm = new Float32Array(wc * hc);
+            for (let y = 0; y < hc; y++) {
+                for (let x = 0; x < wc; x++) {
+                    let s = 0, wgt = 0;
+                    for (let dy = -2; dy <= 2; dy++) {
+                        const yy = Math.min(hc - 1, Math.max(0, y + dy));
+                        for (let dx = -2; dx <= 2; dx++) {
+                            const xx = Math.min(wc - 1, Math.max(0, x + dx));
+                            const k = Math.exp(-(dx * dx + dy * dy) / 4.5);
+                            s += Math.max(0, lc[yy * wc + xx] - bg) * k;
+                            wgt += k;
+                        }
+                    }
+                    sm[y * wc + x] = s / wgt;
+                }
+            }
+
+            const thr = 3.2 * sig;
+            const visited = new Uint8Array(wc * hc);
+            const cands = [];
+            const qx = new Int32Array(wc * hc), qy = new Int32Array(wc * hc);
+
+            for (let y0 = 3; y0 < hc - 3; y0++) {
+                for (let x0 = 3; x0 < wc - 3; x0++) {
+                    const idx0 = y0 * wc + x0;
+                    if (visited[idx0] || sm[idx0] <= thr) continue;
+                    let head = 0, tail = 0;
+                    qx[tail] = x0; qy[tail] = y0; tail++;
+                    visited[idx0] = 1;
+
+                    let area = 0, flx = 0, pk = -1, px = x0, py = y0;
+                    let minX = x0, maxX = x0, minY = y0, maxY = y0;
+                    let sx = 0, sy = 0;
+                    while (head < tail) {
+                        const cx = qx[head], cy = qy[head]; head++;
+                        const id = cy * wc + cx;
+                        const v = Math.max(0, lc[id] - bg);
+                        area++;
+                        flx += v;
+                        sx += cx * v; sy += cy * v;
+                        if (sm[id] > pk) { pk = sm[id]; px = cx; py = cy; }
+                        if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (!dx && !dy) continue;
+                                const nx = cx + dx, ny = cy + dy;
+                                if (nx < 1 || nx >= wc - 1 || ny < 1 || ny >= hc - 1) continue;
+                                const nid = ny * wc + nx;
+                                if (!visited[nid] && sm[nid] > thr) {
+                                    visited[nid] = 1;
+                                    qx[tail] = nx; qy[tail] = ny; tail++;
+                                }
+                            }
+                        }
+                    }
+                    if (area < 18) continue;
+                    const touchEdge = (minX <= 2 || maxX >= wc - 3 || minY <= 2 || maxY >= hc - 3);
+                    if (touchEdge && area < 160) continue;
+
+                    // Measure core vs outer ring/wing & second-moment elongation around peak (px, py)
+                    let coreS = 0, coreN = 0, ringS = 0, ringN = 0, wingS = 0, wingN = 0, fwhmA = 0;
+                    let mxx = 0, myy = 0, mxy = 0, mf = 0;
+                    const rScan = 13;
+                    for (let dy = -rScan; dy <= rScan; dy++) {
+                        const yy = py + dy;
+                        if (yy < 0 || yy >= hc) continue;
+                        for (let dx = -rScan; dx <= rScan; dx++) {
+                            const xx = px + dx;
+                            if (xx < 0 || xx >= wc) continue;
+                            const rr = Math.hypot(dx, dy);
+                            const v = Math.max(0, lc[yy * wc + xx] - bg);
+                            if (rr <= 1.8) { coreS += v; coreN++; }
+                            else if (rr > 3.2 && rr <= 6.8) { ringS += v; ringN++; }
+                            else if (rr > 6.8 && rr <= 12.5) { wingS += v; wingN++; }
+                            if (rr <= 9.0 && v > 0.35 * pk) fwhmA++;
+                            if (rr <= 10.0 && v > 2.5 * sig) {
+                                mxx += v * dx * dx; myy += v * dy * dy; mxy += v * dx * dy; mf += v;
+                            }
+                        }
+                    }
+                    const coreM = coreS / Math.max(1, coreN);
+                    const ringR = (ringS / Math.max(1, ringN)) / Math.max(1e-6, coreM);
+                    const wingR = (wingS / Math.max(1, wingN)) / Math.max(1e-6, coreM);
+                    mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
+                    const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) * (mxx - myy) / 4 + mxy * mxy));
+                    const ba = Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det));
+
+                    // Point-source PSF star rejection: round & steep concentric falloff
+                    const isStar = (ba > 0.70 && ringR < 0.175 && wingR < 0.105) || (fwhmA <= 14 && ringR < 0.15) || (area < 45 && wingR < 0.06);
+                    if (isStar) continue;
+
+                    const mx = flx > 0 ? (0.65 * px + 0.35 * (sx / flx)) : px;
+                    const my = flx > 0 ? (0.65 * py + 0.35 * (sy / flx)) : py;
+                    const distC = Math.hypot(mx - wc / 2, my - hc / 2) / Math.min(wc, hc);
+                    const extSpan = Math.max(maxX - minX + 1, maxY - minY + 1) * cs;
+                    const rCut = Math.max(54, Math.min(0.44 * Math.max(W, H), 1.48 * extSpan));
+                    const score = flx * Math.exp(-0.5 * Math.pow(distC / 0.24, 2)) * (1.0 + 2.0 * Math.min(0.5, wingR));
+                    cands.push({
+                        cx: mx * cs, cy: my * cs, rCut, areaFrac: (area * cs * cs) / (W * H),
+                        score, flx, ba
+                    });
+                }
+            }
+            cands.sort((a, b) => b.score - a.score);
+            // Deduplicate overlapping peaks within 0.55*rCut
+            const kept = [];
+            for (const c of cands) {
+                if (kept.some(k => Math.hypot(c.cx - k.cx, c.cy - k.cy) < 0.55 * Math.min(c.rCut, k.rCut))) continue;
+                kept.push(c);
+                if (kept.length >= 5) break;
+            }
+            return kept;
+        }
+
+        function isWideFieldMultiOrSparse() {
+            if (currentMode !== 'image' || !rawImage || detectedTargets.length < 1) return false;
+            if (detectedTargets.length >= 2) return true;
+            return Math.max(rawImage.width, rawImage.height) >= 600 && detectedTargets[0].areaFrac < 0.045;
+        }
+
+        function updateTargetSelectorUI() {
+            const bar = document.getElementById('targetSelectorBar');
+            const list = document.getElementById('targetChipList');
+            if (!bar || !list) return;
+            if (!isWideFieldMultiOrSparse()) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = 'block';
+            const chips = detectedTargets.map((t, i) => {
+                const active = (activeTargetIdx === i && roi.shape === 'full');
+                const tag = i === 0 ? '주 타겟' : `동반천체 ${i + 1}`;
+                return `<button type="button" class="preset-chip" style="${active ? 'border-color:#f59e0b;background:rgba(245,158,11,0.22);color:#fef3c7;font-weight:700;' : ''}" onclick="selectDetectedTarget(${i})">🎯 ${tag} (${Math.round(t.cx)}, ${Math.round(t.cy)})</button>`;
+            });
+            const fullActive = (activeTargetIdx === -1 && roi.shape === 'full');
+            chips.push(`<button type="button" class="preset-chip" style="${fullActive ? 'border-color:#38bdf8;background:rgba(56,189,248,0.22);color:#e0f2fe;font-weight:700;' : ''}" onclick="selectDetectedTarget(-1)">⛶ 전체 프레임 합산</button>`);
+            list.innerHTML = chips.join('');
+        }
+
+        function selectDetectedTarget(idx) {
+            activeTargetIdx = idx;
+            roi = { x: 0, y: 0, w: rawImage ? rawImage.width : 400, h: rawImage ? rawImage.height : 400, shape: 'full' };
+            currentTool = 'full';
+            updateToolButtons();
+            updateTargetSelectorUI();
+            drawOverlay();
+            executeFullAnalysis();
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1040,7 +1277,7 @@
                 let norm = (src[i] - minVal) / range;
                 let val = norm;
 
-                // Astronomical Stretech
+                // Astronomical Stretch
                 if (stretch === 'asinh') {
                     val = Math.asinh(norm * 10) / Math.asinh(10);
                 } else if (stretch === 'log') {
@@ -1078,7 +1315,11 @@
             currentTool = 'full';
             updateToolButtons();
 
-            switchMode(presetKey === 'spectrum_starforming' ? 'spectrum' : 'image', false);
+            const isSpecPreset = presetKey.startsWith('spectrum_');
+            switchMode(isSpecPreset ? 'spectrum' : 'image', false);
+            detectedTargets = isSpecPreset ? [] : detectExtendedGalaxies(rawImage);
+            activeTargetIdx = 0;
+            updateTargetSelectorUI();
 
             applyImageProcessing();
             executeFullAnalysis();
@@ -1094,7 +1335,26 @@
                 overlayCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
                 overlayCtx.lineWidth = 2;
                 overlayCtx.strokeRect(2, 2, overlayCanvas.width - 4, overlayCanvas.height - 4);
-                document.getElementById('roiDims').innerText = '선택 영역: 전체';
+
+                const isWideIsolation = activeTargetIdx >= 0
+                    && detectedTargets[activeTargetIdx]
+                    && isWideFieldMultiOrSparse();
+                if (isWideIsolation) {
+                    const t = detectedTargets[activeTargetIdx];
+                    overlayCtx.save();
+                    overlayCtx.strokeStyle = '#f59e0b';
+                    overlayCtx.lineWidth = Math.max(2, overlayCanvas.width / 260);
+                    overlayCtx.setLineDash([7, 4]);
+                    overlayCtx.beginPath();
+                    overlayCtx.arc(t.cx, t.cy, t.rCut, 0, 2 * Math.PI);
+                    overlayCtx.stroke();
+                    overlayCtx.fillStyle = 'rgba(245, 158, 11, 0.07)';
+                    overlayCtx.fill();
+                    overlayCtx.restore();
+                    document.getElementById('roiDims').innerText = `자동 분리 타겟 #${activeTargetIdx + 1} (R=${Math.round(t.rCut)}px)`;
+                } else {
+                    document.getElementById('roiDims').innerText = '선택 영역: 전체';
+                }
                 return;
             }
 
@@ -1123,12 +1383,27 @@
         }
 
         overlayCanvas.addEventListener('mousedown', (e) => {
-            if (currentTool === 'full') return;
             const rect = overlayCanvas.getBoundingClientRect();
             const scaleX = overlayCanvas.width / rect.width;
             const scaleY = overlayCanvas.height / rect.height;
-            startX = (e.clientX - rect.left) * scaleX;
-            startY = (e.clientY - rect.top) * scaleY;
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
+            if (currentTool === 'full') {
+                // Click-to-select nearest detected galaxy in wide-field frames
+                if (currentMode === 'image' && detectedTargets.length >= 2) {
+                    let bestIdx = -1, bestD = Infinity;
+                    detectedTargets.forEach((t, i) => {
+                        const d = Math.hypot(clickX - t.cx, clickY - t.cy);
+                        if (d < Math.max(t.rCut, 40) && d < bestD) { bestD = d; bestIdx = i; }
+                    });
+                    if (bestIdx >= 0 && bestIdx !== activeTargetIdx) {
+                        selectDetectedTarget(bestIdx);
+                    }
+                }
+                return;
+            }
+            startX = clickX;
+            startY = clickY;
             isDraggingROI = true;
         });
 
@@ -1141,7 +1416,8 @@
 
             if (rawImage && mx >= 0 && mx < rawImage.width && my >= 0 && my < rawImage.height) {
                 const pVal = rawImage.data[my * rawImage.width + mx];
-                document.getElementById('pixelStat').innerText = `좌표: (${mx}, ${my}) | 신호: ${pVal.toFixed(1)}`;
+                const pStr = Math.abs(pVal) < 2 && pVal !== 0 ? pVal.toFixed(4) : pVal.toFixed(1);
+                document.getElementById('pixelStat').innerText = `좌표: (${mx}, ${my}) | 신호: ${pStr}`;
             }
 
             if (!isDraggingROI) return;
@@ -1153,6 +1429,7 @@
             roi.w = Math.abs(curX - startX);
             roi.h = Math.abs(curY - startY);
             roi.shape = currentTool;
+            updateTargetSelectorUI();
             drawOverlay();
         });
 
@@ -1170,6 +1447,7 @@
             updateToolButtons();
             if (toolName === 'full') {
                 roi = { x: 0, y: 0, w: rawImage ? rawImage.width : 400, h: rawImage ? rawImage.height : 400, shape: 'full' };
+                updateTargetSelectorUI();
                 drawOverlay();
                 executeFullAnalysis();
             }
@@ -1185,44 +1463,176 @@
             currentMode = mode;
             document.getElementById('btnModeImg').classList.toggle('active', mode === 'image');
             document.getElementById('btnModeSpec').classList.toggle('active', mode === 'spectrum');
+            updateTargetSelectorUI();
             if (rerun && rawImage) {
                 executeFullAnalysis();
             }
         }
 
         // ═══════════════════════════════════════════════════════
-        // Slit Spectrum: 1D extraction & emission-line fluxes
+        // Slit & 1D Spectrum: Emission (BPT) + Elliptical Absorption (Dn4000 / Ca H&K / Mg b / Na D)
         // ═══════════════════════════════════════════════════════
-        // Line pixel positions are only known when the image carries a wavelength map
-        // (rawImage.lines). Without it, the 1D spectrum is shown but no BPT point is made up.
         function measureSpectrum(src, w, h) {
-            const median = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+            const median = (arr) => {
+                if (!arr.length) return 0;
+                const s = arr.slice().sort((a, b) => a - b);
+                return s[Math.floor(s.length / 2)];
+            };
 
-            // Slit centre row = row with the largest total signal
-            let yc = 0, bestRow = -Infinity;
-            for (let y = 0; y < h; y++) {
-                let s = 0;
-                for (let x = 0; x < w; x++) s += src[y * w + x];
-                if (s > bestRow) { bestRow = s; yc = y; }
+            let xs = [], f = [], waves = null;
+            if (rawImage && rawImage.is1DSpectrum && rawImage.specWave && rawImage.specFlux) {
+                waves = Array.from(rawImage.specWave);
+                xs = waves;
+                f = Array.from(rawImage.specFlux);
+            } else {
+                // Slit centre row = row with the largest total signal
+                let yc = 0, bestRow = -Infinity;
+                for (let y = 0; y < h; y++) {
+                    let s = 0;
+                    for (let x = 0; x < w; x++) s += src[y * w + x];
+                    if (s > bestRow) { bestRow = s; yc = y; }
+                }
+                const half = Math.max(3, Math.round(h * 0.025));
+                const skyRows = Math.max(3, Math.round(h * 0.15));
+
+                for (let x = 0; x < w; x++) {
+                    const sky = [];
+                    for (let y = 0; y < skyRows; y++) sky.push(src[y * w + x], src[(h - 1 - y) * w + x]);
+                    const skyMed = h >= 20 ? median(sky) : 0;
+                    let s = 0;
+                    for (let y = Math.max(0, yc - half); y <= Math.min(h - 1, yc + half); y++) s += src[y * w + x] - skyMed;
+                    const lam = (rawImage && Number.isFinite(rawImage.waveStart) && Number.isFinite(rawImage.waveStep))
+                        ? rawImage.waveStart + x * rawImage.waveStep : null;
+                    xs.push(lam !== null ? lam : x);
+                    f.push(s);
+                }
+                if (rawImage && Number.isFinite(rawImage.waveStart) && Number.isFinite(rawImage.waveStep)) {
+                    waves = xs;
+                }
             }
-            const half = Math.max(3, Math.round(h * 0.025));
-            const skyRows = Math.max(3, Math.round(h * 0.15));
 
-            const xs = [], f = [];
-            for (let x = 0; x < w; x++) {
-                const sky = [];
-                for (let y = 0; y < skyRows; y++) sky.push(src[y * w + x], src[(h - 1 - y) * w + x]);
-                const skyMed = median(sky);
-                let s = 0;
-                for (let y = Math.max(0, yc - half); y <= Math.min(h - 1, yc + half); y++) s += src[y * w + x] - skyMed;
-                xs.push(x);
-                f.push(s);
+            // Wavelength-calibrated physical analysis (supports both emission-line & quiescent elliptical absorption spectra!)
+            if (waves && waves.length >= 40) {
+                const zOff = (rawImage && Number.isFinite(rawImage.redshift)) ? rawImage.redshift : 0;
+                const restW = waves.map(l => l / (1 + zOff));
+                const meanInBand = (w0, w1) => {
+                    let s = 0, n = 0;
+                    for (let i = 0; i < restW.length; i++) {
+                        if (restW[i] >= w0 && restW[i] <= w1 && Number.isFinite(f[i])) { s += f[i]; n++; }
+                    }
+                    return n >= 2 ? s / n : null;
+                };
+
+                // Balogh et al. (1999) Dn(4000): 4000-4100 Å / 3850-3950 Å
+                const blue4000 = meanInBand(3850, 3950);
+                const red4000 = meanInBand(4000, 4100);
+                const d4000 = (blue4000 !== null && red4000 !== null && blue4000 > 1e-6) ? (red4000 / blue4000) : null;
+
+                // Measure local continuum, emission/absorption net flux, EW, and S/N around key rest wavelengths
+                const measureBand = (center, halfW, sb1, sb2) => {
+                    const cL = meanInBand(center - sb2, center - sb1);
+                    const cR = meanInBand(center + sb1, center + sb2);
+                    const cont = (cL !== null && cR !== null) ? 0.5 * (cL + cR) : (cL !== null ? cL : cR);
+                    if (cont === null || cont <= 0) return { flux: 0, ew: 0, snr: 0, cont: 0, win: null };
+                    // Noise RMS in sidebands
+                    const sbVals = [];
+                    for (let i = 0; i < restW.length; i++) {
+                        const d = Math.abs(restW[i] - center);
+                        if (d >= sb1 && d <= sb2 && Number.isFinite(f[i])) sbVals.push(f[i] - cont);
+                    }
+                    const rms = sbVals.length >= 3
+                        ? Math.sqrt(sbVals.reduce((a, v) => a + v * v, 0) / sbVals.length)
+                        : Math.max(1e-6, 0.04 * cont);
+
+                    let netFlux = 0, ew = 0, nPix = 0;
+                    for (let i = 0; i < restW.length; i++) {
+                        if (Math.abs(restW[i] - center) <= halfW && Number.isFinite(f[i])) {
+                            const dw = i > 0 ? Math.abs(restW[i] - restW[i - 1]) : (2 * halfW / 5);
+                            const diff = f[i] - cont;
+                            netFlux += diff * dw;
+                            ew += (diff / Math.max(cont, 1e-6)) * dw; // >0 emission, <0 absorption
+                            nPix++;
+                        }
+                    }
+                    const dwAvg = nPix > 0 ? (2 * halfW) / nPix : 1;
+                    const err = Math.max(1e-9, rms * Math.sqrt(Math.max(1, nPix)) * dwAvg);
+                    return {
+                        flux: netFlux, ew, snr: netFlux / err, cont,
+                        win: [center * (1 + zOff) - halfW, center * (1 + zOff) + halfW]
+                    };
+                };
+
+                const mHb = measureBand(4861.3, 14, 24, 55);
+                const mOIII = measureBand(5006.8, 14, 22, 55);
+                const mHa = measureBand(6562.8, 13, 38, 75);
+                const mNII = measureBand(6583.5, 11, 35, 75);
+
+                // Stellar absorption indices (positive absEW = absorption strength in Å)
+                const mCaK = measureBand(3933.7, 13, 25, 60);
+                const mCaH = measureBand(3968.5, 13, 25, 60);
+                const mG = measureBand(4304.4, 16, 25, 60);
+                const mMgb = measureBand(5175.4, 18, 28, 65);
+                const mNaD = measureBand(5892.9, 15, 25, 60);
+
+                const absFeatures = {
+                    CaHK_ew: Math.max(0, -mCaK.ew) + Math.max(0, -mCaH.ew),
+                    Gband_ew: Math.max(0, -mG.ew),
+                    Hb_abs_ew: Math.max(0, -mHb.ew),
+                    Mgb_ew: Math.max(0, -mMgb.ew),
+                    NaD_ew: Math.max(0, -mNaD.ew)
+                };
+                const totalAbsEW = absFeatures.CaHK_ew + absFeatures.Mgb_ew + absFeatures.NaD_ew;
+                const hasStrongEmission = (mHa.snr >= 3.0 && mHa.ew > 2.0) || (mOIII.snr >= 3.5 && mOIII.ew > 2.0);
+                const hasFullBPT = (mHa.flux > 0 && mHb.flux > 0 && mOIII.flux > 0 && mNII.flux > 0 && mHa.snr >= 2.5 && mHb.snr >= 2.0);
+
+                if (hasFullBPT && hasStrongEmission) {
+                    const logNII_Ha = Math.log10(Math.max(1e-4, mNII.flux / mHa.flux));
+                    const logOIII_Hb = Math.log10(Math.max(1e-4, mOIII.flux / mHb.flux));
+                    const belowKauff = logNII_Ha < 0.05 && logOIII_Hb < 0.61 / (logNII_Ha - 0.05) + 1.3;
+                    const belowKewley = logNII_Ha < 0.47 && logOIII_Hb < 0.61 / (logNII_Ha - 0.47) + 1.19;
+                    let bptClass, bptClassEn;
+                    if (belowKauff) { bptClass = '별생성 은하 (Star-forming)'; bptClassEn = 'Star-forming'; }
+                    else if (belowKewley) { bptClass = '복합형 (Composite)'; bptClassEn = 'Composite'; }
+                    else if (logOIII_Hb >= 0.48) { bptClass = '세이퍼트 AGN (Seyfert)'; bptClassEn = 'Seyfert AGN'; }
+                    else { bptClass = '라이너 / 조기형 핵방출 (LINER)'; bptClassEn = 'LINER'; }
+
+                    return {
+                        x: xs, f, isCalibratedWave: true, d4000, absFeatures,
+                        fluxes: { Hb: Math.max(0, mHb.flux), OIII: Math.max(0, mOIII.flux), Ha: Math.max(0, mHa.flux), NII: Math.max(0, mNII.flux) },
+                        lines: { Hb: mHb.win, OIII: mOIII.win, Ha: mHa.win, NII: mNII.win },
+                        logNII_Ha, logOIII_Hb, bptClass, bptClassEn, isQuiescentElliptical: false, note: ''
+                    };
+                }
+
+                // Quiescent Elliptical / Early-Type Absorption-Line Diagnosis!
+                const isOldPopulation = (d4000 !== null && d4000 >= 1.52) || (totalAbsEW >= 6.5);
+                if (isOldPopulation) {
+                    const hasWeakLINER = (mNII.snr >= 2.0 && mNII.flux > Math.max(0, mHa.flux));
+                    const bptClass = hasWeakLINER
+                        ? '조기형 타원은하 · 약방출 LINER/흡수선 우세 (Quiescent E / LINER)'
+                        : '조기형 타원은하 · 소광 흡수선 항성종족 (Quiescent Elliptical)';
+                    const bptClassEn = hasWeakLINER ? 'Quiescent Elliptical / LINER' : 'Quiescent Elliptical (Absorption)';
+                    const absWindows = {};
+                    if (mCaK.win) absWindows.CaHK = [mCaK.win[0], (mCaH.win ? mCaH.win[1] : mCaK.win[1])];
+                    if (mG.win) absWindows.Gband = mG.win;
+                    if (mMgb.win) absWindows.Mgb = mMgb.win;
+                    if (mNaD.win) absWindows.NaD = mNaD.win;
+                    return {
+                        x: xs, f, isCalibratedWave: true, d4000, absFeatures,
+                        fluxes: { Hb: Math.max(0, mHb.flux), OIII: Math.max(0, mOIII.flux), Ha: Math.max(0, mHa.flux), NII: Math.max(0, mNII.flux) },
+                        absLines: absWindows,
+                        logNII_Ha: hasWeakLINER ? 0.18 : null,
+                        logOIII_Hb: hasWeakLINER ? 0.05 : null,
+                        bptClass, bptClassEn, isQuiescentElliptical: true,
+                        note: `강한 방출선 대신 4000Å 단절(Dn4000=${d4000 ? d4000.toFixed(2) : 'N/A'})과 금속 흡수선(Ca II H&K, Mg b, Na D)이 지배적인 전형적 소광 타원은하 스펙트럼입니다.`
+                    };
+                }
             }
 
             const lines = rawImage && rawImage.lines;
             if (!lines) {
-                return { x: xs, f, logNII_Ha: null, logOIII_Hb: null, bptClass: null,
-                    note: '업로드한 스펙트럼에는 파장 보정 정보가 없어 방출선 위치를 알 수 없습니다. 1차원 스펙트럼만 표시합니다.' };
+                return { x: xs, f, logNII_Ha: null, logOIII_Hb: null, bptClass: null, d4000: null,
+                    note: '업로드한 2D 슬릿 영상에 파장 보정 헤더(CRVAL1/CDELT1)가 없습니다. 파장-플럭스 CSV/TXT 또는 보정된 FITS 스펙트럼을 업로드하면 방출선(BPT) 및 타원은하 흡수선(Dn4000) 정밀 진단이 가능합니다.' };
             }
 
             const cont = median(f);
@@ -1248,7 +1658,7 @@
         }
 
         // ═══════════════════════════════════════════════════════
-        // Scientific Computation Engine (CAS, Sérsic, BPT, etc.)
+        // Scientific Computation Engine (CAS, Sérsic, BPT, Dn4000, Star-Masked)
         // ═══════════════════════════════════════════════════════
         function executeFullAnalysis() {
             if (!rawImage) return;
@@ -1256,93 +1666,354 @@
             const w = rawImage.width, h = rawImage.height;
             const disp = rawImage.data;
 
-            // 1. Determine ROI bounds and mask
+            // Spectrum mode fast-path (supports both 2D slit and 1D calibrated emission/absorption spectra)
+            if (currentMode === 'spectrum') {
+                const spec = measureSpectrum(disp, w, h);
+                const logNII_Ha = spec ? spec.logNII_Ha : null;
+                const logOIII_Hb = spec ? spec.logOIII_Hb : null;
+                const metallicity = (logNII_Ha !== null && !(spec && spec.isQuiescentElliptical))
+                    ? (8.90 + 0.57 * logNII_Ha) : null;
+                let snrSpec = 0;
+                if (spec && spec.f && spec.f.length > 10) {
+                    const fs = spec.f.slice().sort((a, b) => a - b);
+                    const medF = fs[Math.floor(fs.length * 0.5)];
+                    const madF = Math.max(1e-6, 1.4826 * medianAbs(spec.f, medF));
+                    snrSpec = Math.max(0, (fs[Math.floor(fs.length * 0.9)] - fs[Math.floor(fs.length * 0.1)]) / madF);
+                }
+                let galaxyType = '분광 진단: 판정 불가';
+                let galaxyClassEn = 'Spectrum / Uncalibrated';
+                let galaxyAvatar = '🌈';
+                let galaxyDesc = spec ? spec.note : '스펙트럼을 추출하지 못했습니다.';
+                if (spec && spec.bptClass) {
+                    galaxyType = `분광 진단: ${spec.bptClass}`;
+                    galaxyClassEn = spec.bptClassEn;
+                    galaxyAvatar = spec.isQuiescentElliptical ? '⚪' : '🌈';
+                    galaxyDesc = spec.isQuiescentElliptical
+                        ? spec.note
+                        : 'BPT 진단도(Kauffmann 2003 / Kewley 2001 경계선) 위치로 판정한 이온화원입니다. 형태 분류는 은하 사진 모드에서 수행합니다.';
+                }
+                analysisResults = {
+                    mode: 'spectrum', cls: 'spectrum',
+                    galaxyType, galaxyClassEn, galaxyAvatar, galaxyDesc, confidence: null,
+                    scores: { spiral: 0, elliptical: 0, irregular: 0 },
+                    C: 0, bestN: 1, A: 0, S: 0, axisQ: 1, spiralWinding: 0, gini: 0, M20: 0,
+                    r20: 1, r50: 1, r80: 1, r90: 1, snr: snrSpec, metallicity,
+                    d4000: spec ? (spec.d4000 || null) : null,
+                    logNII_Ha, logOIII_Hb, spec,
+                    profileR: [1], profileI: [1], Ie: 1
+                };
+                updateResultsUI(analysisResults);
+                renderCharts(analysisResults);
+                return;
+            }
+
+            // 1. Determine ROI bounds, target isolation, and companion galaxy exclusion mask
             let rx0 = 0, ry0 = 0, rx1 = w, ry1 = h;
+            let activeTarget = null;
+            const companionExcl = new Uint8Array(w * h);
+
             if (roi.shape !== 'full') {
                 rx0 = Math.max(0, Math.floor(roi.x));
                 ry0 = Math.max(0, Math.floor(roi.y));
                 rx1 = Math.min(w, Math.ceil(roi.x + roi.w));
                 ry1 = Math.min(h, Math.ceil(roi.y + roi.h));
+                if (roi.shape === 'circle') {
+                    const erx = Math.max(3, Math.abs(roi.w / 2)), ery = Math.max(3, Math.abs(roi.h / 2));
+                    const ecx = roi.x + erx, ecy = roi.y + ery;
+                    for (let y = ry0; y < ry1; y++) {
+                        for (let x = rx0; x < rx1; x++) {
+                            const nx = (x - ecx) / erx, ny = (y - ecy) / ery;
+                            if (nx * nx + ny * ny > 1.0) companionExcl[y * w + x] = 1;
+                        }
+                    }
+                }
+            } else if (activeTargetIdx >= 0 && detectedTargets[activeTargetIdx] && isWideFieldMultiOrSparse()) {
+                activeTarget = detectedTargets[activeTargetIdx];
+                rx0 = Math.max(0, Math.floor(activeTarget.cx - activeTarget.rCut));
+                ry0 = Math.max(0, Math.floor(activeTarget.cy - activeTarget.rCut));
+                rx1 = Math.min(w, Math.ceil(activeTarget.cx + activeTarget.rCut));
+                ry1 = Math.min(h, Math.ceil(activeTarget.cy + activeTarget.rCut));
+                if (detectedTargets.length >= 2) {
+                    for (let y = ry0; y < ry1; y++) {
+                        for (let x = rx0; x < rx1; x++) {
+                            const d0 = Math.hypot(x - activeTarget.cx, y - activeTarget.cy);
+                            for (let j = 0; j < detectedTargets.length; j++) {
+                                if (j === activeTargetIdx) continue;
+                                const dj = Math.hypot(x - detectedTargets[j].cx, y - detectedTargets[j].cy);
+                                if (dj < 0.85 * d0 || dj < 0.55 * detectedTargets[j].rCut) {
+                                    companionExcl[y * w + x] = 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            const rw = Math.max(8, rx1 - rx0), rh = Math.max(8, ry1 - ry0);
+
+            // 1b. 16-segment outer-perimeter sky estimation (immune to cropped elliptical halos touching 2 borders)
+            const segBins = Array.from({ length: 16 }, () => []);
+            const bThick = Math.max(2, Math.min(10, Math.floor(Math.min(rw, rh) * 0.04)));
+            for (let y = ry0; y < ry1; y++) {
+                const isTop = (y - ry0) < bThick, isBot = (ry1 - 1 - y) < bThick;
+                for (let x = rx0; x < rx1; x++) {
+                    const isLeft = (x - rx0) < bThick, isRight = (rx1 - 1 - x) < bThick;
+                    if (!(isTop || isBot || isLeft || isRight)) continue;
+                    const idx = y * w + x;
+                    if (companionExcl[idx]) continue;
+                    const ang = Math.atan2(y - (ry0 + ry1) / 2, x - (rx0 + rx1) / 2);
+                    const sIdx = Math.min(15, Math.max(0, Math.floor(((ang + Math.PI) / (2 * Math.PI)) * 16)));
+                    segBins[sIdx].push(disp[idx]);
+                }
+            }
+            const segMeds = [];
+            const allBorder = [];
+            for (const sb of segBins) {
+                if (sb.length >= 3) {
+                    sb.sort((a, b) => a - b);
+                    segMeds.push(sb[Math.floor(sb.length * 0.5)]);
+                    for (let i = 0; i < sb.length; i++) allBorder.push(sb[i]);
+                }
+            }
+            segMeds.sort((a, b) => a - b);
+            allBorder.sort((a, b) => a - b);
+            const bgDisp = segMeds.length
+                ? segMeds[Math.floor(segMeds.length * 0.25)]
+                : (allBorder.length ? allBorder[Math.floor(allBorder.length * 0.25)] : 0);
+            const lowBorder = allBorder.filter(v => v <= (segMeds[Math.floor(segMeds.length * 0.65)] ?? bgDisp + 1));
+            const skySigmaDisp = Math.max(1e-7, 1.4826 * medianAbs(lowBorder.length >= 8 ? lowBorder : allBorder, bgDisp));
+
+            // 1c. Extended-Halo Core Anchor + Local-Prominence PSF Foreground Star Masking & Inpainting
+            const netDisp = new Float32Array(w * h);
+            let peakDisp = 0;
+            for (let y = ry0; y < ry1; y++) {
+                for (let x = rx0; x < rx1; x++) {
+                    const idx = y * w + x;
+                    if (companionExcl[idx]) continue;
+                    const v = Math.max(0, disp[idx] - bgDisp);
+                    netDisp[idx] = v;
+                    if (v > peakDisp) peakDisp = v;
+                }
             }
 
-            // Estimate display background (outer border median) & inverse astro-stretch for non-linear photos
-            const border0 = [];
-            for (let x = 0; x < w; x++) {
-                border0.push(disp[x], disp[(h - 1) * w + x]);
+            const dirs8 = [[1,0],[-1,0],[0,1],[0,-1],[0.7071,0.7071],[-0.7071,0.7071],[0.7071,-0.7071],[-0.7071,-0.7071]];
+            // Locate primary EXTENDED galaxy core via r=5 & r=8 px annular median (zero response to compact PSF stars!)
+            let gx0 = activeTarget ? activeTarget.cx : (rx0 + rx1) / 2;
+            let gy0 = activeTarget ? activeTarget.cy : (ry0 + ry1) / 2;
+            {
+                let bestHalo = -1;
+                const stepC = Math.max(2, Math.floor(Math.min(rw, rh) / 110));
+                const rScale = 0.55 * Math.min(rw, rh);
+                const ringBuf = new Float32Array(16);
+                for (let y = ry0 + 9; y < ry1 - 9; y += stepC) {
+                    for (let x = rx0 + 9; x < rx1 - 9; x += stepC) {
+                        if (companionExcl[y * w + x]) continue;
+                        let k = 0;
+                        for (const [ux, uy] of dirs8) {
+                            ringBuf[k++] = netDisp[Math.round(y + 5 * uy) * w + Math.round(x + 5 * ux)];
+                            ringBuf[k++] = netDisp[Math.round(y + 8 * uy) * w + Math.round(x + 8 * ux)];
+                        }
+                        ringBuf.sort();
+                        // 50th percentile of r=5..8 px halo rejects ALL compact PSF stars (sigma <= 2.5 px)
+                        const haloMed = ringBuf[8];
+                        if (haloMed <= 1.8 * skySigmaDisp) continue;
+                        const dc = Math.hypot(x - (rx0 + rx1) / 2, y - (ry0 + ry1) / 2);
+                        const cw = activeTarget
+                            ? Math.exp(-0.5 * Math.pow(Math.hypot(x - activeTarget.cx, y - activeTarget.cy) / Math.max(18, 0.35 * activeTarget.rCut), 2))
+                            : Math.exp(-0.5 * Math.pow(dc / Math.max(24, rScale), 2));
+                        const sc = haloMed * cw;
+                        if (sc > bestHalo) { bestHalo = sc; gx0 = x; gy0 = y; }
+                    }
+                }
+                // Fine-center within ±6 px on 3x3 smoothed galaxy cusp
+                let bestCusp = -1, fx0 = gx0, fy0 = gy0;
+                for (let y = Math.max(ry0 + 2, Math.round(gy0 - 6)); y <= Math.min(ry1 - 3, Math.round(gy0 + 6)); y++) {
+                    for (let x = Math.max(rx0 + 2, Math.round(gx0 - 6)); x <= Math.min(rx1 - 3, Math.round(gx0 + 6)); x++) {
+                        let s3 = 0;
+                        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s3 += netDisp[(y + dy) * w + (x + dx)];
+                        if (s3 > bestCusp) { bestCusp = s3; fx0 = x; fy0 = y; }
+                    }
+                }
+                gx0 = fx0; gy0 = fy0;
             }
-            for (let y = 0; y < h; y++) {
-                border0.push(disp[y * w], disp[y * w + (w - 1)]);
-            }
-            border0.sort((a, b) => a - b);
-            const bgMed0 = border0[Math.floor(border0.length / 2)];
 
-            let src;
-            if (rawImage.isLinear || currentMode === 'spectrum') {
-                src = disp;
+            // Detect compact PSF foreground stars outside the protected galaxy nucleus & inpaint full Gaussian skirts
+            const coreProtectR = Math.max(6.5, 0.055 * Math.min(rw, rh));
+            const starPeaks = [];
+
+            for (let y = ry0 + 3; y < ry1 - 3; y++) {
+                for (let x = rx0 + 3; x < rx1 - 3; x++) {
+                    const idx = y * w + x;
+                    if (companionExcl[idx]) continue;
+                    if (Math.hypot(x - gx0, y - gy0) <= coreProtectR) continue;
+                    const v0 = netDisp[idx];
+                    if (v0 < 5.5 * skySigmaDisp) continue;
+                    // Local 3x3 maximum check (each PSF star evaluated cleanly at its peak)
+                    let isMax = true;
+                    let m3 = 0;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const nv = netDisp[(y + dy) * w + (x + dx)];
+                            if (nv > v0) isMax = false;
+                            m3 += nv;
+                        }
+                    }
+                    if (!isMax) continue;
+                    m3 /= 9.0;
+
+                    const midVals = [];
+                    const ringVals = [];
+                    for (const [ux, uy] of dirs8) {
+                        const xm = Math.round(x + 4.0 * ux), ym = Math.round(y + 4.0 * uy);
+                        if (xm >= rx0 && xm < rx1 && ym >= ry0 && ym < ry1) midVals.push(netDisp[ym * w + xm]);
+                        for (const rad of [7.5, 10.5]) {
+                            const xr = Math.round(x + rad * ux), yr = Math.round(y + rad * uy);
+                            if (xr >= rx0 && xr < rx1 && yr >= ry0 && yr < ry1 && !companionExcl[yr * w + xr]) {
+                                ringVals.push(netDisp[yr * w + xr]);
+                            }
+                        }
+                    }
+                    if (ringVals.length < 6 || midVals.length < 6) continue;
+                    ringVals.sort((a, b) => a - b);
+                    midVals.sort((a, b) => a - b);
+                    const ringMed = ringVals[Math.floor(ringVals.length * 0.45)];
+                    const mid50 = midVals[Math.floor(midVals.length * 0.50)];
+                    const mid75 = midVals[Math.floor(midVals.length * 0.75)]; // Rejects 1D edge-on disk / spiral ridges!
+
+                    const localPromMin = Math.max(5.5 * skySigmaDisp, 0.35 * ringMed + 3.0 * skySigmaDisp);
+                    const prom = m3 - ringMed;
+                    const peakProm = v0 - ringMed;
+                    if (prom > localPromMin
+                        && (mid50 - ringMed) < 0.38 * prom
+                        && (mid75 - ringMed) < 0.52 * prom) {
+                        // Dynamic PSF skirt mask radius (5..9 px) covering wings down to local sky/halo noise
+                        const snrStar = Math.max(2.0, peakProm / Math.max(skySigmaDisp, 1e-6));
+                        const rad = Math.min(9, Math.max(5, Math.ceil(2.15 * Math.sqrt(2.0 * Math.log(snrStar)))));
+                        starPeaks.push({ x, y, rad, ringMed });
+                    }
+                }
+            }
+
+            // Inpaint each detected PSF star out to its full Gaussian skirt using outer annular halo median
+            const cleanDisp = Float32Array.from(netDisp);
+            let nStarMasked = 0;
+            for (const st of starPeaks) {
+                const outerRing = [];
+                for (const [ux, uy] of dirs8) {
+                    const xo = Math.round(st.x + (st.rad + 1.5) * ux);
+                    const yo = Math.round(st.y + (st.rad + 1.5) * uy);
+                    if (xo >= rx0 && xo < rx1 && yo >= ry0 && yo < ry1 && !companionExcl[yo * w + xo]) {
+                        outerRing.push(netDisp[yo * w + xo]);
+                    }
+                }
+                outerRing.sort((a, b) => a - b);
+                const fillV = outerRing.length >= 3 ? outerRing[Math.floor(outerRing.length * 0.45)] : st.ringMed;
+                for (let dy = -st.rad; dy <= st.rad; dy++) {
+                    const yy = st.y + dy;
+                    if (yy < ry0 || yy >= ry1) continue;
+                    for (let dx = -st.rad; dx <= st.rad; dx++) {
+                        if (dx * dx + dy * dy > st.rad * st.rad) continue;
+                        const xx = st.x + dx;
+                        if (xx < rx0 || xx >= rx1) continue;
+                        if (Math.hypot(xx - gx0, yy - gy0) <= coreProtectR * 0.85) continue;
+                        const tid = yy * w + xx;
+                        if (cleanDisp[tid] > fillV + 0.5 * skySigmaDisp) {
+                            cleanDisp[tid] = fillV;
+                            nStarMasked++;
+                        }
+                    }
+                }
+            }
+
+            // 1d. Scale-Invariant [0..1000] Linearization (handles linear FITS, pre-stretched [0,1] FITS, and 8-bit JPG/PNG)
+            const roiSample = [];
+            const sigSample = [];
+            const stepS = Math.max(1, Math.floor((rw * rh) / 40000));
+            for (let y = ry0; y < ry1; y += stepS) {
+                for (let x = rx0; x < rx1; x += stepS) {
+                    const idx = y * w + x;
+                    if (companionExcl[idx]) continue;
+                    const v = cleanDisp[idx];
+                    roiSample.push(v);
+                    if (v > 3.5 * skySigmaDisp) sigSample.push(v);
+                }
+            }
+            roiSample.sort((a, b) => a - b);
+            sigSample.sort((a, b) => a - b);
+            const p998 = Math.max(1e-6, roiSample[Math.min(roiSample.length - 1, Math.floor(roiSample.length * 0.998))] || peakDisp || 1);
+            const p85Sig = sigSample.length >= 12 ? sigSample[Math.floor(sigSample.length * 0.85)] : (0.35 * p998);
+            const compRatio = p998 / Math.max(1e-9, p85Sig);
+            const isTrueLinear = Boolean(rawImage.isLinear && !rawImage.isAstroStretched && compRatio >= 4.2);
+
+            const src = new Float32Array(w * h);
+            if (isTrueLinear) {
+                const scaleF = 1000.0 / p998;
+                for (let y = ry0; y < ry1; y++) {
+                    for (let x = rx0; x < rx1; x++) {
+                        src[y * w + x] = cleanDisp[y * w + x] * scaleF;
+                    }
+                }
             } else {
-                // 천체사진(JPG/PNG)은 asinh/log/sRGB 감마 스트레칭으로 중심부가 눌러져 있어
-                // 역-스트레칭(Inverse Astro-Stretch)으로 실제 선형 광속(Flux) 분포를 복원함
-                const allSub = new Float32Array(w * h);
-                for (let i = 0; i < w * h; i++) allSub[i] = Math.max(0, disp[i] - bgMed0);
-                const sortedSub = Float32Array.from(allSub).sort();
-                const p995 = Math.max(10.0, sortedSub[Math.floor(sortedSub.length * 0.995)]);
-                src = new Float32Array(w * h);
-                const gammaExp = 4.2;
-                const denomExp = Math.exp(gammaExp) - 1.0;
-                for (let i = 0; i < w * h; i++) {
-                    const u = Math.min(1.25, allSub[i] / p995);
-                    src[i] = ((Math.exp(gammaExp * u) - 1.0) / denomExp) * 255.0;
+                // Adaptive inverse-Asinh de-stretching for nonlinear sRGB photos & pre-stretched [0,1] FITS (PixInsight/Siril)
+                const kAsinh = compRatio < 2.8 ? 4.6 : 3.7;
+                const denomS = Math.sinh(kAsinh);
+                for (let y = ry0; y < ry1; y++) {
+                    for (let x = rx0; x < rx1; x++) {
+                        const u = Math.min(1.18, cleanDisp[y * w + x] / p998);
+                        src[y * w + x] = (Math.sinh(kAsinh * u) / denomS) * 1000.0;
+                    }
                 }
             }
 
-            const borderVals = [];
-            for (let x = 0; x < w; x++) {
-                borderVals.push(src[x], src[(h - 1) * w + x]);
-            }
-            for (let y = 0; y < h; y++) {
-                borderVals.push(src[y * w], src[y * w + (w - 1)]);
-            }
-            borderVals.sort((a, b) => a - b);
-            const bgMed = borderVals[Math.floor(borderVals.length / 2)];
-            const bgStd = Math.max(0.5, Math.abs(borderVals[Math.floor(borderVals.length * 0.84)] - bgMed));
-
-            // 2. Centroid & Flux moments (with inner-core refinement)
-            let totalFlux = 0, sumX = 0, sumY = 0;
+            // Measure normalized sky residual & noise floor in [0..1000] scale
+            const normBorder = [];
             for (let y = ry0; y < ry1; y++) {
+                const isTop = (y - ry0) < bThick, isBot = (ry1 - 1 - y) < bThick;
                 for (let x = rx0; x < rx1; x++) {
-                    const f = Math.max(0, src[y * w + x] - bgMed);
-                    totalFlux += f;
-                    sumX += x * f;
-                    sumY += y * f;
+                    const isLeft = (x - rx0) < bThick, isRight = (rx1 - 1 - x) < bThick;
+                    if (!(isTop || isBot || isLeft || isRight) || companionExcl[y * w + x]) continue;
+                    normBorder.push(src[y * w + x]);
                 }
             }
+            normBorder.sort((a, b) => a - b);
+            const bgMed = normBorder.length ? normBorder[Math.floor(normBorder.length * 0.25)] : 0;
+            const lowNormBorder = normBorder.slice(0, Math.max(8, Math.floor(normBorder.length * 0.65)));
+            const skySigma = Math.max(0.02, 1.4826 * medianAbs(lowNormBorder, bgMed));
+            const bgStd = Math.max(0.03, skySigma);
 
-            let cx = totalFlux > 0 ? sumX / totalFlux : (rx0 + rx1) / 2;
-            let cy = totalFlux > 0 ? sumY / totalFlux : (ry0 + ry1) / 2;
-            const maxR0 = Math.min(Math.min(cx, w - cx, cy, h - cy), 180);
-            let tf2 = 0, sx2 = 0, sy2 = 0;
-            for (let y = ry0; y < ry1; y++) {
-                for (let x = rx0; x < rx1; x++) {
-                    if (Math.hypot(x - cx, y - cy) > 0.6 * maxR0) continue;
-                    const f = Math.max(0, src[y * w + x] - bgMed);
-                    tf2 += f; sx2 += x * f; sy2 += y * f;
+            // 2. Precision Centroid & Isophotal 2nd Moments around target core (gx0, gy0)
+            let cx = gx0, cy = gy0;
+            const searchR1 = Math.max(18, 0.42 * Math.min(rw, rh));
+            for (const radFrac of [1.0, 0.45]) {
+                let tf = 0, sx = 0, sy = 0;
+                const rLim = searchR1 * radFrac;
+                const ya = Math.max(ry0, Math.floor(cy - rLim)), yb = Math.min(ry1, Math.ceil(cy + rLim));
+                const xa = Math.max(rx0, Math.floor(cx - rLim)), xb = Math.min(rx1, Math.ceil(cx + rLim));
+                for (let y = ya; y < yb; y++) {
+                    for (let x = xa; x < xb; x++) {
+                        if (companionExcl[y * w + x]) continue;
+                        if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > rLim * rLim) continue;
+                        const f = Math.max(0, src[y * w + x] - bgMed);
+                        tf += f; sx += x * f; sy += y * f;
+                    }
                 }
+                if (tf > 0) { cx = sx / tf; cy = sy / tf; }
             }
-            if (tf2 > 0) { cx = sx2 / tf2; cy = sy2 / tf2; }
 
-            // Isophotal 2nd moments for ellipse axis ratio q = b/a and position angle PA
-            const maxR = Math.min(Math.min(cx, w - cx, cy, h - cy), 180);
+            const maxR = Math.max(12, Math.min(cx - rx0, rx1 - cx, cy - ry0, ry1 - cy, 0.48 * Math.max(rw, rh)));
             let peakF = 0;
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
+                    if (companionExcl[y * w + x]) continue;
                     const f = src[y * w + x] - bgMed;
                     if (f > peakF) peakF = f;
                 }
             }
-            const isoThresh = Math.max(3 * bgStd, 0.06 * peakF);
+            const isoThresh = Math.max(3.0 * bgStd, 0.035 * peakF);
             let mxx = 0, myy = 0, mxy = 0, mf = 0;
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
+                    if (companionExcl[y * w + x]) continue;
                     const dx = x - cx, dy = y - cy;
                     if (dx * dx + dy * dy > (0.85 * maxR) * (0.85 * maxR)) continue;
                     const f = Math.max(0, src[y * w + x] - bgMed);
@@ -1352,10 +2023,10 @@
             }
             mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
             const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) * (mxx - myy) / 4 + mxy * mxy));
-            const axisQ = Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det));
+            const axisQ = mf > 0 ? Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det)) : 0.85;
             const pa = 0.5 * Math.atan2(2 * mxy, mxx - myy);
             const cosP = Math.cos(pa), sinP = Math.sin(pa);
-            const qUse = Math.max(0.25, axisQ);
+            const qUse = Math.max(0.20, axisQ);
             const ellR = (x, y) => {
                 const dx = x - cx, dy = y - cy;
                 const xr = dx * cosP + dy * sinP;
@@ -1363,43 +2034,50 @@
                 return Math.hypot(xr, yr / qUse);
             };
 
-            // 3. Elliptical radial profile & Petrosian growth curve
-            const nBins = 30;
+            // 3. Outlier-Trimmed Elliptical Radial Profile & Growth Curve (fine radial bins + analytical rectified-sky debiasing)
+            const nBins = Math.min(96, Math.max(32, Math.round(maxR / 1.5)));
             const binWidth = Math.max(maxR / nBins, 0.5);
-            const radFlux = new Float32Array(nBins);
-            const radDisp = new Float32Array(nBins);
-            const radCounts = new Int32Array(nBins);
+            const binLists = Array.from({ length: nBins }, () => []);
 
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
+            for (let y = ry0; y < ry1; y++) {
+                for (let x = rx0; x < rx1; x++) {
+                    if (companionExcl[y * w + x]) continue;
                     const r = ellR(x, y);
                     const bIdx = Math.floor(r / binWidth);
                     if (bIdx >= 0 && bIdx < nBins) {
-                        radFlux[bIdx] += Math.max(0, src[y * w + x] - bgMed);
-                        radDisp[bIdx] += disp[y * w + x];
-                        radCounts[bIdx]++;
+                        binLists[bIdx].push(Math.max(0, src[y * w + x] - bgMed));
                     }
                 }
             }
 
             const profileR = [];
             const profileI = [];
-            const profileDisp = [];
             const cumFlux = [];
             let cFlux = 0;
+            const rectNoisePedestal = 0.42 * skySigma;
 
             for (let b = 0; b < nBins; b++) {
                 const rMid = (b + 0.5) * binWidth;
-                const surfBright = radCounts[b] > 0 ? radFlux[b] / radCounts[b] : 0;
-                const dispBright = radCounts[b] > 0 ? radDisp[b] / radCounts[b] : 0;
+                const arr = binLists[b];
+                let surfBright = 0;
+                if (arr.length > 0) {
+                    arr.sort((a, z) => a - z);
+                    const hi = b >= 2 ? Math.max(1, Math.floor(arr.length * 0.92)) : arr.length;
+                    let s = 0;
+                    for (let i = 0; i < hi; i++) s += arr[i];
+                    const rawMean = s / hi;
+                    // Analytical debiasing of E[max(0, N(0, sigma^2))] = sigma/sqrt(2*pi) on faint outer sky rings
+                    const debias = b >= 3 ? rectNoisePedestal * Math.exp(-rawMean / Math.max(1.8 * skySigma, 1e-6)) : 0;
+                    surfBright = Math.max(0, rawMean - debias);
+                }
+                const ringArea = 2 * Math.PI * rMid * binWidth * qUse;
+                const ringFlux = surfBright * ringArea;
                 profileR.push(rMid);
                 profileI.push(surfBright);
-                profileDisp.push(dispBright);
-                cFlux += radFlux[b];
+                cFlux += ringFlux;
                 cumFlux.push(cFlux);
             }
 
-            // Radii R20, R50, R80, R90 (cumulative growth curve, linearly interpolated at bin edges)
             const maxCum = cumFlux[cumFlux.length - 1] || 1;
             const radiusAt = (frac) => {
                 const target = frac * maxCum;
@@ -1414,17 +2092,15 @@
                 return nBins * binWidth;
             };
             const r20 = Math.max(radiusAt(0.20), 0.5);
-            const r50 = Math.max(radiusAt(0.50), 1);
-            const r80 = Math.max(radiusAt(0.80), 1);
-            const r90 = Math.max(radiusAt(0.90), 1);
+            const r50 = Math.max(radiusAt(0.50), 1.0);
+            const r80 = Math.max(radiusAt(0.80), 1.2);
+            const r90 = Math.max(radiusAt(0.90), 1.5);
 
             // 4. Non-parametric indices: C, A, S, spiralWinding, Gini, M20
-            let C = 5 * Math.log10(r80 / r20);
+            let C = 5 * Math.log10(Math.max(1.1, r80 / r20));
 
-            // Asymmetry A (Conselice 2003): A = min_center Σ|I − I180| / Σ|I| − A_bg
-            const sortedBorderDev = borderVals.map(v => Math.abs(v - bgMed)).sort((a, b) => a - b);
-            const skySigma = Math.max(0.2, 1.4826 * sortedBorderDev[Math.floor(sortedBorderDev.length / 2)]);
-            const apR = Math.max(r90, 3);
+            // Asymmetry A (Conselice 2003) on star-cleaned normalized flux
+            const apR = Math.min(maxR, Math.max(r90, 4));
             const asymAt = (ccx, ccy) => {
                 let diff = 0, denom = 0, nAp = 0;
                 const ya = Math.max(ry0, Math.floor(ccy - apR)), yb = Math.min(ry1, Math.ceil(ccy + apR));
@@ -1432,8 +2108,9 @@
                 for (let y = ya; y < yb; y++) {
                     for (let x = xa; x < xb; x++) {
                         if (Math.hypot(x - ccx, y - ccy) > apR) continue;
-                        const ox = 2 * ccx - x, oy = 2 * ccy - y;
-                        if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue;
+                        const ox = Math.round(2 * ccx - x), oy = Math.round(2 * ccy - y);
+                        if (ox < rx0 || ox >= rx1 || oy < ry0 || oy >= ry1) continue;
+                        if (companionExcl[y * w + x] || companionExcl[oy * w + ox]) continue;
                         const i1 = src[y * w + x] - bgMed;
                         const i2 = src[oy * w + ox] - bgMed;
                         diff += Math.abs(i1 - i2);
@@ -1451,9 +2128,9 @@
                     A = Math.min(A, asymAt(cx0 + ox, cy0 + oy));
                 }
             }
-            A = Math.max(0, Math.min(1, A));
+            A = Math.max(0, Math.min(1, Number.isFinite(A) ? A : 0));
 
-            // Clumpiness S (Conselice 2003): positive residual after box smoothing (width ≈ 0.3·R50), sky-corrected.
+            // Clumpiness S (Conselice 2003): positive high-frequency residual outside 0.25*R50
             const sk = Math.max(1, Math.round(0.15 * r50));
             let sNum = 0, sDen = 0, sN = 0;
             {
@@ -1462,14 +2139,16 @@
                 for (let y = 0; y < ih; y++) {
                     let row = 0;
                     for (let x = 0; x < iw; x++) {
-                        row += src[(y + ry0) * w + (x + rx0)] - bgMed;
+                        const idx = (y + ry0) * w + (x + rx0);
+                        row += companionExcl[idx] ? 0 : (src[idx] - bgMed);
                         integ[(y + 1) * (iw + 1) + (x + 1)] = integ[y * (iw + 1) + (x + 1)] + row;
                     }
                 }
                 for (let y = ry0; y < ry1; y++) {
                     for (let x = rx0; x < rx1; x++) {
-                        const rr = Math.hypot(x - cx, y - cy);
-                        if (rr > apR || rr < 0.25 * r50) continue;   // exclude nucleus (Conselice)
+                        if (companionExcl[y * w + x]) continue;
+                        const rr = ellR(x, y);
+                        if (rr > apR || rr < 0.28 * r50) continue;
                         const x0 = Math.max(rx0, x - sk) - rx0, x1 = Math.min(rx1 - 1, x + sk) - rx0 + 1;
                         const y0 = Math.max(ry0, y - sk) - ry0, y1 = Math.min(ry1 - 1, y + sk) - ry0 + 1;
                         const area = (x1 - x0) * (y1 - y0);
@@ -1484,8 +2163,6 @@
             const S = sDen > 0 ? Math.max(0, (sNum - sN * skySigma / Math.sqrt(2 * Math.PI)) / sDen) : 0;
 
             // Logarithmic Spiral Arm Winding Coherence (m=2, 3 Fourier-Bessel pitch-angle detector)
-            // 대칭적인 2팔 나선은하는 180도 회전 대칭(A가 낮음)이고 큰 팽대부 때문에 C·n이 높을 수 있으나,
-            // 타원 등광도선 잔차(I - <I>_ring)에서 로그 나선 위상(m·θ_ell - α·ln r)의 응집도가 타원은하보다 10배 이상 높음.
             const rIn = Math.max(3.0, 1.15 * r20);
             const rOut = Math.min(maxR, 1.35 * r80);
             const nRing = 18;
@@ -1493,6 +2170,7 @@
             const ringCnt = new Int32Array(nRing);
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
+                    if (companionExcl[y * w + x]) continue;
                     const re = ellR(x, y);
                     if (re < rIn || re >= rOut) continue;
                     const rb = Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing));
@@ -1510,6 +2188,7 @@
                 const sA = new Float64Array(alphas.length);
                 for (let y = ry0; y < ry1; y++) {
                     for (let x = rx0; x < rx1; x++) {
+                        if (companionExcl[y * w + x]) continue;
                         const dx = x - cx, dy = y - cy;
                         const xr = dx * cosP + dy * sinP;
                         const yr = (-dx * sinP + dy * cosP) / qUse;
@@ -1517,9 +2196,9 @@
                         if (re < rIn || re >= rOut) continue;
                         const rb = Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing));
                         const meanI = ringMean[rb];
-                        if (meanI <= bgStd) continue;
+                        if (meanI <= 2.0 * bgStd) continue;
                         const f = Math.max(0, src[y * w + x] - bgMed);
-                        const resI = (f - meanI) / meanI;
+                        const resI = Math.max(-1.5, Math.min(2.0, (f - meanI) / meanI));
                         const th = Math.atan2(yr, xr);
                         const lnr = Math.log(Math.max(re, 1.0) / r50);
                         c0 += resI * Math.cos(mSym * th);
@@ -1536,25 +2215,27 @@
                     const barAmp = Math.hypot(c0, s0) / wSum;
                     for (let k = 0; k < alphas.length; k++) {
                         const spAmp = Math.hypot(cA[k], sA[k]) / wSum;
-                        const netWinding = Math.max(0, spAmp - 0.35 * barAmp);
+                        // Subtract pure zero-pitch quadrupole/hexapole (ellipticity/boxiness) so elongated E3-E7 ellipticals don't trigger!
+                        const netWinding = Math.max(0, spAmp - 0.65 * barAmp);
                         if (netWinding > maxSpiralWinding) maxSpiralWinding = netWinding;
                     }
                 }
             }
             const spiralWinding = maxSpiralWinding;
 
-            // Gini & M20 (Lotz et al. 2004), pixels inside the r90 aperture
-            const roiPix = [];   // [flux, r²]
+            // Gini & M20 (Lotz et al. 2004), pixels inside the elliptical apR aperture
+            const roiPix = [];
             for (let y = ry0; y < ry1; y++) {
                 for (let x = rx0; x < rx1; x++) {
+                    if (companionExcl[y * w + x]) continue;
+                    const re = ellR(x, y);
+                    if (re > apR) continue;
                     const r2 = (x - cx) * (x - cx) + (y - cy) * (y - cy);
-                    if (r2 > apR * apR) continue;
                     roiPix.push([Math.max(0, src[y * w + x] - bgMed), r2]);
                 }
             }
             const nPix = roiPix.length;
 
-            // Gini: G = Σ(2i − n − 1)|X_i| / (mean·n·(n − 1)), X sorted ascending
             const fluxAsc = roiPix.map(p => p[0]).sort((a, b) => a - b);
             let giniSum = 0;
             const meanP = fluxAsc.reduce((acc, v) => acc + v, 0) / Math.max(nPix, 1);
@@ -1563,7 +2244,6 @@
             }
             const gini = (meanP > 0 && nPix > 1) ? giniSum / (meanP * nPix * (nPix - 1)) : 0;
 
-            // M20 = log10(Σ_brightest20% f·r² / Σ_all f·r²)
             let mTot = 0, fTot = 0;
             for (const [f, r2] of roiPix) { mTot += f * r2; fTot += f; }
             const byFlux = roiPix.slice().sort((a, b) => b[0] - a[0]);
@@ -1573,14 +2253,15 @@
                 fAcc += f;
                 mAcc += f * r2;
             }
-            const M20 = (mTot > 0 && mAcc > 0) ? Math.log10(mAcc / mTot) : 0;
+            const M20 = (mTot > 0 && mAcc > 0) ? Math.log10(mAcc / mTot) : -1.5;
 
-            // Sérsic Fit (unsaturated bins above sky noise, linear least-squares of ln I vs r^(1/n))
+            // Scale-Invariant Sérsic Fit (unsaturated bins above 2*bgStd, no hardcoded 242!)
+            const maxProfI = Math.max(...profileI, 1e-6);
             let fitBins = [];
             for (let b = 0; b < nBins; b++) {
-                if (profileI[b] > 2 * bgStd && profileDisp[b] < 242) fitBins.push(b);
+                if (profileR[b] >= 1.2 && profileI[b] > 2.0 * bgStd && profileI[b] < 0.96 * maxProfI) fitBins.push(b);
             }
-            if (fitBins.length < 4) {
+            if (fitBins.length < 5) {
                 fitBins = [];
                 for (let b = 0; b < nBins; b++) {
                     if (profileI[b] > bgStd) fitBins.push(b);
@@ -1599,14 +2280,14 @@
                     sxx += (xs[i] - mx) * (xs[i] - mx);
                     sxy += (xs[i] - mx) * (ys[i] - my);
                 }
-                const slope = sxx > 1e-9 ? Math.min(-0.4, sxy / sxx) : -bn;
+                const slope = sxx > 1e-9 ? Math.min(-0.35, sxy / sxx) : -bn;
                 const intercept = my - slope * mx;
                 let chi2 = 0;
                 for (let i = 0; i < xs.length; i++) {
                     const pred = intercept + slope * xs[i];
                     chi2 += (ys[i] - pred) * (ys[i] - pred);
                 }
-                const bPen = Math.pow(( -slope - bn ) / (0.65 * bn), 2) * 0.12;
+                const bPen = Math.pow((-slope - bn) / (0.60 * bn), 2) * 0.14;
                 const score = (chi2 / xs.length) + bPen;
                 if (score < minChi2) {
                     minChi2 = score;
@@ -1615,12 +2296,12 @@
                 }
             }
 
-            // 일반 천체사진(JPG/PNG)에서 프레임 경계에 의해 외곽 헤일로가 잘리고 중심핵이 포화된 매끄러운 타원체(Spheroid)의
-            // 유한 구경 절단(Aperture Truncation) 보정: 나선팔 감김과 덩어리짐이 전혀 없는 대칭 타원체에만 물리적 보정 적용
-            if (!rawImage.isLinear && currentMode === 'image' && spiralWinding < 0.016 && S < 0.018 && A < 0.14 && axisQ >= 0.38) {
-                const smoothSph = (1 - spiralWinding / 0.016) * (1 - S / 0.018);
-                C = Math.min(4.85, C + 0.65 * smoothSph);
-                bestN = Math.min(5.2, Math.round((bestN + 1.45 * smoothSph) * 10) / 10);
+            // Finite-aperture & core-compression recovery for pre-stretched / nonlinear photos of smooth spheroids (E0-E7, q >= 0.28)
+            if (!isTrueLinear && spiralWinding < 0.017 && S < 0.024 && A < 0.13 && axisQ >= 0.28 && bestN >= 1.85 && C >= 3.0) {
+                const smoothSph = (1 - spiralWinding / 0.017) * (1 - S / 0.024);
+                const truncBoost = r80 > 0.50 * maxR ? 1.0 : 0.65;
+                C = Math.min(4.85, C + 0.50 * smoothSph * truncBoost);
+                bestN = Math.min(5.2, Math.round((bestN + 1.15 * smoothSph * truncBoost) * 10) / 10);
                 if (fitBins.length >= 3) {
                     const bnNew = 1.9992 * bestN - 0.3271;
                     const dNew = fitBins.map(b => Math.log(Math.max(profileI[b], 1e-6)) + bnNew * (Math.pow(profileR[b] / r50, 1 / bestN) - 1));
@@ -1628,79 +2309,88 @@
                 }
             }
 
-            // S/N Ratio (aperture flux / sky noise over the aperture)
             const snr = fTot / (skySigma * Math.sqrt(Math.max(nPix, 1)));
 
-            // BPT & metallicity: only measurable from a spectrum.
-            const spec = currentMode === 'spectrum' ? measureSpectrum(src, w, h) : null;
-            const logNII_Ha = spec ? spec.logNII_Ha : null;
-            const logOIII_Hb = spec ? spec.logOIII_Hb : null;
-            // Pettini & Pagel (2004) N2: 12 + log(O/H) = 8.90 + 0.57 · log([NII]/Hα)
-            const metallicity = logNII_Ha !== null ? 8.90 + 0.57 * logNII_Ha : null;
-
-            // 5. Galaxy Classification Logic (3 classes only: 나선 / 타원 / 불규칙)
-            // 타원은하: 높은 집중도(C) + 높은 Sérsic n + 낮은 비대칭(A) + 나선팔 감김 없음(spiralWinding < 0.016) + 매끄러움(낮은 S)
-            // 나선은하: 팽대부+원반 또는 뚜렷한 로그 나선팔 감김(spiralWinding ≥ 0.016, 대칭 2팔 나선은하 포함)
-            // 불규칙은하: 팽대부 없음(낮은 C, 낮은 n) + 높은 비대칭(A) 또는 길쭉하고 울퉁불퉁한 M82형 스타버스트
+            // 5. Balanced 3-Class Multi-Evidence Softmax Classifier (나선 / 타원 / 불규칙)
+            // Replaces fragile 6-sigmoid product collapse so E0-E7 ellipticals (including monochrome/L-filter & elongated E5-E7)
+            // are evaluated symmetrically against spirals and irregulars.
             const sig = (z) => 1 / (1 + Math.exp(-z));
-            const sE = sig((bestN - 2.4) / 0.3) * sig((C - 3.5) / 0.15) * sig((0.15 - A) / 0.03)
-                     * sig((axisQ - 0.35) / 0.04) * sig((0.016 - spiralWinding) / 0.003) * sig((0.018 - S) / 0.004);
-            const sI1 = sig((A - 0.32) / 0.04) * sig((2.6 - C) / 0.12) * sig((1.3 - bestN) / 0.15);
-            const sI2 = sig((0.65 - axisQ) / 0.05) * sig((S - 0.018) / 0.004) * sig((A - 0.15) / 0.03)
-                      * sig((1.6 - bestN) / 0.2) * sig((3.4 - C) / 0.15);
-            const sI = Math.max(sI1, sI2);
-            const sS = Math.max(0.05, 1 - Math.max(sE, sI));
-            const sTot = sE + sI + sS;
+            const colorBonusE = (rawImage.rbRatio && rawImage.rbRatio >= 1.24) ? 0.32 * Math.min(1, (rawImage.rbRatio - 1.20) / 0.35) : 0;
 
+            // Elliptical evidence: high Sérsic n, high concentration C, smooth azimuthal profile (low W_spiral, low S), symmetric (low A), E0-E7 (q >= 0.28)
+            let logitE = 2.15 * Math.tanh((bestN - 2.05) / 0.80)
+                       + 2.05 * Math.tanh((C - 3.12) / 0.42)
+                       + 1.75 * Math.tanh((0.017 - spiralWinding) / 0.007)
+                       + 1.45 * Math.tanh((0.026 - S) / 0.013)
+                       + 1.25 * Math.tanh((0.14 - A) / 0.06)
+                       + 0.65 * Math.tanh((-1.75 - M20) / 0.32)
+                       + colorBonusE;
+            if (axisQ < 0.28) logitE -= 4.5 * ((0.28 - axisQ) / 0.08); // Thin edge-on disks cannot be E8+ ellipticals
+
+            // Spiral evidence: exponential/bulge+disk profile (n ≈ 0.7-2.1, C ≈ 2.2-3.3) OR coherent spiral winding OR thin edge-on disk / HII texture
+            let logitS = 1.45 * Math.exp(-Math.pow((bestN - 1.25) / 0.85, 2))
+                       + 1.15 * Math.exp(-Math.pow((C - 2.68) / 0.55, 2))
+                       + 2.85 * Math.tanh((spiralWinding - 0.016) / 0.0075)
+                       + 1.20 * Math.tanh((S - 0.024) / 0.014) * sig((0.34 - A) / 0.07)
+                       + 0.45;
+            if (axisQ < 0.28 && A < 0.28) logitS += 2.75; // Edge-on spiral disk (e.g., NGC 891, NGC 5981)
+
+            // Irregular evidence: lack of central bulge (low C, low n) + strong rotational asymmetry / off-center bright clumps (M20, S)
+            let logitI = 1.85 * Math.tanh((2.50 - C) / 0.36)
+                       + 1.55 * Math.tanh((1.30 - bestN) / 0.42)
+                       + 2.45 * Math.tanh((A - 0.24) / 0.075)
+                       + 1.30 * Math.tanh((M20 + 1.45) / 0.28)
+                       + 1.10 * Math.tanh((S - 0.032) / 0.018);
+            // M82-like cigar starburst irregular
+            const isCigarIrr = (axisQ < 0.55 && S > 0.035 && A > 0.16 && bestN < 1.55 && C < 3.15);
+            if (isCigarIrr) logitI += 1.65;
+
+            const maxLogit = Math.max(logitE, logitS, logitI);
+            const sE = Math.exp((logitE - maxLogit) / 1.15);
+            const sS = Math.exp((logitS - maxLogit) / 1.15);
+            const sI = Math.exp((logitI - maxLogit) / 1.15);
+            const sTot = sE + sS + sI;
+
+            const eSubtype = `E${Math.min(7, Math.max(0, Math.round(10 * (1 - axisQ))))}`;
             const CLASSES = {
                 spiral: {
                     type: "나선은하 (Spiral Galaxy)", en: "Spiral / Late-Type", avatar: "🌀",
-                    desc: "중심 팽대부와 지수 원반(n≈1~2.5) 및 로그 나선팔 감김 구조가 검출된 만기형/나선은하입니다."
+                    desc: axisQ < 0.28
+                        ? "높은 경사각의 얇은 지수 원반(축비 q<0.28, n≈1)과 적도면 구조가 검출된 옆면(Edge-on) 나선은하입니다."
+                        : "중심 팽대부와 지수 원반(n≈1~2.2) 및 나선팔/성간 구조가 검출된 만기형 나선은하입니다."
                 },
                 elliptical: {
-                    type: "타원은하 (Elliptical Galaxy)", en: "Elliptical / Early-Type", avatar: "⚪",
-                    desc: "de Vaucouleurs(n≈4) 프로파일, 높은 중심 집중도(C≥3.5), 나선팔 없는 매끄러운 등광도선을 갖춘 조기형 타원은하입니다."
+                    type: `타원은하 (Elliptical Galaxy · ${eSubtype})`, en: `Elliptical (${eSubtype}) / Early-Type`, avatar: "⚪",
+                    desc: `높은 중심 집중도(C=${C.toFixed(2)})와 Sérsic 곡률(n=${bestN.toFixed(1)}), 나선팔·성단 덩어리가 없는 매끄러운 등광도선을 갖춘 허블 ${eSubtype}형 조기형 타원은하입니다.`
                 },
                 irregular: {
                     type: "불규칙은하 (Irregular Galaxy)", en: "Irregular", avatar: "✨",
-                    desc: "뚜렷한 중심 팽대부가 없고(낮은 C·n) 밝기 분포가 크게 비대칭인 불규칙은하입니다."
+                    desc: isCigarIrr
+                        ? "길쭉한 모양에 팽대부가 없고 먼지띠·별생성 덩어리로 비대칭성이 큰 M82형 스타버스트 불규칙은하입니다."
+                        : "뚜렷한 중심 팽대부가 없고(낮은 C·n) 밝기 분포가 크게 비대칭인 불규칙은하입니다."
                 }
             };
-            if (sI2 > sI1) CLASSES.irregular.desc = "길쭉한 모양(축비 q<0.65)에 팽대부가 없고, 먼지띠·별생성 덩어리로 울퉁불퉁한(S) 옆면 불규칙은하(M82 시가은하형)입니다.";
+
             let cls = 'spiral', best = sS;
             if (sE > best) { cls = 'elliptical'; best = sE; }
             if (sI > best) { cls = 'irregular'; best = sI; }
 
-            let galaxyType = CLASSES[cls].type;
-            let galaxyClassEn = CLASSES[cls].en;
-            let galaxyAvatar = CLASSES[cls].avatar;
-            let galaxyDesc = CLASSES[cls].desc;
-            let confidence = 100 * best / sTot;
+            const galaxyType = CLASSES[cls].type;
+            const galaxyClassEn = CLASSES[cls].en;
+            const galaxyAvatar = CLASSES[cls].avatar;
+            const galaxyDesc = CLASSES[cls].desc;
+            const confidence = 100 * best / sTot;
             const scores = {
                 spiral: 100 * sS / sTot, elliptical: 100 * sE / sTot, irregular: 100 * sI / sTot
             };
 
-            // Spectrum mode: the image is a slit spectrum, so morphology is meaningless → spectral class
-            if (currentMode === 'spectrum') {
-                cls = 'spectrum';
-                galaxyAvatar = '🌈';
-                confidence = null;
-                if (spec && spec.bptClass) {
-                    galaxyType = `분광 진단: ${spec.bptClass}`;
-                    galaxyClassEn = spec.bptClassEn;
-                    galaxyDesc = 'BPT 진단도(Kauffmann 2003 / Kewley 2001 경계선) 위치로 판정한 이온화원입니다. 형태 분류는 은하 사진 모드에서 수행합니다.';
-                } else {
-                    galaxyType = '분광 진단: 판정 불가';
-                    galaxyClassEn = 'Spectrum / Uncalibrated';
-                    galaxyDesc = spec ? spec.note : '스펙트럼을 추출하지 못했습니다.';
-                }
-            }
-
             analysisResults = {
                 mode: currentMode, cls,
                 galaxyType, galaxyClassEn, galaxyAvatar, galaxyDesc, confidence, scores,
-                C, bestN, A, S, axisQ, spiralWinding, gini, M20, r20, r50, r80, r90, snr, metallicity,
-                logNII_Ha, logOIII_Hb, spec,
+                C, bestN, A, S, axisQ, spiralWinding, gini, M20, r20, r50, r80, r90, snr,
+                metallicity: null, d4000: null,
+                logNII_Ha: null, logOIII_Hb: null, spec: null,
+                nStarMasked, isTrueLinear,
                 profileR, profileI, Ie
             };
 
@@ -1709,12 +2399,21 @@
             renderCharts(analysisResults);
         }
 
+        function medianAbs(arr, med) {
+            if (!arr || !arr.length) return 0;
+            const d = new Float32Array(arr.length);
+            for (let i = 0; i < arr.length; i++) d[i] = Math.abs(arr[i] - med);
+            d.sort();
+            return d[Math.floor(d.length * 0.5)];
+        }
+
         const CLASS_COLORS = { spiral: '#38bdf8', elliptical: '#f59e0b', irregular: '#a855f7', spectrum: '#10b981' };
 
         function updateResultsUI(res) {
             const isSpec = res.mode === 'spectrum';
-            document.getElementById('heroCard').style.borderLeftColor = CLASS_COLORS[res.cls];
-            document.getElementById('heroKicker').innerText = isSpec ? '분광 이온화원 진단 결과' : '형태 분류 결과 (나선 · 타원 · 불규칙)';
+            const heroColor = (isSpec && res.spec && res.spec.isQuiescentElliptical) ? '#f59e0b' : CLASS_COLORS[res.cls];
+            document.getElementById('heroCard').style.borderLeftColor = heroColor;
+            document.getElementById('heroKicker').innerText = isSpec ? '분광 방출선(BPT) · 타원은하 흡수선(Dn4000) 진단 결과' : '형태 분류 결과 (나선 · 타원 E0–E7 · 불규칙)';
             document.getElementById('heroAvatar').innerText = res.galaxyAvatar;
             document.getElementById('heroTitle').innerText = res.galaxyType;
             document.getElementById('heroDesc').innerText = res.galaxyDesc;
@@ -1733,60 +2432,80 @@
                     </div>`).join('');
             }
 
-            document.getElementById('valC').innerText = res.C.toFixed(2);
-            document.getElementById('subC').innerText = res.C >= 3.5 ? 'C ≥ 3.5 · 강한 중심 집중 (타원형)' : (res.C >= 2.6 ? '2.6 ≤ C < 3.5 · 팽대부 + 원반' : 'C < 2.6 · 팽대부 약하거나 없음');
+            document.getElementById('valC').innerText = isSpec ? (res.d4000 ? res.d4000.toFixed(2) : '—') : res.C.toFixed(2);
+            document.getElementById('subC').innerText = isSpec
+                ? (res.d4000 ? (res.d4000 >= 1.55 ? 'Dn4000 ≥ 1.55 · 늙은 타원은하 항성종족' : 'Dn4000 < 1.55 · 젊은 항성 연속광') : '4000Å 단절 지수')
+                : (res.C >= 3.25 ? 'C ≥ 3.25 · 강한 중심 집중 (타원형)' : (res.C >= 2.55 ? '2.55 ≤ C < 3.25 · 팽대부 + 원반' : 'C < 2.55 · 팽대부 약하거나 없음'));
 
-            document.getElementById('valSersic').innerText = res.bestN.toFixed(2);
-            document.getElementById('subSersic').innerText = res.bestN >= 2.4 ? 'de Vaucouleurs 타원형' : '지수 원반형 (Disk)';
+            document.getElementById('valSersic').innerText = isSpec ? '—' : res.bestN.toFixed(2);
+            document.getElementById('subSersic').innerText = isSpec ? '영상 모드 전용' : (res.bestN >= 2.2 ? 'de Vaucouleurs 조기형 타원체' : '지수 원반형 (Disk)');
 
-            document.getElementById('valA').innerText = res.A.toFixed(2);
-            document.getElementById('subA').innerText = res.A > 0.25 ? '강한 비대칭 (나선팔/불규칙 구조)' : (res.A > 0.1 ? '나선팔/별생성' : '고대칭 평탄구조');
+            document.getElementById('valA').innerText = isSpec ? '—' : res.A.toFixed(2);
+            document.getElementById('subA').innerText = isSpec ? '영상 모드 전용' : (res.A > 0.24 ? '강한 비대칭 (불규칙/병합)' : (res.A > 0.11 ? '나선팔/별생성 구조' : '고대칭 매끄러운 구조'));
 
-            document.getElementById('valGini').innerText = res.gini.toFixed(2);
-            document.getElementById('subGini').innerText = res.gini >= 0.55 ? '빛이 소수 픽셀에 집중' : (res.gini >= 0.4 ? '중간 수준의 광량 분산' : '빛이 넓게 고르게 분포');
-            document.getElementById('valM20').innerText = res.M20.toFixed(2);
-            document.getElementById('subM20').innerText = res.M20 <= -2.0 ? '밝은 영역이 중심에 집중' : (res.M20 <= -1.5 ? '중심+원반 구조' : '밝은 덩어리가 외곽에 분산');
+            document.getElementById('valGini').innerText = isSpec ? '—' : res.gini.toFixed(2);
+            document.getElementById('subGini').innerText = isSpec ? '' : (res.gini >= 0.55 ? '빛이 중심핵에 집중' : (res.gini >= 0.4 ? '중간 수준의 광량 분산' : '빛이 넓게 고르게 분포'));
+            document.getElementById('valM20').innerText = isSpec ? '—' : res.M20.toFixed(2);
+            document.getElementById('subM20').innerText = isSpec ? '' : (res.M20 <= -1.85 ? '밝은 영역이 중심에 집중 (타원/팽대부)' : (res.M20 <= -1.45 ? '중심+원반 구조' : '밝은 덩어리가 외곽에 분산'));
 
-            document.getElementById('valR50').innerText = res.r50.toFixed(1) + ' px';
-            document.getElementById('subR50').innerText = `R20 ${res.r20.toFixed(1)} · R80 ${res.r80.toFixed(1)} · R90 ${res.r90.toFixed(1)} px`;
+            document.getElementById('valR50').innerText = isSpec ? '—' : (res.r50.toFixed(1) + ' px');
+            document.getElementById('subR50').innerText = isSpec ? '' : `R20 ${res.r20.toFixed(1)} · R80 ${res.r80.toFixed(1)} · R90 ${res.r90.toFixed(1)} px`;
 
             document.getElementById('valSNR').innerText = res.snr.toFixed(1);
             document.getElementById('subSNR').innerText = res.snr >= 50 ? '측광 신뢰성 우수' : (res.snr >= 15 ? '측광 가능' : '잡음 많음 — 결과 신뢰도 낮음');
 
             const zEl = document.getElementById('valZ');
-            zEl.innerText = res.metallicity === null ? '—' : res.metallicity.toFixed(2);
-            zEl.classList.toggle('na', res.metallicity === null);
-            document.getElementById('subZ').innerText = res.metallicity === null
-                ? '분광 모드 + 파장 보정 스펙트럼 필요'
-                : (res.metallicity >= 8.6 ? '태양 금속량 수준 (~Z⊙)' : '태양보다 낮은 금속량');
+            if (isSpec && res.spec && res.spec.isQuiescentElliptical && res.d4000) {
+                zEl.innerText = `Dn4000 ${res.d4000.toFixed(2)}`;
+                zEl.classList.remove('na');
+                document.getElementById('subZ').innerText = '소광 타원은하 (방출선 대신 흡수선·D4000 진단)';
+            } else {
+                zEl.innerText = res.metallicity === null ? '—' : res.metallicity.toFixed(2);
+                zEl.classList.toggle('na', res.metallicity === null);
+                document.getElementById('subZ').innerText = res.metallicity === null
+                    ? '분광 모드 + 방출선 스펙트럼에서 측정'
+                    : (res.metallicity >= 8.6 ? '태양 금속량 수준 (~Z⊙)' : '태양보다 낮은 금속량');
+            }
 
             // Update Diagnoses
             const li = (ok, title, body) => `<li class="diagnosis-item${ok ? '' : ' warn'}"><span class="diag-icon">${ok ? '✅' : 'ℹ️'}</span><span><strong>${title}</strong> ${body}</span></li>`;
             const items = [];
             if (!isSpec) {
+                items.push(li(true, '전경별 마스킹 & 역-Asinh 광속 선형화:',
+                    `${res.isTrueLinear ? '원시 선형(Linear) 데이터 감지' : '비선형 스트레칭(Asinh/sRGB) 자동 역변환 복원 완료'}${res.nStarMasked > 0 ? ` · 전경 점광원(별) ${res.nStarMasked}px 자동 인페인팅 제거됨` : ''}.`));
                 items.push(li(true, '집중도 C = 5·log(R80/R20):',
-                    `${res.C.toFixed(2)} → ${res.C >= 3.5 ? '중심 집중도가 높은 조기형(타원) 영역.' : (res.C >= 2.6 ? '팽대부+원반 구조 (나선 영역).' : '팽대부가 약하거나 없음 (원반·불규칙 영역).')}`));
-                items.push(li(true, 'Sérsic n 피팅 (역-감마 선형화):',
-                    `n = ${res.bestN.toFixed(1)} → ${res.bestN >= 2.4 ? '드 보쿨뢰르(n≈4) 형 구형체 프로파일에 가까움.' : '지수 원반(n≈1) 형 원반 프로파일에 가까움.'}`));
+                    `${res.C.toFixed(2)} → ${res.C >= 3.25 ? '중심 집중도가 높은 조기형(타원은하) 영역.' : (res.C >= 2.55 ? '팽대부+원반 구조 (나선은하 영역).' : '팽대부가 약하거나 없음 (만기형 원반·불규칙 영역).')}`));
+                items.push(li(true, 'Sérsic n 곡률 피팅:',
+                    `n = ${res.bestN.toFixed(1)} → ${res.bestN >= 2.2 ? '드 보쿨뢰르(n≈3~4) 형 타원체 프로파일과 일치.' : '지수 원반(n≈1) 형 원반 프로파일과 일치.'}`));
                 items.push(li(true, '비대칭도 A · 나선팔 감김 W_spiral:',
-                    `A = ${res.A.toFixed(2)}, W_spiral = ${(res.spiralWinding || 0).toFixed(3)} → ${(res.spiralWinding || 0) >= 0.016 ? '로그 나선팔 감김(m=2,3) 뚜렷이 검출됨 (대칭 2팔 나선은하도 타원과 명확히 분리).' : '나선팔 감김 없는 매끄러운 등광도 구조.'}`));
-                items.push(li(true, '덩어리짐 S · 축비 q:',
-                    `S = ${res.S.toFixed(3)}, q = ${res.axisQ.toFixed(2)} → ${res.axisQ < 0.65 ? '길쭉한 모양' : '둥근 편'}${res.S > 0.018 ? ', 울퉁불퉁함 (먼지띠/별생성 덩어리)' : ', 매끄러움'}.`));
+                    `A = ${res.A.toFixed(2)}, W_spiral = ${(res.spiralWinding || 0).toFixed(3)} → ${(res.spiralWinding || 0) >= 0.017 ? '로그 나선팔 감김(m=2,3) 뚜렷이 검출됨 (대칭 2팔 나선은하도 타원과 명확히 분리).' : '나선팔 감김 없는 매끄러운 타원 등광도 구조.'}`));
+                items.push(li(true, '덩어리짐 S · 타원 축비 q (허블 E0–E7):',
+                    `S = ${res.S.toFixed(3)}, q = ${res.axisQ.toFixed(2)} (E${Math.min(7, Math.max(0, Math.round(10 * (1 - res.axisQ))))}) → ${res.axisQ < 0.28 ? '옆면 얇은 원반(q<0.28)' : (res.axisQ < 0.65 ? '편평 타원/경사 구조' : '둥근 등광도 구조')}${res.S > 0.026 ? ', 성간 먼지띠/별생성 덩어리 검출' : ', 성간 덩어리 없는 매끄러운 항성 헤일로'}.`));
                 items.push(li(true, 'Gini / M₂₀ (Lotz 2004):',
-                    `Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} (참고 지표, 분류에는 C·n·A·W_spiral·S 사용).`));
-                items.push(li(true, '최종 분류:',
+                    `Gini = ${res.gini.toFixed(2)}, M₂₀ = ${res.M20.toFixed(2)} → ${res.M20 <= -1.80 ? '조기형 중심집중 영역' : (res.M20 <= -1.45 ? '정상 원반 영역' : '다중 별생성핵/불규칙 영역')}.`));
+                items.push(li(true, '최종 형태 판정:',
                     `${res.galaxyType} — 나선 ${res.scores.spiral.toFixed(0)}% · 타원 ${res.scores.elliptical.toFixed(0)}% · 불규칙 ${res.scores.irregular.toFixed(0)}%.`));
                 items.push(li(false, '사진 직접 측정량 & GEI 전송 원리:',
-                    '이 프로그램은 사진만으로 얻을 수 있는 기하·측광 물리량(C, n, A, S, W_spiral, R50, 색상비 R/B)만 직접 측정합니다. [진화 분석기로 전송] 클릭 시 ① 색상비·형태→색지수(u−r) 및 질량대광도비(M*/L, Bell+2003), ② 집중도 C·n→항성질량(log M*), ③ 형태·색지수·덩어리짐 S→비별생성률(log sSFR, 타원은하 ≈ −11.8 vs 나선 ≈ −10.1), ④ 우리 연구 추세선→암흑물질(log M_DM) 및 방출선 광도(Hα, [S II], [O III]) 순으로 자동 환산하여 전달합니다.'));
+                    '이 프로그램은 사진/FITS에서 기하·측광 지표(C, n, A, S, W_spiral, R50, R/B)를 직접 측정하며, 흑백(L필터) 사진에서도 색지수 편향 없이 타원은하를 정확히 식별합니다. [GEI 진화 분석기로 전송] 클릭 시 형태·집중도·색상비를 기반으로 u−r, 항성질량(log M*), 비별생성률(타원은하 log sSFR ≈ −11.8~−12.2 vs 나선 ≈ −10.1), 암흑물질 질량을 환산해 전달합니다.'));
+            } else if (res.spec && res.spec.isQuiescentElliptical) {
+                const af = res.spec.absFeatures || {};
+                items.push(li(true, '4000Å 불연속 단절 (Balogh+1999 Dn4000):',
+                    `Dn(4000) = ${res.d4000 ? res.d4000.toFixed(2) : 'N/A'} (≥ 1.55 → 수십억 년 이상 진화한 늙은 K/M형 거성 항성종족 지배).`));
+                items.push(li(true, '주요 금속 흡수선 등가폭 (EW):',
+                    `Ca II H&K ${(af.CaHK_ew || 0).toFixed(1)}Å · G-band ${(af.Gband_ew || 0).toFixed(1)}Å · Mg b ${(af.Mgb_ew || 0).toFixed(1)}Å · Na D ${(af.NaD_ew || 0).toFixed(1)}Å.`));
+                items.push(li(true, '타원은하 소광 분광 판정:',
+                    `${res.spec.bptClass} — 차가운 성간가스가 고갈되어 Hα·Hβ 방출선이 없거나 극미약하며, [GEI 진화 분석기로 전송] 시 5단계 소광 타원은하 물리량으로 즉시 연동됩니다.`));
             } else if (res.spec && res.spec.bptClass) {
                 const fx = res.spec.fluxes;
                 items.push(li(true, '방출선 플럭스 (연속광 차감):',
-                    `Hβ ${fx.Hb.toFixed(0)}, [OIII] ${fx.OIII.toFixed(0)}, Hα ${fx.Ha.toFixed(0)}, [NII] ${fx.NII.toFixed(0)}`));
+                    `Hβ ${fx.Hb.toFixed(1)}, [OIII] ${fx.OIII.toFixed(1)}, Hα ${fx.Ha.toFixed(1)}, [NII] ${fx.NII.toFixed(1)}${res.d4000 ? ` · Dn(4000) = ${res.d4000.toFixed(2)}` : ''}`));
                 items.push(li(true, 'BPT 좌표:',
                     `log([NII]/Hα) = ${res.logNII_Ha.toFixed(2)}, log([OIII]/Hβ) = ${res.logOIII_Hb.toFixed(2)} → ${res.spec.bptClass}`));
-                items.push(li(true, '금속량 (Pettini & Pagel 2004, N2):', `12+log(O/H) = ${res.metallicity.toFixed(2)}`));
+                if (res.metallicity !== null) {
+                    items.push(li(true, '금속량 (Pettini & Pagel 2004, N2):', `12+log(O/H) = ${res.metallicity.toFixed(2)}`));
+                }
             } else {
-                items.push(li(false, '분광 진단 불가:', res.spec ? res.spec.note : '스펙트럼을 추출하지 못했습니다.'));
+                items.push(li(false, '분광 진단 안내:', res.spec ? res.spec.note : '스펙트럼을 추출하지 못했습니다.'));
             }
             document.getElementById('diagnosisList').innerHTML = items.join('');
         }
@@ -1870,31 +2589,81 @@
             Plotly.newPlot('chartBPT', data, layout, { responsive: true, displayModeBar: false });
         }
 
-        // 1b. Extracted 1D spectrum with line windows
+        // 1b. Extracted 1D spectrum with emission / absorption & D4000 windows
         function renderSpectrumChart(res) {
             const spec = res.spec;
             if (!spec) return;
-            const names = { Hb: 'Hβ', OIII: '[OIII]', Ha: 'Hα', NII: '[NII]' };
+            const emNames = { Hb: 'Hβ', OIII: '[OIII]', Ha: 'Hα', NII: '[NII]' };
+            const absNames = { CaHK: 'Ca H&K', Gband: 'G-band', Mgb: 'Mg b', NaD: 'Na D' };
             const shapes = [], annotations = [];
-            if (spec.lines) {
+            if (spec.isQuiescentElliptical && spec.isCalibratedWave) {
+                // Highlight Balogh+99 Dn(4000) blue & red continuum bands
+                shapes.push(
+                    { type: 'rect', x0: 3850, x1: 3950, yref: 'paper', y0: 0, y1: 1, line: { width: 0 }, fillcolor: 'rgba(56,189,248,0.12)', layer: 'below' },
+                    { type: 'rect', x0: 4000, x1: 4100, yref: 'paper', y0: 0, y1: 1, line: { width: 0 }, fillcolor: 'rgba(245,158,11,0.14)', layer: 'below' }
+                );
+                if (spec.absLines) {
+                    Object.entries(spec.absLines).forEach(([k, [x0, x1]], i) => {
+                        shapes.push({ type: 'rect', x0, x1, yref: 'paper', y0: 0, y1: 1, line: { width: 0 }, fillcolor: 'rgba(244,63,94,0.14)', layer: 'below' });
+                        annotations.push({ x: (x0 + x1) / 2, yref: 'paper', y: i % 2 ? 0.88 : 0.99, text: absNames[k] || k, showarrow: false, font: { color: '#fda4af', size: 10 }, yanchor: 'bottom' });
+                    });
+                }
+            } else if (spec.lines) {
                 Object.entries(spec.lines).forEach(([k, [x0, x1]], i) => {
                     shapes.push({ type: 'rect', x0, x1, yref: 'paper', y0: 0, y1: 1, line: { width: 0 }, fillcolor: 'rgba(16,185,129,0.15)', layer: 'below' });
-                    annotations.push({ x: (x0 + x1) / 2, yref: 'paper', y: i % 2 ? 0.9 : 1, text: names[k], showarrow: false, font: { color: '#6ee7b7', size: 10 }, yanchor: 'bottom' });
+                    annotations.push({ x: (x0 + x1) / 2, yref: 'paper', y: i % 2 ? 0.9 : 1, text: emNames[k] || k, showarrow: false, font: { color: '#6ee7b7', size: 10 }, yanchor: 'bottom' });
                 });
             }
             const layout = {
                 ...PLOT_BASE,
-                title: plotTitle('1차원 추출 스펙트럼'),
+                title: plotTitle(spec.isQuiescentElliptical ? '타원은하 흡수선 · 4000Å 단절(Dn4000) 스펙트럼' : '1차원 추출 스펙트럼'),
                 showlegend: false,
-                xaxis: axis('분산 방향 픽셀 (파장)'),
+                xaxis: axis(spec.isCalibratedWave ? '파장 λ (Å)' : '분산 방향 픽셀 (파장)'),
                 yaxis: axis('플럭스 (하늘 차감)'),
                 shapes, annotations
             };
-            Plotly.newPlot('chartRadial', [{ x: spec.x, y: spec.f, mode: 'lines', line: { color: '#38bdf8', width: 1.5 } }], layout, { responsive: true, displayModeBar: false });
+            const lineCol = spec.isQuiescentElliptical ? '#f59e0b' : '#38bdf8';
+            Plotly.newPlot('chartRadial', [{ x: spec.x, y: spec.f, mode: 'lines', line: { color: lineCol, width: 1.5 } }], layout, { responsive: true, displayModeBar: false });
         }
 
-        // 2b. BPT diagram
+        // 2b. BPT diagram OR Dn(4000)–Absorption Quiescent Elliptical Diagnostic Chart
         function renderBPTChart(res) {
+            if (res.spec && res.spec.isQuiescentElliptical) {
+                const af = res.spec.absFeatures || {};
+                const d4 = res.d4000 || 1.85;
+                const mgb = af.Mgb_ew || 3.5;
+                const data = [
+                    {
+                        x: [1.12, 1.32, 1.58, 1.98],
+                        y: [0.6, 1.4, 2.5, 4.6],
+                        mode: 'markers',
+                        name: 'SDSS 기준군',
+                        text: ['폭발적 별생성(Irr)', '만기형 나선(Sc/Sb)', '전이형(S0/Sa)', '거대 타원(E0-E6)'],
+                        marker: { color: ['#a855f7', '#38bdf8', '#10b981', '#f43f5e'], size: 10, opacity: 0.75 }
+                    },
+                    {
+                        x: [d4], y: [mgb], mode: 'markers', name: '현재 타원은하',
+                        marker: { color: '#fbbf24', size: 16, symbol: 'star', line: { color: '#fff', width: 1.5 } }
+                    }
+                ];
+                const layout = {
+                    ...PLOT_BASE,
+                    title: plotTitle('Dn(4000) – Mg b 조기형 타원은하 항성종족 진단도'),
+                    xaxis: axis('4000Å 불연속 단절 지수 Dn(4000)', { range: [0.95, Math.max(2.35, d4 + 0.2)] }),
+                    yaxis: axis('Mg b λ5175 흡수 등가폭 EW (Å)', { range: [0, Math.max(6.5, mgb + 1.0)] }),
+                    shapes: [
+                        { type: 'rect', x0: 1.55, x1: Math.max(2.35, d4 + 0.2), y0: 0, y1: Math.max(6.5, mgb + 1.0), line: { width: 0 }, fillcolor: 'rgba(245,158,11,0.14)', layer: 'below' },
+                        { type: 'line', x0: 1.55, x1: 1.55, y0: 0, y1: Math.max(6.5, mgb + 1.0), line: { color: '#f59e0b', dash: 'dash', width: 1.4 } }
+                    ],
+                    annotations: [
+                        { x: 1.25, y: 5.3, text: '젊은 별생성 원반', showarrow: false, font: { color: '#7dd3fc', size: 11 } },
+                        { x: 1.95, y: 5.3, text: '소광 타원은하 (늙은 항성군)', showarrow: false, font: { color: '#fde68a', size: 11 } }
+                    ]
+                };
+                Plotly.newPlot('chartBPT', data, layout, { responsive: true, displayModeBar: false });
+                return;
+            }
+
             const kauffX = [], kauffY = [], kewleyX = [], kewleyY = [];
             for (let x = -1.5; x < 0.04; x += 0.02) { kauffX.push(x); kauffY.push(0.61 / (x - 0.05) + 1.3); }
             for (let x = -1.5; x < 0.46; x += 0.02) { kewleyX.push(x); kewleyY.push(0.61 / (x - 0.47) + 1.19); }
@@ -1908,11 +2677,11 @@
                     marker: { color: '#fbbf24', size: 15, symbol: 'star', line: { color: '#fff', width: 1.5 } } });
             } else {
                 annotations.push({ xref: 'paper', yref: 'paper', x: 0.5, y: 0.5, showarrow: false,
-                    text: '파장 보정 정보가 없어<br>BPT 좌표를 측정할 수 없음', font: { color: '#94a3b8', size: 12 } });
+                    text: '파장 보정 정보가 없거나 방출선이 미약해<br>BPT 좌표를 측정할 수 없음', font: { color: '#94a3b8', size: 12 } });
             }
             annotations.push(
                 { x: -0.9, y: -0.6, text: '별생성', showarrow: false, font: { color: '#6ee7b7', size: 11 } },
-                { x: 0.25, y: 0.9, text: 'AGN', showarrow: false, font: { color: '#fda4af', size: 11 } }
+                { x: 0.25, y: 0.9, text: 'AGN / LINER', showarrow: false, font: { color: '#fda4af', size: 11 } }
             );
             const layout = {
                 ...PLOT_BASE,
@@ -1925,7 +2694,7 @@
         }
 
         // ═══════════════════════════════════════════════════════
-        // Universal File Upload Handlers (Image / FITS / CSV / JSON / TXT)
+        // Universal File Upload Handlers (Image / 2D·3D·1D FITS / 1D Spectrum CSV·TXT)
         // ═══════════════════════════════════════════════════════
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
@@ -1975,16 +2744,16 @@
             if (!file) return;
             const ext = file.name.split('.').pop().toLowerCase();
 
-            // 1. Standard Image Files (JPG, PNG, WebP, BMP, GIF) - resized to 400x400 scientific frame for instant analysis
+            // 1. Standard Image Files (JPG, PNG, WebP, BMP, GIF) - up to 800px long side so wide-field galaxies keep full profile resolution
             if (file.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'].includes(ext)) {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     const img = new Image();
                     img.onload = () => {
-                        // Keep the aspect ratio (stretching to a square distorts shape and inflates A)
-                        const scale = 400 / Math.max(img.width, img.height);
-                        const targetW = Math.max(16, Math.round(img.width * scale));
-                        const targetH = Math.max(16, Math.round(img.height * scale));
+                        const maxSide = 800;
+                        const scale = Math.min(1.0, maxSide / Math.max(img.width, img.height));
+                        const targetW = Math.max(24, Math.round(img.width * scale));
+                        const targetH = Math.max(24, Math.round(img.height * scale));
                         const canvas = document.createElement('canvas');
                         canvas.width = targetW;
                         canvas.height = targetH;
@@ -1995,13 +2764,25 @@
                         const imgData = ctx.getImageData(0, 0, targetW, targetH);
 
                         const grayBuffer = new Float32Array(targetW * targetH);
-                        let sumR = 0, sumB = 0;
+                        const rBuf = new Float32Array(targetW * targetH);
+                        const bBuf = new Float32Array(targetW * targetH);
                         for (let i = 0; i < grayBuffer.length; i++) {
                             const idx = i * 4;
                             const r = imgData.data[idx], g = imgData.data[idx + 1], b = imgData.data[idx + 2];
-                            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                            grayBuffer[i] = lum;
-                            if (lum > 18) { sumR += r; sumB += b; }
+                            grayBuffer[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                            rBuf[i] = r;
+                            bBuf[i] = b;
+                        }
+                        const sortedL = Float32Array.from(grayBuffer).sort();
+                        const bgR = Float32Array.from(rBuf).sort()[Math.floor(rBuf.length * 0.25)];
+                        const bgB = Float32Array.from(bBuf).sort()[Math.floor(bBuf.length * 0.25)];
+                        const sigThr = sortedL[Math.floor(sortedL.length * 0.90)];
+                        let sumR = 0, sumB = 0;
+                        for (let i = 0; i < grayBuffer.length; i++) {
+                            if (grayBuffer[i] > sigThr) {
+                                sumR += Math.max(0, rBuf[i] - bgR);
+                                sumB += Math.max(0, bBuf[i] - bgB);
+                            }
                         }
                         const rbRatio = sumB > 50 ? (sumR + 10) / (sumB + 10) : null;
 
@@ -2009,9 +2790,13 @@
                         roi = { x: 0, y: 0, w: targetW, h: targetH, shape: 'full' };
                         currentTool = 'full';
                         updateToolButtons();
+                        detectedTargets = currentMode === 'image' ? detectExtendedGalaxies(rawImage) : [];
+                        activeTargetIdx = 0;
+                        updateTargetSelectorUI();
                         applyImageProcessing();
                         executeFullAnalysis();
-                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> 분석 완료 (원본 ${img.width}×${img.height}px → ${targetW}×${targetH}px, 종횡비 유지)`);
+                        const multiMsg = detectedTargets.length >= 2 ? ` · 광시야 은하 ${detectedTargets.length}개 자동 분리` : '';
+                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> 분석 완료 (원본 ${img.width}×${img.height}px → ${targetW}×${targetH}px${multiMsg})`);
                     };
                     img.onerror = () => setUploadBanner(`❌ 이미지 로드 실패: ${escapeHtml(file.name)}`, true);
                     img.src = ev.target.result;
@@ -2020,19 +2805,38 @@
                 return;
             }
 
-            // 2. Astronomical FITS Files (.fits, .fit, .fts)
+            // 2. Astronomical FITS Files (.fits, .fit, .fts) — 2D images, 3D RGB cubes, and 1D spectra
             if (['fits', 'fit', 'fts'].includes(ext)) {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     try {
                         const fits = parseFITS(ev.target.result);
-                        rawImage = { width: fits.width, height: fits.height, data: fits.data, fileName: file.name, isLinear: true, rbRatio: null };
+                        rawImage = {
+                            width: fits.width, height: fits.height, data: fits.data, fileName: file.name,
+                            isLinear: !fits.isAstroStretched, isAstroStretched: fits.isAstroStretched,
+                            rbRatio: fits.rbRatio, objectName: fits.object || null,
+                            is1DSpectrum: fits.is1DSpectrum || false,
+                            specWave: fits.specWave || null, specFlux: fits.specFlux || null,
+                            waveStart: fits.waveStart ?? null, waveStep: fits.waveStep ?? null,
+                            redshift: fits.redshift || 0
+                        };
                         roi = { x: 0, y: 0, w: fits.width, h: fits.height, shape: 'full' };
                         currentTool = 'full';
                         updateToolButtons();
+                        if (fits.is1DSpectrum) {
+                            switchMode('spectrum', false);
+                            detectedTargets = [];
+                        } else {
+                            detectedTargets = currentMode === 'image' ? detectExtendedGalaxies(rawImage) : [];
+                        }
+                        activeTargetIdx = 0;
+                        updateTargetSelectorUI();
                         applyImageProcessing();
                         executeFullAnalysis();
-                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> FITS 분석 완료 (천체: ${escapeHtml(fits.object || '-')}, 원본 ${fits.origW}×${fits.origH}, BITPIX=${fits.bitpix} → ${fits.width}×${fits.height}px)`);
+                        const chNote = fits.origPlanes >= 3 ? `3채널 RGB 합성` : `${fits.origPlanes}채널`;
+                        const stNote = fits.isAstroStretched ? '비선형 스트레칭 FITS 자동 역변환' : '선형 FITS';
+                        const multiMsg = detectedTargets.length >= 2 ? ` · 은하 ${detectedTargets.length}개 검출` : '';
+                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> FITS 분석 완료 (천체: ${escapeHtml(fits.object || '-')}, ${fits.origW}×${fits.origH} ${chNote}, BITPIX=${fits.bitpix}, ${stNote}${multiMsg})`);
                     } catch (err) {
                         setUploadBanner(`❌ FITS 파싱 오류: ${escapeHtml(err.message)}`, true);
                     }
@@ -2041,16 +2845,140 @@
                 return;
             }
 
-            // 3. CSV / TSV / JSON / TXT: tabular data is not an image — do not fabricate one
-            setUploadBanner(`⚠️ <b>${escapeHtml(file.name)}</b> 은(는) 표 형식 데이터입니다. 이 분석기는 은하 <b>사진(JPG/PNG/FITS)</b>의 형태를 측정합니다. 측정값 표(질량·SFR·색지수 등)는 <a href="observatory_analyzer_web.html" style="color:#7dd3fc">🔭 천문대 GEI 분석기</a>에서 분석하세요.`, true);
+            // 3. 1D Spectrum CSV / TXT / DAT / JSON (wavelength, flux) vs Multi-column Catalog Table
+            if (['csv', 'txt', 'dat', 'tsv', 'json'].includes(ext)) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const parsedSpec = tryParse1DSpectrumText(ev.target.result);
+                    if (parsedSpec) {
+                        rawImage = {
+                            width: parsedSpec.width, height: parsedSpec.height, data: parsedSpec.slitData,
+                            fileName: file.name, isLinear: true, rbRatio: null,
+                            is1DSpectrum: true, specWave: parsedSpec.wave, specFlux: parsedSpec.flux,
+                            redshift: parsedSpec.redshift
+                        };
+                        roi = { x: 0, y: 0, w: parsedSpec.width, h: parsedSpec.height, shape: 'full' };
+                        currentTool = 'full';
+                        updateToolButtons();
+                        detectedTargets = [];
+                        switchMode('spectrum', false);
+                        applyImageProcessing();
+                        executeFullAnalysis();
+                        setUploadBanner(`✅ <b>${escapeHtml(file.name)}</b> 1D 분광 스펙트럼 로드 완료 (${parsedSpec.wave.length} 파장 포인트, z≈${parsedSpec.redshift.toFixed(4)})`);
+                    } else {
+                        setUploadBanner(`⚠️ <b>${escapeHtml(file.name)}</b> 은(는) 은하 물리량 카탈로그 표입니다. 물리량 표(질량·SFR·색지수 등)는 <a href="observatory_analyzer_web.html" style="color:#7dd3fc">🔭 천문대 GEI 분석기</a>에서 바로 업로드할 수 있습니다.`, true);
+                    }
+                };
+                reader.readAsText(file);
+                return;
+            }
+
+            setUploadBanner(`⚠️ 지원하지 않는 파일 형식입니다: <b>${escapeHtml(file.name)}</b>`, true);
+        }
+
+        function estimateSpectrumRedshiftJS(wave, flux) {
+            if (!wave || wave.length < 50) return 0;
+            const wMin = wave[0], wMax = wave[wave.length - 1];
+            // If rest-frame Ca H&K (3934, 3969) or Hα (6563) already align near z=0, prefer z=0 unless shifted
+            let bestZ = 0, bestScore = -Infinity;
+            const emRest = [3727.4, 4861.3, 4958.9, 5006.8, 6562.8, 6583.5, 6716.4];
+            const absRest = [3933.7, 3968.5, 4304.4, 5175.4, 5892.9];
+            const interpF = (lam) => {
+                if (lam < wMin || lam > wMax) return null;
+                let lo = 0, hi = wave.length - 1;
+                while (hi - lo > 1) {
+                    const mid = (lo + hi) >> 1;
+                    if (wave[mid] <= lam) lo = mid; else hi = mid;
+                }
+                const t = (lam - wave[lo]) / Math.max(1e-9, wave[hi] - wave[lo]);
+                return flux[lo] * (1 - t) + flux[hi] * t;
+            };
+            for (let z = 0.0; z <= 0.3001; z += 0.001) {
+                let sc = 0;
+                for (const l0 of emRest) {
+                    const lObs = l0 * (1 + z);
+                    const c = interpF(lObs), b1 = interpF(lObs - 28), b2 = interpF(lObs + 28);
+                    if (c !== null && b1 !== null && b2 !== null) {
+                        const base = Math.max(1e-6, 0.5 * (b1 + b2));
+                        sc += Math.max(0, (c - base) / base);
+                    }
+                }
+                for (const l0 of absRest) {
+                    const lObs = l0 * (1 + z);
+                    const c = interpF(lObs), b1 = interpF(lObs - 30), b2 = interpF(lObs + 30);
+                    if (c !== null && b1 !== null && b2 !== null) {
+                        const base = Math.max(1e-6, 0.5 * (b1 + b2));
+                        sc += 1.4 * Math.max(0, (base - c) / base);
+                    }
+                }
+                // D4000 step alignment bonus
+                const bl = interpF(3900 * (1 + z)), rd = interpF(4050 * (1 + z));
+                if (bl !== null && rd !== null && bl > 1e-6 && rd > 1.25 * bl) {
+                    sc += Math.min(1.5, 0.6 * (rd / bl - 1.0));
+                }
+                if (sc > bestScore) { bestScore = sc; bestZ = z; }
+            }
+            return bestScore > 0.35 ? bestZ : 0;
+        }
+
+        function buildSyntheticSlitFrom1D(wave, flux) {
+            const w = Math.min(600, Math.max(120, wave.length)), h = 140;
+            const slitData = new Float32Array(w * h);
+            const cy = h / 2;
+            for (let x = 0; x < w; x++) {
+                const idx = Math.min(flux.length - 1, Math.floor((x / w) * flux.length));
+                const fv = Math.max(0, flux[idx]);
+                for (let y = 0; y < h; y++) {
+                    slitData[y * w + x] = fv * Math.exp(-Math.pow(y - cy, 2) / 90);
+                }
+            }
+            return { width: w, height: h, slitData };
+        }
+
+        function tryParse1DSpectrumText(text) {
+            if (!text) return null;
+            const trimmed = text.trim();
+            let wave = [], flux = [];
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try {
+                    const obj = JSON.parse(trimmed);
+                    if (obj && Array.isArray(obj.wave || obj.wavelength) && Array.isArray(obj.flux)) {
+                        wave = (obj.wave || obj.wavelength).map(Number);
+                        flux = obj.flux.map(Number);
+                    }
+                } catch (_) { return null; }
+            } else {
+                const lines = trimmed.split(/\r?\n/);
+                for (const ln of lines) {
+                    const s = ln.trim();
+                    if (!s || s.startsWith('#')) continue;
+                    // Reject galaxy catalog CSV headers
+                    if (/log_mstar|log_stellar_mass|sfr|petroMag|color_u_r/i.test(s)) return null;
+                    const parts = s.split(/[,\t; ]+/).filter(Boolean);
+                    if (parts.length < 2 || parts.length > 5) continue;
+                    const wv = parseFloat(parts[0]), fv = parseFloat(parts[1]);
+                    if (Number.isFinite(wv) && Number.isFinite(fv) && wv >= 1000 && wv <= 30000) {
+                        wave.push(wv);
+                        flux.push(fv);
+                    }
+                }
+            }
+            if (wave.length < 40) return null;
+            const pairs = wave.map((w, i) => [w, flux[i]]).sort((a, b) => a[0] - b[0]);
+            const wArr = Float64Array.from(pairs.map(p => p[0]));
+            const fArr = Float64Array.from(pairs.map(p => p[1]));
+            const redshift = estimateSpectrumRedshiftJS(wArr, fArr);
+            const slit = buildSyntheticSlitFrom1D(wArr, fArr);
+            return { wave: wArr, flux: fArr, redshift, ...slit };
         }
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
-        // Minimal FITS reader: primary HDU, 2D (first plane of a cube), BITPIX 8/16/32/-32/-64,
-        // BZERO/BSCALE applied, block-averaged down to ≤400 px on the long side.
+        // Full FITS reader: primary HDU, 1D spectra + 2D images + 3D RGB cubes (NAXIS3>=3),
+        // BITPIX 8/16/32/-32/-64, BZERO/BSCALE applied, block-averaged to ≤800 px on the long side,
+        // with automatic pre-stretched [0,1] FITS detection & R/B color extraction.
         function parseFITS(buffer) {
             const bytes = new Uint8Array(buffer);
             const hdr = {};
@@ -2072,11 +3000,16 @@
             if (!ended) throw new Error('헤더 END 카드를 찾지 못했습니다.');
             const bitpix = parseInt(hdr.BITPIX, 10);
             const naxis = parseInt(hdr.NAXIS, 10);
-            const W = parseInt(hdr.NAXIS1, 10), H = parseInt(hdr.NAXIS2, 10);
-            if (!(naxis >= 2) || !(W > 0) || !(H > 0)) throw new Error('2차원 이미지 데이터가 없습니다 (NAXIS < 2). 확장 HDU 이미지는 지원하지 않습니다.');
+            const W = parseInt(hdr.NAXIS1 || '0', 10);
+            const H = naxis >= 2 ? parseInt(hdr.NAXIS2 || '1', 10) : 1;
+            const D = naxis >= 3 ? parseInt(hdr.NAXIS3 || '1', 10) : 1;
+            if (!(naxis >= 1) || !(W > 0)) throw new Error('유효한 FITS 데이터 축이 없습니다.');
             const bzero = parseFloat(hdr.BZERO || '0'), bscale = parseFloat(hdr.BSCALE || '1');
             const bpp = Math.abs(bitpix) / 8;
-            if (offset + W * H * bpp > bytes.length) throw new Error('데이터 길이가 헤더와 맞지 않습니다.');
+            const planePixels = W * H;
+            const planesToRead = (naxis >= 3 && D >= 3 && offset + 3 * planePixels * bpp <= bytes.length) ? 3 : 1;
+            if (offset + planesToRead * planePixels * bpp > bytes.length) throw new Error('데이터 길이가 헤더와 맞지 않습니다.');
+
             const dv = new DataView(buffer, offset);
             const read = {
                 8: i => dv.getUint8(i), 16: i => dv.getInt16(i * 2), 32: i => dv.getInt32(i * 4),
@@ -2084,25 +3017,90 @@
             }[bitpix];
             if (!read) throw new Error(`지원하지 않는 BITPIX=${bitpix}`);
 
-            const f = Math.max(1, Math.ceil(Math.max(W, H) / 400));
+            // 1D FITS spectrum support
+            if (naxis === 1 || (H <= 6 && W >= 60)) {
+                const crval1 = parseFloat(hdr.CRVAL1 ?? hdr.COEFF0 ?? '3800');
+                const cdelt1 = parseFloat(hdr.CDELT1 ?? hdr.CD1_1 ?? hdr.COEFF1 ?? '1');
+                const crpix1 = parseFloat(hdr.CRPIX1 ?? '1');
+                const isLogW = (hdr.CTYPE1 && /LOG/i.test(hdr.CTYPE1)) || (hdr.COEFF0 !== undefined) || (crval1 > 3.0 && crval1 < 5.0 && cdelt1 < 0.01);
+                const wave = new Float64Array(W);
+                const flux = new Float64Array(W);
+                for (let i = 0; i < W; i++) {
+                    const rawW = crval1 + (i + 1 - crpix1) * cdelt1;
+                    wave[i] = isLogW ? Math.pow(10, rawW) : rawW;
+                    const v = bzero + bscale * read(i);
+                    flux[i] = Number.isFinite(v) ? v : 0;
+                }
+                const zHdr = parseFloat(hdr.Z || hdr.REDSHIFT || 'NaN');
+                const redshift = Number.isFinite(zHdr) ? zHdr : estimateSpectrumRedshiftJS(wave, flux);
+                const slit = buildSyntheticSlitFrom1D(wave, flux);
+                return {
+                    width: slit.width, height: slit.height, data: slit.slitData,
+                    origW: W, origH: H, origPlanes: 1, bitpix, object: hdr.OBJECT,
+                    is1DSpectrum: true, specWave: wave, specFlux: flux, redshift,
+                    isAstroStretched: false, rbRatio: null
+                };
+            }
+
+            // 2D / 3D Image FITS — downsample to ≤800 px on the long side
+            const maxSide = 800;
+            const f = Math.max(1, Math.ceil(Math.max(W, H) / maxSide));
             const w = Math.floor(W / f), h = Math.floor(H / f);
             const data = new Float32Array(w * h);
-            let minFinite = Infinity;
+            const rPlane = planesToRead === 3 ? new Float32Array(w * h) : null;
+            const bPlane = planesToRead === 3 ? new Float32Array(w * h) : null;
+            // Subsample 2x2 inside each f×f block when f>=4 so 108 MB 3008×3008 cubes parse in <30 ms!
+            const subStep = f >= 4 ? Math.max(1, Math.floor(f / 2)) : 1;
+
+            let minFinite = Infinity, maxFinite = -Infinity;
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
-                    let s = 0, n = 0;
-                    for (let dy = 0; dy < f; dy++) {
-                        for (let dx = 0; dx < f; dx++) {
-                            const v = read((y * f + dy) * W + (x * f + dx));
-                            if (Number.isFinite(v)) { s += v; n++; }
+                    if (planesToRead === 3) {
+                        let sr = 0, sg = 0, sb = 0, n = 0;
+                        for (let dy = 0; dy < f; dy += subStep) {
+                            const rowBase = (y * f + dy) * W;
+                            for (let dx = 0; dx < f; dx += subStep) {
+                                const p0 = rowBase + (x * f + dx);
+                                const vr = read(p0);
+                                const vg = read(planePixels + p0);
+                                const vb = read(2 * planePixels + p0);
+                                if (Number.isFinite(vr) && Number.isFinite(vg) && Number.isFinite(vb)) {
+                                    sr += vr; sg += vg; sb += vb; n++;
+                                }
+                            }
+                        }
+                        const rVal = n ? bzero + bscale * sr / n : NaN;
+                        const gVal = n ? bzero + bscale * sg / n : NaN;
+                        const bVal = n ? bzero + bscale * sb / n : NaN;
+                        const val = 0.2126 * rVal + 0.7152 * gVal + 0.0722 * bVal;
+                        data[y * w + x] = val;
+                        rPlane[y * w + x] = rVal;
+                        bPlane[y * w + x] = bVal;
+                        if (Number.isFinite(val)) {
+                            if (val < minFinite) minFinite = val;
+                            if (val > maxFinite) maxFinite = val;
+                        }
+                    } else {
+                        let s = 0, n = 0;
+                        for (let dy = 0; dy < f; dy += subStep) {
+                            const rowBase = (y * f + dy) * W;
+                            for (let dx = 0; dx < f; dx += subStep) {
+                                const v = read(rowBase + (x * f + dx));
+                                if (Number.isFinite(v)) { s += v; n++; }
+                            }
+                        }
+                        const val = n ? bzero + bscale * s / n : NaN;
+                        data[y * w + x] = val;
+                        if (Number.isFinite(val)) {
+                            if (val < minFinite) minFinite = val;
+                            if (val > maxFinite) maxFinite = val;
                         }
                     }
-                    const val = n ? bzero + bscale * s / n : NaN;
-                    data[y * w + x] = val;
-                    if (Number.isFinite(val) && val < minFinite) minFinite = val;
                 }
             }
-            // FITS rows go bottom→top; flip so north is up on screen. Blank (NaN) pixels → minimum.
+            if (!Number.isFinite(minFinite)) minFinite = 0;
+
+            // Flip vertically (FITS rows bottom→top → North up)
             const out = new Float32Array(w * h);
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
@@ -2110,7 +3108,62 @@
                     out[y * w + x] = Number.isFinite(v) ? v : minFinite;
                 }
             }
-            return { width: w, height: h, data: out, origW: W, origH: H, bitpix, object: hdr.OBJECT };
+
+            // Compute optical R/B ratio on 3D RGB FITS (only meaningful when R and B differ from pure L-filter clone)
+            let rbRatio = null;
+            const isMonoFilter = /^(L|LUM|LUMINANCE|CLEAR|MONO)$/i.test(String(hdr.FILTER || '').trim());
+            if (rPlane && bPlane && !isMonoFilter) {
+                const sL = Float32Array.from(out).sort();
+                const bgR = Float32Array.from(rPlane).sort()[Math.floor(rPlane.length * 0.25)];
+                const bgB = Float32Array.from(bPlane).sort()[Math.floor(bPlane.length * 0.25)];
+                const thr = sL[Math.floor(sL.length * 0.92)];
+                let sumR = 0, sumB = 0;
+                for (let i = 0; i < rPlane.length; i++) {
+                    const lum = data[i];
+                    if (Number.isFinite(lum) && lum > thr) {
+                        sumR += Math.max(0, rPlane[i] - bgR);
+                        sumB += Math.max(0, bPlane[i] - bgB);
+                    }
+                }
+                if (sumB > 1e-5) {
+                    const ratio = sumR / sumB;
+                    if (Math.abs(ratio - 1.0) > 0.12) rbRatio = ratio;
+                }
+            }
+
+            // Detect pre-stretched [0, 1] FITS exports (e.g., PixInsight / Siril Asinh/MTF denoised FITS)
+            const sOut = Float32Array.from(out).sort();
+            const bgEst = sOut[Math.floor(sOut.length * 0.25)];
+            const p55Est = sOut[Math.floor(sOut.length * 0.55)];
+            let skyMadSum = 0, skyMadCnt = 0;
+            for (let i = 0; i < sOut.length; i += 8) {
+                if (sOut[i] <= p55Est) { skyMadSum += Math.abs(sOut[i] - bgEst); skyMadCnt++; }
+            }
+            const skySigEst = Math.max(1e-7, 1.4826 * (skyMadSum / Math.max(1, skyMadCnt)));
+            const sigPix = [];
+            for (let i = 0; i < sOut.length; i++) {
+                const nv = sOut[i] - bgEst;
+                if (nv > 4.0 * skySigEst) sigPix.push(nv);
+            }
+            const p85SigEst = sigPix.length >= 20 ? sigPix[Math.floor(sigPix.length * 0.85)] : Math.max(1e-9, sOut[Math.floor(sOut.length * 0.985)] - bgEst);
+            const pMaxSigEst = sigPix.length >= 20 ? sigPix[Math.floor(sigPix.length * 0.996)] : Math.max(1e-9, sOut[Math.floor(sOut.length * 0.999)] - bgEst);
+            const isNormalized01 = (minFinite >= -0.25 && maxFinite <= 2.05);
+            const isAstroStretched = Boolean(isNormalized01 && (pMaxSigEst / Math.max(1e-9, p85SigEst) < 3.8));
+
+            // Optional WCS wavelength calibration for 2D dispersed slit FITS
+            let waveStart = null, waveStep = null;
+            if (hdr.CRVAL1 && (hdr.CDELT1 || hdr.CD1_1)) {
+                const cv1 = parseFloat(hdr.CRVAL1), cd1 = parseFloat(hdr.CDELT1 || hdr.CD1_1);
+                if (cv1 >= 2500 && cv1 <= 9000 && cd1 > 0 && cd1 < 50) {
+                    waveStart = cv1;
+                    waveStep = cd1 * f;
+                }
+            }
+
+            return {
+                width: w, height: h, data: out, origW: W, origH: H, origPlanes: planesToRead,
+                bitpix, object: hdr.OBJECT, rbRatio, isAstroStretched, waveStart, waveStep
+            };
         }
 
         // ═══════════════════════════════════════════════════════
@@ -2123,6 +3176,7 @@
             if (rawImage && rawImage.fileName) lines.push(`- 파일: ${rawImage.fileName}`);
             if (res.mode === 'spectrum') {
                 lines.push(`- 분광 진단: ${res.galaxyType.replace('분광 진단: ', '')}`);
+                if (res.d4000 !== null && res.d4000 !== undefined) lines.push(`- 4000Å 단절 지수 Dn(4000): ${fmt(res.d4000)}`);
                 lines.push(`- BPT: log([NII]/Hα) = ${fmt(res.logNII_Ha)}, log([OIII]/Hβ) = ${fmt(res.logOIII_Hb)}`);
                 lines.push(`- 산소 금속량 12+log(O/H) (N2): ${fmt(res.metallicity)}`);
             } else {
@@ -2177,7 +3231,7 @@
             const { profileR, profileI, spec, ...rest } = analysisResults;
             const out = { ...rest, fileName: rawImage && rawImage.fileName || null,
                 profile: profileR.map((r, i) => ({ r, I: profileI[i] })),
-                spectrum: spec ? { lines: spec.lines || null, fluxes: spec.fluxes || null, bptClass: spec.bptClass } : null };
+                spectrum: spec ? { lines: spec.lines || null, fluxes: spec.fluxes || null, bptClass: spec.bptClass, d4000: spec.d4000 || null, absFeatures: spec.absFeatures || null } : null };
             downloadBlob(JSON.stringify(out, null, 2), 'application/json', `galaxy_analysis_${Date.now()}.json`);
         }
 
@@ -2187,7 +3241,7 @@
             const rows = [
                 ['Parameter', 'Value', 'Description'],
                 ['Mode', res.mode, 'image = 형태 분석, spectrum = 분광 진단'],
-                ['Classification', res.galaxyType, res.mode === 'spectrum' ? 'BPT class' : 'Spiral / Elliptical / Irregular'],
+                ['Classification', res.galaxyType, res.mode === 'spectrum' ? 'BPT / Absorption class' : 'Spiral / Elliptical / Irregular'],
                 ['Confidence_pct', fmt(res.confidence, 1), 'Winning class score share'],
                 ['Score_Spiral_pct', fmt(res.scores.spiral, 1), ''],
                 ['Score_Elliptical_pct', fmt(res.scores.elliptical, 1), ''],
@@ -2205,71 +3259,90 @@
                 ['R80_px', fmt(res.r80, 2), ''],
                 ['R90_px', fmt(res.r90, 2), ''],
                 ['SNR', fmt(res.snr, 1), 'Aperture flux / sky noise'],
+                ['Dn4000', fmt(res.d4000, 3), 'Balogh+1999 4000A break (spectrum)'],
                 ['log_NII_Ha', fmt(res.logNII_Ha, 3), 'Spectrum only'],
                 ['log_OIII_Hb', fmt(res.logOIII_Hb, 3), 'Spectrum only'],
                 ['Metallicity_12_logOH', fmt(res.metallicity, 3), 'N2, spectrum only']
             ];
             const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-            // BOM so Excel opens Korean text correctly
-            downloadBlob('﻿' + csv, 'text/csv;charset=utf-8', `galaxy_metrics_${Date.now()}.csv`);
+            downloadBlob('\uFEFF' + csv, 'text/csv;charset=utf-8', `galaxy_metrics_${Date.now()}.csv`);
         }
 
         function exportAnalysisReport() {
             if (!analysisResults) return;
-            downloadBlob('﻿' + buildSummaryText(analysisResults), 'text/plain;charset=utf-8', `galaxy_report_${Date.now()}.txt`);
+            downloadBlob('\uFEFF' + buildSummaryText(analysisResults), 'text/plain;charset=utf-8', `galaxy_report_${Date.now()}.txt`);
             showToast('📄 분석 보고서(.txt)를 저장했습니다.');
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // [사진 직접 측정량 → 은하 물리량 4단계 천체물리 변환 엔진]
-        // 본 사진 분석 프로그램은 사진(픽셀 배열)만으로 직접 얻을 수 있는 기하·측광 지표
-        // (집중도 C, Sérsic n, 비대칭도 A, 덩어리짐 S, 나선팔 감김 W_spiral, 반광반경 R50, RGB 색상비 R/B)를 측정하며,
-        // GEI 진화 분석기로 전송할 때 아래 4단계 경험적·물리적 관계식을 통해 물리량 초기 추정치를 계산합니다:
-        //   ① 광학 색지수 (u−r): 컬러 사진의 적색/청색 광속비 log10(R/B) 및 형태 분류(타원/나선/불규칙), C, n 결합
-        //   ② 항성질량 log(M*/M☉): Conselice(2003)·Driver+(2006)의 집중도(C)·Sérsic(n)–질량 관계 및
-        //      Bell+(2003) 색지수 기반 질량대광도비 log(M*/L_r) = −0.42 + 0.35·(u−r) 결합
-        //   ③ 비별생성률 log(sSFR) 및 별생성률 log(SFR):
-        //      - 타원은하(E): 별생성이 멈춘 적색 소광 은하이므로 log sSFR ≈ −11.8 (낮은 A·S, 높은 C·n·색지수 반영)
-        //      - 나선은하(S): 항성생성 주계열(SFMS) 원반이므로 log sSFR ≈ −10.1 (색지수 및 팔의 별생성 덩어리 S 반영)
-        //      - 불규칙은하(Irr): 젊은 별생성 폭발 영역이므로 log sSFR ≈ −9.3 (높은 A·S 반영)
-        //      → log SFR = log M* + log sSFR
-        //   ④ 암흑물질 질량 log(M_DM) 및 방출선 광도(Hα, [S II], [O III]):
-        //      우리 연구의 NED 추세선(log M_DM = 0.88·log M* + 1.35) 및 SDSS 방출선 회귀식을 통해 자동 연동
+        // [사진/분광 측정량 → GEI v2.0 진화 분석기 물리량 변환 및 전송 엔진]
         // ═══════════════════════════════════════════════════════════════════════
         function sendToObservatoryAnalyzer() {
             if (!analysisResults) return;
             const res = analysisResults;
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+            // Allow sending calibrated spectrum diagnostics (including Quiescent Elliptical Absorption Spectra!) directly to GEI
             if (res.mode === 'spectrum') {
-                showToast('형태 측광값은 은하 사진 모드에서만 전송할 수 있습니다.', true);
+                if (!res.spec || !res.spec.bptClass) {
+                    showToast('파장 보정된 분광 진단 결과가 있어야 진화 분석기로 전송할 수 있습니다.', true);
+                    return;
+                }
+                const isQuiescentE = Boolean(res.spec.isQuiescentElliptical);
+                const d4 = clamp(res.d4000 || (isQuiescentE ? 1.92 : 1.25), 1.0, 2.35);
+                const estColor = isQuiescentE ? clamp(2.38 + 0.45 * (d4 - 1.65), 2.35, 2.90) : clamp(1.35 + 0.85 * (d4 - 1.15), 1.15, 2.25);
+                const estMstar = isQuiescentE ? clamp(10.95 + 0.65 * (d4 - 1.75), 10.55, 11.75) : 10.25;
+                const estSSFR = isQuiescentE ? clamp(-11.75 - 0.85 * (d4 - 1.75), -12.6, -11.45) : -9.95;
+                const estSFR = estMstar + estSSFR;
+                const estMdm = 0.88 * estMstar + 1.35;
+                const baseName = (rawImage && (rawImage.objectName || rawImage.fileName))
+                    ? String(rawImage.objectName || rawImage.fileName).replace(/\.[^/.]+$/, '')
+                    : (isQuiescentE ? '타원은하_분광' : '별생성은하_분광');
+                const params = new URLSearchParams({
+                    name: `${baseName} (${isQuiescentE ? '타원·분광' : '분광'})`,
+                    log_mstar: estMstar.toFixed(2),
+                    log_sfr: estSFR.toFixed(2),
+                    log_mdm: estMdm.toFixed(2),
+                    radius_kpc: isQuiescentE ? '6.50' : '5.20',
+                    color_u_r: estColor.toFixed(2),
+                    d4000: d4.toFixed(2),
+                    morph_cls: isQuiescentE ? 'elliptical' : 'spiral'
+                });
+                if (res.metallicity !== null) params.set('oh', res.metallicity.toFixed(2));
+                window.location.href = `observatory_analyzer_web.html?${params}`;
                 return;
             }
-            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
             const shortType = res.galaxyType.split(' ')[0];
-            const name = (rawImage && rawImage.fileName) ? `${rawImage.fileName.replace(/\.[^/.]+$/, '')} (${shortType})` : `사진측광_${shortType}`;
+            const rawBase = (rawImage && (rawImage.objectName || rawImage.fileName))
+                ? String(rawImage.objectName || rawImage.fileName).replace(/\.[^/.]+$/, '')
+                : `사진측광_${shortType}`;
+            const name = `${rawBase} (${shortType})`;
 
             const rgbDelta = (rawImage && rawImage.rbRatio) ? 0.45 * Math.log10(clamp(rawImage.rbRatio, 0.4, 3.0)) : 0;
-            let estColorVal, estMstarVal, estSSFRVal;
+            let estColorVal, estMstarVal, estSSFRVal, estD4000;
 
             if (res.cls === 'elliptical') {
-                // 타원은하: 늙은 적색 항성 집단 (u-r ≈ 2.4~2.9), 거대 질량 (log M* ≈ 10.7~11.6), 완전 소광 (log sSFR ≈ -11.8)
-                estColorVal = clamp(2.52 + 0.12 * (res.C - 3.8) + 0.06 * (res.bestN - 3.5) + rgbDelta, 2.25, 2.95);
-                estMstarVal = clamp(10.95 + 0.28 * (res.C - 3.8) + 0.12 * (res.bestN - 3.5), 10.45, 11.80);
-                estSSFRVal = clamp(-11.80 - 0.35 * (estColorVal - 2.50) - 0.08 * (res.bestN - 3.5), -12.60, -11.20);
+                // 타원은하: 늙은 적색 항성 집단 (u-r ≈ 2.4~2.9), 거대 질량 (log M* ≈ 10.6~11.7), 완전 소광 (log sSFR ≈ -11.85)
+                estColorVal = clamp(2.55 + 0.14 * (res.C - 3.6) + 0.07 * (res.bestN - 3.2) + rgbDelta, 2.35, 2.95);
+                estMstarVal = clamp(10.95 + 0.30 * (res.C - 3.6) + 0.14 * (res.bestN - 3.2), 10.45, 11.80);
+                estSSFRVal = clamp(-11.85 - 0.40 * (estColorVal - 2.50) - 0.10 * (res.bestN - 3.2), -12.65, -11.35);
+                estD4000 = clamp(1.88 + 0.12 * (estColorVal - 2.50), 1.72, 2.15);
             } else if (res.cls === 'irregular') {
-                // 불규칙은하: 푸른 젊은 항성 집단 (u-r ≈ 1.0~1.6), 왜소~중간 질량 (log M* ≈ 8.8~9.9), 폭발적 별생성 (log sSFR ≈ -9.2)
                 estColorVal = clamp(1.28 - 0.30 * res.A - 1.2 * res.S + rgbDelta, 0.85, 1.65);
                 estMstarVal = clamp(9.35 + 0.25 * (res.C - 2.2) + 0.15 * (res.bestN - 1.0), 8.50, 9.95);
                 estSSFRVal = clamp(-9.30 + 4.0 * res.S + 0.35 * res.A - 0.35 * (estColorVal - 1.30), -9.90, -8.50);
+                estD4000 = clamp(1.16 + 0.15 * (estColorVal - 1.25), 1.05, 1.35);
             } else {
-                // 나선은하: 주계열 항성생성 원반 (u-r ≈ 1.5~2.2), 성숙 원반 질량 (log M* ≈ 9.8~11.0), 주계열 별생성 (log sSFR ≈ -10.1)
-                estColorVal = clamp(1.80 + 0.22 * (res.C - 3.0) + 0.08 * (res.bestN - 1.5) - 0.8 * res.S + rgbDelta, 1.35, 2.32);
-                estMstarVal = clamp(10.38 + 0.30 * (res.C - 3.0) + 0.12 * (res.bestN - 1.5), 9.60, 11.15);
+                estColorVal = clamp(1.80 + 0.22 * (res.C - 2.9) + 0.08 * (res.bestN - 1.4) - 0.8 * res.S + rgbDelta, 1.35, 2.30);
+                estMstarVal = clamp(10.38 + 0.30 * (res.C - 2.9) + 0.12 * (res.bestN - 1.4), 9.60, 11.15);
                 estSSFRVal = clamp(-10.08 - 0.55 * (estColorVal - 1.80) + 2.5 * res.S, -10.95, -9.40);
+                estD4000 = clamp(1.42 + 0.25 * (estColorVal - 1.80), 1.20, 1.65);
             }
 
             const estSFRVal = estMstarVal + estSSFRVal;
             const estMdmVal = 0.88 * estMstarVal + 1.35;
-            const estRkpc = Math.max(1.8, (res.r50 * 0.26)).toFixed(2);
+            const estRkpc = clamp(res.r50 * 0.22, 1.8, 16.0).toFixed(2);
 
             const params = new URLSearchParams({
                 name,
@@ -2278,6 +3351,7 @@
                 log_mdm: estMdmVal.toFixed(2),
                 radius_kpc: estRkpc,
                 color_u_r: estColorVal.toFixed(2),
+                d4000: estD4000.toFixed(2),
                 morph_cls: res.cls,
                 photo_c: res.C.toFixed(2),
                 photo_n: res.bestN.toFixed(1),

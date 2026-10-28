@@ -44,6 +44,7 @@ ABSORPTION_LIST = {
     'CaII_K': (3933.66, 'Ca K'),
     'CaII_H': (3968.47, 'Ca H'),
     'G_band': (4304.40, 'G-band'),
+    'H_beta_abs': (4861.33, 'Hβ (흡수)'),
     'Mg_b': (5175.36, 'Mg b'),
     'Na_D': (5892.90, 'Na D'),
 }
@@ -490,48 +491,177 @@ class EmissionLineFitter:
             return None
 
     def estimate_redshift(self, wavelength, flux, z_min=0.0, z_max=0.5, n_grid=2000):
-        """방출선 패턴 매칭으로 적색편이 추정. Returns dict(z, score, n_matched) or None"""
+        """방출선 패턴 매칭 + 조기형(타원) 은하 흡수선·D4000 단절 폴백 매칭으로 적색편이 추정.
+        Returns dict(z, score, n_matched, mode) or None"""
         try:
             wavelength = np.asarray(wavelength, dtype=float)
             flux = np.asarray(flux, dtype=float)
             cont = self.fit_continuum(wavelength, flux)
             sub = flux - cont
-            noise = robust_std(sub)
+            noise = max(robust_std(sub), 1e-9)
             disp0 = np.abs(np.median(np.diff(wavelength))) or 1.0
-            # 연속선 위로 4σ 이상 + 방출선처럼 좁은 봉우리만 (4000Å break·흡수선 가장자리의 넓은 잔차 제외)
-            peaks, props = signal.find_peaks(sub, height=4 * noise, prominence=3 * noise,
-                                             width=(None, max(3.0, 30.0 / disp0)))
-            if len(peaks) < 2:
+            z_grid = np.linspace(z_min, z_max, n_grid)
+
+            # 1) 방출선 패턴 매칭 (연속선 위 4σ 이상 좁은 봉우리)
+            peaks, _ = signal.find_peaks(sub, height=4 * noise, prominence=3 * noise,
+                                         width=(None, max(3.0, 30.0 / disp0)))
+            if len(peaks) >= 2:
+                pw = wavelength[peaks]
+                pf = np.clip(sub[peaks] / noise, 0, None)
+                strong = {'H_alpha': 3.0, 'OIII_5007': 2.0, 'H_beta': 1.5, 'NII_6584': 1.0,
+                          'OII_3727': 1.5, 'SII_6717': 0.7, 'SII_6731': 0.7, 'OIII_4959': 0.8,
+                          'H_gamma': 0.6}
+                tol = max(4.0, 2.5 * disp0)
+                best = (None, 0.0, 0)
+                for z in z_grid:
+                    score, nmatch, sigs = 0.0, 0, []
+                    for name, wgt in strong.items():
+                        obs = LINE_LIST[name][0] * (1 + z)
+                        if obs < wavelength.min() or obs > wavelength.max():
+                            continue
+                        d = np.abs(pw - obs)
+                        j = np.argmin(d)
+                        if d[j] < tol:
+                            score += wgt * np.log1p(pf[j]) * (1 - d[j] / tol)
+                            nmatch += 1
+                            sigs.append(pf[j])
+                    ok = nmatch >= 3 or (nmatch == 2 and min(sigs) >= 8)
+                    if ok and score > best[1]:
+                        best = (z, score, nmatch)
+                if best[0] is not None:
+                    return {'z': float(best[0]), 'score': float(best[1]),
+                            'n_matched': int(best[2]), 'mode': 'emission'}
+
+            # 2) 소광 타원은하 폴백: 광구 흡수선 골(Ca II H&K, G-band, Hβ, Mg b, Na D) + 4000Å 단절(D4000) 매칭
+            # 넓은 연속선 창을 사용해 Ca H&K 흡수골과 4000Å 단절이 연속선에 과적합되지 않도록 보호
+            w_pts = max(41, int(len(flux) * 0.06) | 1)
+            smooth_cont = ndimage.median_filter(flux, size=w_pts, mode='nearest')
+            smooth_cont = ndimage.uniform_filter1d(smooth_cont, size=max(11, w_pts // 2))
+            abs_resid = smooth_cont - flux
+            abs_noise = max(robust_std(abs_resid), noise, 1e-9)
+            troughs, _ = signal.find_peaks(abs_resid, height=2.4 * abs_noise, prominence=2.0 * abs_noise,
+                                           width=(None, max(5.0, 55.0 / disp0)))
+            if len(troughs) < 2:
                 return None
-            pw = wavelength[peaks]
-            pf = np.clip(sub[peaks] / noise, 0, None)
-            strong = {'H_alpha': 3.0, 'OIII_5007': 2.0, 'H_beta': 1.5, 'NII_6584': 1.0,
-                      'OII_3727': 1.5, 'SII_6717': 0.7, 'SII_6731': 0.7, 'OIII_4959': 0.8,
-                      'H_gamma': 0.6}
-            disp = np.abs(np.median(np.diff(wavelength))) or 1.0
-            tol = max(4.0, 2.5 * disp)
-            best = (None, 0.0, 0)
-            for z in np.linspace(z_min, z_max, n_grid):
+            tw = wavelength[troughs]
+            tf = np.clip(abs_resid[troughs] / abs_noise, 0, None)
+            abs_strong = {'CaII_K': 2.8, 'CaII_H': 2.5, 'G_band': 1.6,
+                          'H_beta_abs': 1.1, 'Mg_b': 2.2, 'Na_D': 1.8}
+            tol_abs = max(6.5, 3.2 * disp0)
+            fnu_obs = flux * (wavelength ** 2)
+            wmin_obs, wmax_obs = float(wavelength.min()), float(wavelength.max())
+            best_abs = (None, 0.0, 0)
+            for z in z_grid:
                 score, nmatch, sigs = 0.0, 0, []
-                for name, wgt in strong.items():
-                    obs = LINE_LIST[name][0] * (1 + z)
-                    if obs < wavelength.min() or obs > wavelength.max():
+                for name, wgt in abs_strong.items():
+                    obs = ABSORPTION_LIST[name][0] * (1 + z)
+                    if obs < wmin_obs or obs > wmax_obs:
                         continue
-                    d = np.abs(pw - obs)
+                    d = np.abs(tw - obs)
                     j = np.argmin(d)
-                    if d[j] < tol:
-                        score += wgt * np.log1p(pf[j]) * (1 - d[j] / tol)
+                    if d[j] < tol_abs:
+                        score += wgt * np.log1p(tf[j]) * (1 - d[j] / tol_abs)
                         nmatch += 1
-                        sigs.append(pf[j])
-                # 잡음 봉우리 우연 일치 방지: 3개 이상 일치, 또는 2개가 모두 매우 강할 때만 인정
-                ok = nmatch >= 3 or (nmatch == 2 and min(sigs) >= 8)
-                if ok and score > best[1]:
-                    best = (z, score, nmatch)
-            if best[0] is None:
+                        sigs.append(tf[j])
+                if nmatch < 2:
+                    continue
+                # 4000Å 단절 검증 보너스 (조기형 타원은하의 급격한 D4000 상승과 흡수선 동시 일치)
+                b_lo, b_hi = 3850.0 * (1 + z), 3950.0 * (1 + z)
+                r_lo, r_hi = 4000.0 * (1 + z), 4100.0 * (1 + z)
+                d4_val = 1.0
+                if b_lo >= wmin_obs and r_hi <= wmax_obs:
+                    i_b0, i_b1 = np.searchsorted(wavelength, [b_lo, b_hi])
+                    i_r0, i_r1 = np.searchsorted(wavelength, [r_lo, r_hi])
+                    if i_b1 - i_b0 >= 3 and i_r1 - i_r0 >= 3:
+                        mb = float(np.mean(fnu_obs[i_b0:i_b1]))
+                        mr = float(np.mean(fnu_obs[i_r0:i_r1]))
+                        if mb > 0:
+                            d4_val = mr / mb
+                            if d4_val >= 1.35:
+                                score += 2.2 * min(1.5, d4_val - 1.20)
+                ok_abs = (nmatch >= 3 and max(sigs) >= 3.2) or (nmatch == 2 and min(sigs) >= 4.5 and d4_val >= 1.45)
+                if ok_abs and score > best_abs[1]:
+                    best_abs = (z, score, nmatch)
+            if best_abs[0] is None:
                 return None
-            return {'z': float(best[0]), 'score': float(best[1]), 'n_matched': int(best[2])}
+            return {'z': float(best_abs[0]), 'score': float(best_abs[1]),
+                    'n_matched': int(best_abs[2]), 'mode': 'absorption'}
         except Exception:
             return None
+
+    def measure_absorption_lines(self, rest_wave: np.ndarray, flux: np.ndarray,
+                                 noise: float, emission_fits: dict = None,
+                                 snr_threshold: float = 2.5) -> tuple:
+        """타원/조기형 은하의 주요 항성 광구 흡수선(Ca II K&H, G-band, Hβ, Mg b, Na D) 깊이·등가폭(EW_abs > 0) 측정"""
+        abs_fits = {}
+        rows = []
+        emission_fits = emission_fits or {}
+        if len(rest_wave) < 20:
+            return abs_fits, pd.DataFrame(rows)
+
+        rmin, rmax = float(rest_wave.min()), float(rest_wave.max())
+        min_snr = max(2.2, 0.75 * snr_threshold)
+        for name, (lam0, label) in ABSORPTION_LIST.items():
+            if not (rmin + 12.0 < lam0 < rmax - 12.0):
+                continue
+            if name == 'H_beta_abs' and 'H_beta' in emission_fits and emission_fits['H_beta'].get('snr', 0) >= 3.0:
+                continue
+            # 국소 사이드밴드 연속선 추정 (흡수선 중심 ±14Å 제외, 좌우 14~38Å 중앙값 보간)
+            sb_mask = ((rest_wave >= lam0 - 38.0) & (rest_wave <= lam0 - 14.0)) | (
+                (rest_wave >= lam0 + 14.0) & (rest_wave <= lam0 + 38.0)
+            )
+            core_mask = (rest_wave >= lam0 - 16.0) & (rest_wave <= lam0 + 16.0)
+            if sb_mask.sum() < 4 or core_mask.sum() < 5:
+                continue
+            sb_w, sb_f = rest_wave[sb_mask], flux[sb_mask]
+            left_m = sb_w < lam0
+            right_m = sb_w > lam0
+            if left_m.any() and right_m.any():
+                c_left = float(np.median(sb_f[left_m]))
+                c_right = float(np.median(sb_f[right_m]))
+                w_left = float(np.median(sb_w[left_m]))
+                w_right = float(np.median(sb_w[right_m]))
+                slope = (c_right - c_left) / max(w_right - w_left, 1.0)
+                local_cont = c_left + slope * (rest_wave[core_mask] - w_left)
+            else:
+                local_cont = np.full(core_mask.sum(), float(np.median(sb_f)))
+
+            cont_center = float(np.median(local_cont))
+            if cont_center <= 0:
+                continue
+            cw = rest_wave[core_mask]
+            deficit = local_cont - flux[core_mask]
+            fr = self.fit_gaussian(cw, deficit, lam0, window=15.0)
+            if fr and fr['amplitude'] > 0 and abs(fr['center'] - lam0) <= 9.0:
+                depth = float(fr['amplitude'])
+                center = float(fr['center'])
+                fwhm = float(fr['fwhm'])
+                integ_abs = float(fr['integrated_flux'])
+            else:
+                j_pk = int(np.argmax(deficit))
+                center = float(cw[j_pk])
+                if abs(center - lam0) > 8.0:
+                    continue
+                depth = float(deficit[j_pk])
+                fwhm = 12.0
+                integ_abs = float(np.trapezoid(np.clip(deficit, 0.0, None), cw)) if hasattr(np, 'trapezoid') else float(np.trapz(np.clip(deficit, 0.0, None), cw))
+
+            snr_abs = depth / max(noise, 1e-9)
+            ew_abs = integ_abs / cont_center
+            if snr_abs >= min_snr and ew_abs >= 0.45:
+                info = {
+                    'center': center, 'rest_wavelength': lam0, 'label': label,
+                    'depth': depth, 'fwhm': fwhm, 'integrated_absorption': integ_abs,
+                    'snr': float(snr_abs), 'ew_abs': float(ew_abs),
+                }
+                abs_fits[name] = info
+                rows.append({
+                    '흡수선': label, 'key': name, '정지파장(Å)': lam0,
+                    '측정중심(Å)': round(center, 2), 'FWHM(Å)': round(fwhm, 2),
+                    '흡수깊이': round(depth, 4), 'S/N': round(float(snr_abs), 1),
+                    '흡수 EW(Å)': round(float(ew_abs), 2),
+                })
+        return abs_fits, pd.DataFrame(rows)
 
     # ── 메인 파이프라인 ──────────────────────────────────
     def fit_all_lines(self, wavelength: np.ndarray, flux: np.ndarray, z: float = 0.0,
@@ -618,6 +748,12 @@ class EmissionLineFitter:
 
             results['fits'] = fits
             results['d4000'] = self.d4000(rest_wave, flux)
+            abs_fits, abs_table = self.measure_absorption_lines(
+                rest_wave, flux, noise, emission_fits=fits, snr_threshold=snr_threshold
+            )
+            results['absorption_fits'] = abs_fits
+            results['absorption_table'] = abs_table
+            results['total_absorption_ew'] = float(sum(v['ew_abs'] for v in abs_fits.values()))
 
             rows = []
             for n in sorted(fits, key=lambda k: LINE_LIST[k][0]):

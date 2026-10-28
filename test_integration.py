@@ -469,6 +469,121 @@ test('gei_v3_engine', test_gei_v3_engine)
 
 # ============================================
 print()
+print('=== 10. Elliptical Galaxy Comprehensive Regression ===')
+# ============================================
+
+
+def test_elliptical_absorption_spectrum():
+    """타원은하 흡수선 스펙트럼 적색편이 자동 추정(흡수선+D4000) · 광구 흡수선 측정 · 소광 은하 물리량 진단"""
+    np.random.seed(42)
+    for z_true in (0.05, 0.12):
+        df = mock.generate('elliptical', z=z_true)
+        est = fitter.estimate_redshift(df['wavelength'].values, df['flux'].values, 0.0, 0.35)
+        assert est is not None, 'elliptical z=%.2f: estimate_redshift returned None' % z_true
+        assert abs(est['z'] - z_true) < 0.004, 'elliptical z=%.2f: got %.4f' % (z_true, est['z'])
+        fit = fitter.fit_all_lines(df['wavelength'].values, df['flux'].values, z=est['z'])
+        assert fit.get('d4000') is not None and fit['d4000'] > 1.55, 'D4000 too low: %s' % fit.get('d4000')
+        abs_fits = fit.get('absorption_fits') or {}
+        assert len(abs_fits) >= 3, 'too few absorption lines detected: %s' % list(abs_fits)
+        phys = calc.compute_all(
+            fitter.extract_line_fluxes(fit), z=est['z'],
+            d4000=fit.get('d4000'), absorption_fits=abs_fits
+        )
+        assert phys.get('is_quiescent_spectrum') or phys.get('bpt_class_en') in ('Quiescent Elliptical', 'Quiescent/LINER', 'LINER')
+        assert phys.get('gei') is not None and phys['gei'] >= 78.0, 'expected Stage V GEI >= 78, got %s' % phys.get('gei')
+        print('    elliptical spec z_true=%.2f -> z_est=%.4f (%s), D4000=%.2f, abs=%d, BPT=%s, GEI=%.1f' % (
+            z_true, est['z'], est.get('mode'), fit['d4000'], len(abs_fits), phys['bpt_class'], phys['gei']))
+
+
+test('elliptical_absorption_spectrum', test_elliptical_absorption_spectrum)
+
+
+def test_elliptical_image_edge_cases():
+    """편평한 E5 타원은하 + 전경 PSF 별 오염 + (3,H,W) 단색 스트레칭 FITS + 실제 NGC 5982 관측 FITS 검증"""
+    an = GalaxyImageAnalyzer()
+    rng = np.random.default_rng(123)
+    size = 360
+    yy, xx = np.indices((size, size), dtype=float)
+    cx = cy = size / 2.0
+    ang = np.radians(38.0)
+    q_true = 0.48  # E5 타원은하
+    dx, dy = xx - cx, yy - cy
+    xr = dx * np.cos(ang) + dy * np.sin(ang)
+    yr = (-dx * np.sin(ang) + dy * np.cos(ang)) / q_true
+    r_ell = np.hypot(xr, yr) + 1e-3
+    bn4 = GalaxyImageAnalyzer._bn(4.0)
+    gal = 0.30 * np.exp(-bn4 * ((r_ell / 34.0) ** 0.25 - 1.0))
+    # 헤일로 위 밝은 전경 PSF 별 5개 추가
+    for sx, sy in [(cx + 28, cy - 18), (cx - 35, cy + 22), (cx + 46, cy + 30), (cx - 22, cy - 40), (cx + 15, cy + 48)]:
+        gal += 1.2 * np.exp(-((xx - sx) ** 2 + (yy - sy) ** 2) / (2.0 * 1.25 ** 2))
+    gal += rng.normal(0.02, 0.0025, gal.shape)
+    gal_norm = np.clip(gal / np.percentile(gal, 99.9), 0.0, 1.0)
+    # PixInsight/Siril 스타일 사전 Asinh 스트레칭 + (3, H, W) 단색 L필터 FITS 큐브 시뮬레이션
+    stretched = np.arcsinh(45.0 * gal_norm) / np.arcsinh(45.0)
+    cube_3hw = np.stack([stretched, stretched, stretched], axis=0).astype(np.float32)
+
+    mask = (xx - cx) ** 2 + (yy - cy) ** 2 < (0.44 * size) ** 2
+    res = an.analyze(cube_3hw, mask, linearize='auto')
+    assert not res.get('error'), res.get('error')
+    assert res['stats'].get('is_monochrome') is True, 'monochrome 3-channel cube should not emit fake color_GR'
+    assert res['stats'].get('color_GR') is None
+    assert res['metrics']['stars_masked'] >= 3, 'foreground PSF stars not masked: %d' % res['metrics']['stars_masked']
+    assert res['metrics']['W_spiral'] < 0.06, 'elongated E5 falsely got high spiral winding W=%.3f' % res['metrics']['W_spiral']
+    assert res['morphology']['class_en'] == 'Early-type', 'E5+stars+stretched classified as %s (%s)' % (
+        res['morphology']['class_en'], res['metrics'])
+    p_comb = dict(res.get('estimated_physics', {}))
+    p_comb.update(res.get('ml_features', {}))
+    ai_res = pred.predict_galaxy_type(p_comb)
+    print('    E5+Stars+(3,H,W) Stretched -> %s | C=%.2f n=%.2f W=%.3f stars=%d | AI=%s (%.1f%%)' % (
+        res['morphology']['class_en'], res['metrics']['C_sdss'], res['metrics']['sersic_n'] or -1,
+        res['metrics']['W_spiral'], res['metrics']['stars_masked'],
+        ai_res['predicted_class'], ai_res['confidence'] * 100))
+    assert any(k in ai_res['predicted_class'] for k in ('타원', '렌즈', '전파', 'Elliptical', 'Lenticular')), \
+        'AI predicted late-type %s for elliptical image' % ai_res['predicted_class']
+
+    real_fits = os.path.join(ROOT, 'output', 'denoised_fits', 'NGC 5982_denoised.fit')
+    if os.path.exists(real_fits):
+        from astropy.io import fits as astro_fits
+        with astro_fits.open(real_fits, memmap=False) as hdul:
+            arr_real = np.asarray(hdul[0].data[:, ::4, ::4], dtype=np.float32)  # (3, 752, 752)
+        res_real = an.analyze(arr_real, mask=None, linearize='auto')
+        assert not res_real.get('error'), res_real.get('error')
+        print('    Real FITS NGC 5982_denoised.fit -> %s | C=%.2f n=%s A=%.2f W=%.3f' % (
+            res_real['morphology']['class_en'], res_real['metrics']['C_sdss'],
+            res_real['metrics'].get('sersic_n'), res_real['metrics']['asymmetry'], res_real['metrics']['W_spiral']))
+        assert res_real['morphology']['class_en'] == 'Early-type', \
+            'NGC 5982 real FITS misclassified as %s' % res_real['morphology']['class_en']
+
+
+test('elliptical_image_edge_cases', test_elliptical_image_edge_cases)
+
+
+def test_elliptical_gei_and_trajectory():
+    """GEI v3 적색계열/단색 타원은하 Stage V 판별 및 과거(-10 Gyr) 원시 전구체 복원 검증"""
+    e_color = compute_unified_gei({'log_mstar': 11.25, 'color_u_r': 2.72, 'vel_disp': 240.0, 'z': 0.01})
+    e_d4000 = compute_unified_gei({'log_mstar': 11.20, 'd4000': 1.92, 'vel_disp': 230.0, 'z': 0.01})
+    e_mono = compute_unified_gei({'log_mstar': 11.20, 'morph_hint': 'elliptical', 'vel_disp': 230.0, 'z': 0.01})
+    for tag, g in (('u-r=2.72', e_color), ('D4000=1.92', e_d4000), ('mono_hint', e_mono)):
+        assert g['stage_id'] == 5 and g['gei_score'] >= 0.78, '%s expected Stage V, got GEI=%.3f (stage %d)' % (
+            tag, g['gei_score'], g['stage_id'])
+        assert g['log_ssfr'] < -11.5, '%s expected log_ssfr < -11.5, got %.2f' % (tag, g['log_ssfr'])
+
+    sim_5982 = simulate_galaxy_evolution_trajectory(OBSERVATORY_BENCHMARK_GALAXIES['NGC 5982 (용자리 타원은하 - 천문대 관측)'])
+    tdf = sim_5982['trajectory_df']
+    past0 = tdf.iloc[0]
+    now0 = sim_5982['current']
+    assert now0['stage_id'] == 5 and now0['gei_score'] >= 0.78
+    assert past0['log_ssfr'] > -10.3 and past0['log_ssfr'] > now0['log_ssfr'] + 1.5, \
+        'past elliptical sSFR did not reconstruct star-forming progenitor: %.2f -> %.2f' % (past0['log_ssfr'], now0['log_ssfr'])
+    assert past0['log_mstar'] < now0['log_mstar'] - 0.15
+    print('    NGC 5982 GEI=%.3f(Stage V) | past(-10Gyr): logM=%.2f logSSFR=%.2f GEI=%.3f(%s)' % (
+        now0['gei_score'], past0['log_mstar'], past0['log_ssfr'], past0['gei_score'], past0['stage_code']))
+
+
+test('elliptical_gei_and_trajectory', test_elliptical_gei_and_trajectory)
+
+# ============================================
+print()
 print('=' * 50)
 print('RESULTS: %d errors found' % len(errors))
 print('=' * 50)

@@ -282,11 +282,14 @@ class PhysicsCalculator:
 
     def compute_all(self, emission_lines: dict, z: float = 0.05,
                     log_mass: Optional[float] = None, color_ur: Optional[float] = None,
-                    flux_scale: float = 1.0) -> dict:
-        """Master function: given emission line fluxes dict, compute ALL physical properties.
+                    flux_scale: float = 1.0, d4000: Optional[float] = None,
+                    absorption_fits: Optional[dict] = None) -> dict:
+        """Master function: given emission line fluxes dict (and optional D4000 / absorption lines),
+        compute ALL physical properties including quiescent elliptical galaxy diagnostics.
         Input: {'H_alpha': float, 'H_beta': float, 'OIII_5007': float, 'NII_6584': float, ...}
         flux_scale: 입력 플럭스 단위 → erg/s/cm² 변환 계수 (예: SDSS 1e-17). 비율 기반 양에는 영향 없음.
         Output: comprehensive dict with all computed quantities."""
+        emission_lines = emission_lines or {}
         def g(k):
             v = emission_lines.get(k)
             return float(v) * flux_scale if v is not None and v > 0 else None
@@ -326,9 +329,55 @@ class PhysicsCalculator:
         sii_bpt = self.classify_sii_bpt(log_sii_ha, log_oiii_hb)
         n_e = self.electron_density_sii(sii1, sii2)
 
+        # 소광 타원/조기형 은하 흡수선·D4000 분광 진단 (방출선이 없거나 약해 BPT 미분류인 경우)
+        abs_dict = absorption_fits or {}
+        tot_abs_ew = float(sum(v.get('ew_abs', 0.0) for v in abs_dict.values() if isinstance(v, dict)))
+        d4_valid = (d4000 is not None and np.isfinite(d4000))
+        is_quiescent_spec = (
+            bpt_info['class_en'] == 'Unclassified'
+            and ((d4_valid and float(d4000) >= 1.50) or tot_abs_ew >= 5.5)
+        )
+        stellar_pop = None
+        quiescent_priors = {}
+        if is_quiescent_spec:
+            if not math.isnan(log_nii_ha) and log_nii_ha >= -0.10:
+                bpt_info = {
+                    'class': '조기형 LINER / 소광 타원은하',
+                    'class_en': 'Quiescent/LINER',
+                    'kauffmann_distance': bpt_info['kauffmann_distance'],
+                    'kewley_distance': bpt_info['kewley_distance'],
+                }
+            else:
+                bpt_info = {
+                    'class': '소광 타원은하 (흡수선 우세)',
+                    'class_en': 'Quiescent Elliptical',
+                    'kauffmann_distance': bpt_info['kauffmann_distance'],
+                    'kewley_distance': bpt_info['kewley_distance'],
+                }
+            d4_use = float(d4000) if d4_valid else float(np.clip(1.52 + 0.025 * tot_abs_ew, 1.55, 2.05))
+            stellar_pop = '노령 항성종족 (D4000=%.2f, 흡수선 EW=%.1fÅ)' % (d4_use, tot_abs_ew)
+            est_ur = float(np.clip(2.58 + 0.55 * (d4_use - 1.78), 2.35, 3.05))
+            est_mass = float(np.clip(11.08 + 0.50 * (d4_use - 1.78) + 0.012 * max(tot_abs_ew - 8.0, 0.0), 10.45, 11.85))
+            est_ssfr = float(np.clip(-11.90 - 0.80 * (d4_use - 1.78), -13.3, -11.30))
+            est_sfr = float(est_mass + est_ssfr)
+            est_vdisp = float(np.clip(10 ** (2.23 + 0.28 * (est_mass - 11.0)), 135.0, 340.0))
+            est_oh = float(np.clip(9.07 + 0.12 * (est_mass - 11.0), 8.92, 9.22))
+            quiescent_priors = {
+                'log_mass': round(est_mass, 3),
+                'log_sfr': round(est_sfr, 3),
+                'log_ssfr': round(est_ssfr, 3),
+                'color_ur': round(est_ur, 3),
+                'd4000_n': round(d4_use, 3),
+                'velDisp': round(est_vdisp, 1),
+                'metallicity': round(est_oh, 3),
+            }
+
         # 통합 금속량: O3N2 우선, N2 보조 (AGN 은 강선 금속량 보정식 적용 불가 → 표시만)
         best_metallicity = metal_o3n2 if metal_o3n2 is not None else metal_n2
         metallicity_method = 'O3N2 (PP04)' if metal_o3n2 is not None else ('N2 (PP04)' if metal_n2 is not None else '-')
+        if best_metallicity is None and is_quiescent_spec and quiescent_priors.get('metallicity') is not None:
+            best_metallicity = quiescent_priors['metallicity']
+            metallicity_method = 'D4000·흡수선 경험식 (조기형)'
 
         results = {
             'ebv': ebv,
@@ -352,11 +401,20 @@ class PhysicsCalculator:
             'kewley_distance': bpt_info['kewley_distance'],
             'z': z,
             'ha_flux_corr': ha_corr,
+            'd4000_n': float(d4000) if d4_valid else None,
+            'total_absorption_ew': tot_abs_ew,
+            'is_quiescent_spectrum': bool(is_quiescent_spec),
+            'stellar_population': stellar_pop,
+            'quiescent_priors': quiescent_priors,
         }
-        if bpt_info['class_en'] in ('Seyfert', 'LINER', 'Composite') and best_metallicity is not None:
-            results['metallicity_warning'] = 'AGN/복합 은하는 강선 금속량 보정식의 적용 범위를 벗어납니다 (참고값).'
+        if bpt_info['class_en'] in ('Seyfert', 'LINER', 'Composite', 'Quiescent/LINER') and (metal_o3n2 is not None or metal_n2 is not None):
+            results['metallicity_warning'] = 'AGN/복합/LINER 은하는 강선 금속량 보정식의 적용 범위를 벗어납니다 (참고값).'
 
         if log_mass is not None and np.isfinite(log_mass):
+            results['log_mass'] = log_mass
+            results['log_stellar_mass'] = log_mass
+        elif is_quiescent_spec and quiescent_priors.get('log_mass') is not None:
+            log_mass = quiescent_priors['log_mass']
             results['log_mass'] = log_mass
             results['log_stellar_mass'] = log_mass
         else:
@@ -364,8 +422,17 @@ class PhysicsCalculator:
         if color_ur is not None and np.isfinite(color_ur):
             results['color_ur'] = color_ur
             results['color_u_r'] = color_ur
+        elif is_quiescent_spec and quiescent_priors.get('color_ur') is not None:
+            color_ur = quiescent_priors['color_ur']
+            results['color_ur'] = color_ur
+            results['color_u_r'] = color_ur
         else:
             color_ur = None
+
+        if (log_sfr is None or not np.isfinite(log_sfr)) and is_quiescent_spec and quiescent_priors.get('log_sfr') is not None:
+            log_sfr = quiescent_priors['log_sfr']
+            results['log_sfr'] = log_sfr
+            results['velDisp'] = quiescent_priors.get('velDisp')
 
         # Evolution Index (GEI v3)
         met_for_gei = best_metallicity if best_metallicity is not None else metal_n2

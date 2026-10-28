@@ -42,14 +42,18 @@ class ReportGenerator:
 
     @staticmethod
     def _bpt_interpretation(bpt_class, bpt_class_en=None):
-        key = (bpt_class_en or bpt_class or '').lower()
-        if 'seyfert' in key or '세이퍼트' in key or key == 'agn':
+        key = ((bpt_class_en or '') + ' ' + (bpt_class or '')).lower()
+        if 'seyfert' in key or '세이퍼트' in key or key.strip() == 'agn':
             return "활동은하핵(AGN, 세이퍼트) 특성이 강합니다. 중심 초대질량 블랙홀 강착원반의 강한 전리 복사가 [OIII] 방출을 증폭시킵니다."
         if 'composite' in key or '복합' in key:
             return "별 탄생과 AGN 활동이 혼합된 복합(Composite) 특성을 보입니다. 퀜칭이 진행 중인 전이 단계일 가능성이 있습니다."
+        if 'quiescent' in key and 'liner' in key:
+            return "강한 4000Å 단절(D4000)과 항성 광구 흡수선이 우세하며, 노령 항성종족(post-AGB) 또는 약한 저전리 핵방출(LINER)을 동반한 조기형 소광 타원은하입니다."
+        if 'quiescent' in key or '소광' in key or '흡수선' in key:
+            return "성간 가스 방출선이 거의 없고 Ca II H&K · G-band · Mg b · Na D 광구 흡수선과 D4000 단절이 지배적인 전형적 소광 타원/조기형 은하입니다."
         if 'liner' in key:
             return "저전리 핵방출선 영역(LINER)으로 분류됩니다. 늙은 항성종족(post-AGB)이나 약한 AGN에 의한 전리일 수 있습니다."
-        if 'star' in key or '별생성' in key or key == 'sf':
+        if 'star' in key or '별생성' in key or key.strip() == 'sf':
             return "젊고 무거운 O/B형 별이 주변 가스를 전리시키는 일반적인 별 탄생(HII) 은하입니다."
         return "방출선 비가 부족하여 BPT 분류를 확정할 수 없습니다."
 
@@ -152,8 +156,20 @@ class ReportGenerator:
         md.append("| 방출선 | 정지파장 (Å) | 적분 플럭스 | S/N | EW (Å) |")
         md.append("|--------|-------------|-------------|-----|--------|")
         md.append(line_table)
+        abs_rows = a.get('absorption_table') or []
+        if abs_rows:
+            md.append("\n### 주요 항성 광구 흡수선 (타원/조기형 은하 진단)")
+            md.append("| 흡수선 | 정지파장 (Å) | 흡수깊이 | S/N | 흡수 EW (Å) |")
+            md.append("|--------|-------------|----------|-----|-------------|")
+            for ar in abs_rows:
+                md.append("| %s | %s | %s | %s | %s |" % (
+                    ar.get('흡수선', ar.get('key', '-')), f(ar.get('정지파장(Å)'), "{:.2f}"),
+                    f(ar.get('흡수깊이'), "{:.4g}"), f(ar.get('S/N'), "{:.1f}"),
+                    f(ar.get('흡수 EW(Å)'), "{:.2f}")))
         if a.get('d4000') is not None:
             md.append("\n- **D4000 (4000Å 단절 지수)**: %s — 1.5 이상이면 늙은 항성종족 우세" % f(a.get('d4000')))
+        if a.get('stellar_population'):
+            md.append("- **항성종족 진단**: %s" % a['stellar_population'])
         md.append("")
 
         md.append("## %d. 물리량 추출 결과" % sec)

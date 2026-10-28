@@ -201,6 +201,17 @@ OBSERVATORY_BENCHMARK_GALAXIES = {
         "log_nii_ha": 0.15, "log_oiii_hb": 0.20,
         "description": "처녀자리 은하단에서 광도가 가장 밝은 거대 타원은하(M49)로, 별생성이 완전히 멈추고 노화된 항성종족과 거대 암흑물질 헤일로를 지닌 Stage V 대표 은하."
     },
+    "NGC 5982 (용자리 타원은하 - 천문대 관측)": {
+        "name": "NGC 5982 (용자리 삼중은하 Draco Trio 타원은하)",
+        "morphology": "E2 (동역학적 분리핵 타원은하)",
+        "ra": 234.6657, "dec": 59.3559,
+        "z": 0.01006, "dist_mpc": 44.0,
+        "log_mstar": 11.18, "log_sfr": -1.42,
+        "radius_kpc": 7.80, "v_rot": 338.0, "vel_disp": 239.0,
+        "color_u_r": 2.68, "d4000": 1.91, "oh_metallicity": 9.10,
+        "log_nii_ha": 0.12, "log_oiii_hb": 0.18,
+        "description": "용자리 삼중은하(Draco Trio: NGC 5981·5982·5985)의 중심 조기형 타원은하(E2). 고대의 은하 병합 흔적(쉘 구조와 동역학적 분리핵)을 간직한 Stage V 소광 타원은하."
+    },
     "M101 (바람개비 은하)": {
         "name": "M101 (바람개비 은하 / NGC 5457)",
         "morphology": "SAB(rs)cd (정면향 대형 나선은하)",
@@ -282,6 +293,38 @@ def redshift_to_lookback_gyr(z):
     # 저적색편이 보정: t_LB ~ 13.8 * (1 - 1/(1+z)^1.18) -> H0^-1 z at small z
     t_lb = T_UNIVERSE_GYR - cosmic_age
     return t_lb, cosmic_age
+
+
+def _estimate_bimodal_ssfr(c_ur, d4000, log_mstar, z, morph_hint=None):
+    """SDSS DR18 청색구름(Blue Cloud) vs 적색계열(Red Sequence) 이중모드 비별생성률(log sSFR) 경험식.
+    단색(L필터) 타원은하(morph_hint='elliptical'), D4000 ≥ 1.65 흡수선 은하, 적색 색지수(u-r ≥ 2.38) 은하가
+    주계열 선형식에 의해 Stage III~IV로 과대추정되는 현상을 방지합니다."""
+    hint = str(morph_hint or "").strip().lower()
+    is_ell_hint = any(k in hint for k in ("ellip", "타원", "조기", "early", "e0", "e1", "e2", "e3", "e4", "e5", "e6", "cD".lower()))
+    is_irr_hint = any(k in hint for k in ("irreg", "불규칙", "starburst", "폭발"))
+
+    if c_ur is None:
+        if d4000 is not None:
+            c_ur = float(np.clip(1.25 + 1.55 * (d4000 - 1.15), 0.90, 3.05))
+        elif is_ell_hint:
+            c_ur = float(np.clip(2.62 + 0.12 * (log_mstar - 11.0), 2.42, 2.95))
+        elif is_irr_hint:
+            c_ur = 1.32
+        else:
+            c_ur = 2.00
+
+    z_boost = 0.35 * np.log10(1.0 + max(0.0, z))
+    # 청색구름 주계열 vs 적색계열 소광 분지 시그모이드 전이 (중심 u-r ≈ 2.24)
+    q_red = 1.0 / (1.0 + np.exp(-(c_ur - 2.24) / 0.14))
+    if d4000 is not None:
+        q_d4 = 1.0 / (1.0 + np.exp(-(d4000 - 1.60) / 0.08))
+        q_red = max(q_red, q_d4)
+    if is_ell_hint:
+        q_red = max(q_red, 0.90)
+
+    ssfr_blue = -9.95 - 0.65 * (c_ur - 1.75) - 0.12 * max(0.0, log_mstar - 10.0) + z_boost
+    ssfr_red = -11.88 - 0.95 * max(0.0, c_ur - 2.50) - 0.18 * max(0.0, log_mstar - 10.8) + 0.20 * z_boost
+    return float(np.clip((1.0 - q_red) * ssfr_blue + q_red * ssfr_red, -13.6, -8.1)), float(c_ur)
 
 
 def complete_galaxy_observables(inputs: dict) -> dict:
@@ -420,11 +463,13 @@ def complete_galaxy_observables(inputs: dict) -> dict:
             sfr_val = max(1e-4, 7.9e-42 * l_ha)
             log_sfr = np.log10(sfr_val)
         else:
-            # 색지수 또는 주계열 경험식 기반 추정
-            c_ur = _valid(d.get("color_u_r", d.get("color_ur", None)))
-            if c_ur is None:
-                c_ur = 2.0
-            log_ssfr_est = -10.1 - 1.15 * (c_ur - 1.95) + 0.35 * np.log10(1.0 + z)
+            # 색지수·D4000·형태 힌트 결합 이중모드(청색구름 vs 적색계열) 경험식 기반 추정
+            c_ur_in = _valid(d.get("color_u_r", d.get("color_ur", None)))
+            d4_in = _valid(d.get("d4000", d.get("d4000_n", None)))
+            morph_hint = d.get("morph_hint", d.get("morphology", None))
+            log_ssfr_est, c_ur_resolved = _estimate_bimodal_ssfr(c_ur_in, d4_in, d["log_mstar"], z, morph_hint=morph_hint)
+            if c_ur_in is None:
+                d["color_u_r"] = c_ur_resolved
             log_sfr = d["log_mstar"] + log_ssfr_est
     d["log_sfr"] = float(np.clip(log_sfr, -4.0, 3.5))
     d["log_ssfr"] = float(d["log_sfr"] - d["log_mstar"])
@@ -705,24 +750,52 @@ def simulate_galaxy_evolution_trajectory(obs: dict, dt_steps_gyr=None) -> dict:
         mstar_grid[i] = mstar_grid[i - 1] + dm_sf + dm_merger
 
     # 과거 방향 역적분 (idx_zero -> 0)
+    is_quenched_now = bool(cur["log_ssfr"] < -10.85)
+    t_quench_epoch = float(np.clip(
+        8.8 - 1.35 * (cur["log_mstar"] - 10.5) + 0.65 * (cur["log_ssfr"] + 11.8),
+        3.6, max(4.0, min(t_age_now - 0.8, 10.6))
+    ))
     for i in range(idx_zero - 1, -1, -1):
         dt_step = dt_grid[i + 1] - dt_grid[i]  # 양수 Gyr
-        # 과거에는 우주 가스 유입률이 높았으나 은하 질량이 작았음
-        t_ratio = (t_cosmic[i] / t_cosmic[i + 1]) ** 0.55
-        growth_boost = np.exp(min(dt_step / (tau_quench * 1.25), 0.25))
-        # 과거 질량 감소분 (단계당 최대 질량 감소율 제한으로 고적색편이 폭발적 별생성 은하의 불연속 절벽 방지)
-        dm_sf_raw = (1.0 - r_return) * sfr_grid[i + 1] * (dt_step * 1e9)
-        max_dm_step = 0.16 * mstar_grid[i + 1] * (dt_step / max(t_cosmic[i + 1], 0.6))
-        dm_sf = min(dm_sf_raw, max_dm_step)
-        m_min = max(1e7, mstar_now * 0.05 * ((t_cosmic[i] / t_age_now) ** 1.2))
-        mstar_grid[i] = max(m_min, mstar_grid[i + 1] - dm_sf)
+        if is_quenched_now:
+            # 다운사이징(Downsizing) 소광 타원/조기형 은하 과거 복원:
+            # 고적색편이 주계열(SFMS) 원시 전구체 별생성기 및 병합 질량 조립 역추적
+            z_i = max(0.0, (T_UNIVERSE_GYR / max(float(t_cosmic[i]), 0.45)) ** (1.0 / 1.18) - 1.0)
+            dm_sf_raw = (1.0 - r_return) * sfr_grid[i + 1] * (dt_step * 1e9)
+            dm_acc = mstar_grid[i + 1] * 0.038 * dt_step
+            max_dm_step = max(0.065 * dt_step, 0.22 * (dt_step / max(float(t_cosmic[i + 1]), 0.6))) * mstar_grid[i + 1]
+            dm_tot = min(dm_sf_raw + dm_acc, max_dm_step)
+            m_min = max(1e8, mstar_now * 0.18 * ((float(t_cosmic[i]) / t_age_now) ** 0.75))
+            mstar_grid[i] = max(m_min, mstar_grid[i + 1] - dm_tot)
 
-        mass_scale = (mstar_grid[i] / max(mstar_grid[i + 1], 1e6)) ** 0.65
-        sfr_prev = sfr_grid[i + 1] * t_ratio * growth_boost * mass_scale
-        # 하한선을 min(sfr_now * 0.2, mstar * 1e-14)로 설정하여 log_ssfr < -12인 소광 타원은하(M87 등)의 dt=0 불연속 점프 방지
-        min_sfr_allowed = max(1e-4, min(sfr_now * 0.2, mstar_grid[i] * 1e-14))
-        max_sfr_allowed = max(0.05, mstar_grid[i] * (10.0 ** (-8.15)))
-        sfr_grid[i] = np.clip(sfr_prev, min_sfr_allowed, max_sfr_allowed)
+            log_m_i = np.log10(max(mstar_grid[i], 1e7))
+            log_ssfr_ms = -9.72 + 0.42 * np.log10(1.0 + z_i) - 0.12 * max(0.0, log_m_i - 10.5)
+            w_active = 1.0 / (1.0 + np.exp((float(t_cosmic[i]) - t_quench_epoch) / 1.35))
+            # dt=0 근방 연속성 보장 가중치
+            w_rel = 1.0 - np.exp(-abs(float(dt_grid[i])) / 1.15)
+            blend = w_active * w_rel
+            log_ssfr_cur_step = np.log10(max(sfr_grid[i + 1], 1e-5) / max(mstar_grid[i + 1], 1e7))
+            log_ssfr_target = (1.0 - blend) * log_ssfr_cur_step + blend * log_ssfr_ms
+            sfr_prev = mstar_grid[i] * (10.0 ** log_ssfr_target)
+            min_sfr_allowed = max(1e-4, min(sfr_now * 0.2, mstar_grid[i] * 1e-14))
+            max_sfr_allowed = max(0.05, mstar_grid[i] * (10.0 ** (-8.15)))
+            sfr_grid[i] = float(np.clip(sfr_prev, min_sfr_allowed, max_sfr_allowed))
+        else:
+            # 과거에는 우주 가스 유입률이 높았으나 은하 질량이 작았음
+            t_ratio = (t_cosmic[i] / t_cosmic[i + 1]) ** 0.55
+            growth_boost = np.exp(min(dt_step / (tau_quench * 1.25), 0.25))
+            # 과거 질량 감소분 (단계당 최대 질량 감소율 제한으로 고적색편이 폭발적 별생성 은하의 불연속 절벽 방지)
+            dm_sf_raw = (1.0 - r_return) * sfr_grid[i + 1] * (dt_step * 1e9)
+            max_dm_step = 0.16 * mstar_grid[i + 1] * (dt_step / max(t_cosmic[i + 1], 0.6))
+            dm_sf = min(dm_sf_raw, max_dm_step)
+            m_min = max(1e7, mstar_now * 0.05 * ((t_cosmic[i] / t_age_now) ** 1.2))
+            mstar_grid[i] = max(m_min, mstar_grid[i + 1] - dm_sf)
+
+            mass_scale = (mstar_grid[i] / max(mstar_grid[i + 1], 1e6)) ** 0.65
+            sfr_prev = sfr_grid[i + 1] * t_ratio * growth_boost * mass_scale
+            min_sfr_allowed = max(1e-4, min(sfr_now * 0.2, mstar_grid[i] * 1e-14))
+            max_sfr_allowed = max(0.05, mstar_grid[i] * (10.0 ** (-8.15)))
+            sfr_grid[i] = np.clip(sfr_prev, min_sfr_allowed, max_sfr_allowed)
 
     # 선택된 valid_dts 시점들에 대한 전체 물리량 및 GEI 산출
     records = []

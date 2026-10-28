@@ -521,7 +521,16 @@
                     </div>
                     <div class="form-group">
                         <label>측광 색지수 (u-r) [mag]</label>
-                        <input type="number" step="any" id="raw-color-ur" value="1.82" placeholder="예: 1.82">
+                        <input type="number" step="any" id="raw-color-ur" value="1.82" placeholder="예: 나선 1.7 / 타원 2.7">
+                    </div>
+                    <div class="form-group full">
+                        <label>관측 형태 / 필터 보정 (흑백 L필터 타원은하 관측 시 '타원은하' 선택 지원)</label>
+                        <select id="raw-morph-hint" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid rgba(148,163,184,0.35); padding:6px 8px; border-radius:6px; font-size:0.78rem;">
+                            <option value="auto">자동 판별 — 측광 색지수 (u−r) 이중분포(적색계열/청색구름) 기반</option>
+                            <option value="elliptical">⚪ 타원은하 / 조기형 (E0–E7 · S0) — 적색계열 M*/L · 소광 sSFR · σ_v 동역학 적용</option>
+                            <option value="spiral">🌀 나선은하 (Sa–Sd) — 주계열 원반 M*/L · 회전속도 V_rot 적용</option>
+                            <option value="irregular">✨ 불규칙 / 폭발적 별생성 (Irr · Starburst) — 청색 저질량비 · 고 sSFR 적용</option>
+                        </select>
                     </div>
                 </div>
                 <button type="button" class="btn-mini-action" id="btn-convert-raw" style="width:100%; margin-top:8px; padding:8px; background:rgba(2,132,199,0.32); border-color:#38bdf8; color:#fff;">
@@ -588,7 +597,7 @@
                             <input type="number" step="any" id="in-rkpc" value="7.42">
                         </div>
                         <div class="form-group">
-                            <label>회전 속도 V_rot [km/s]</label>
+                            <label>회전속도 V_rot (타원 √2·σ_v) [km/s]</label>
                             <input type="number" step="any" id="in-vrot" value="185.0">
                         </div>
                         <div class="form-group">
@@ -844,6 +853,7 @@ const BENCHMARKS = {
     "M51a (문헌기준)": { name: "M51a (소용돌이 은하 / 성숙 나선 Sbc)", aliases: ["m51", "m51a", "ngc5194", "ngc 5194", "소용돌이", "소용돌이은하", "whirlpool"], z: 0.0015, dist_mpc: 8.58, log_mstar: 10.927, log_sfr: 0.65, radius_kpc: 16.05, v_rot: 205.5, color_u_r: 1.85, d4000: 1.32, oh: 9.08 },
     "M81 (문헌기준)": { name: "M81 (보데 은하 / 조기형 나선 Sab)", aliases: ["m81", "ngc3031", "ngc 3031", "보데", "보데은하", "bode"], z: 0.0008, dist_mpc: 3.63, log_mstar: 10.687, log_sfr: -0.40, radius_kpc: 12.15, v_rot: 244.2, color_u_r: 2.38, d4000: 1.64, oh: 8.98 },
     "M31 (문헌기준)": { name: "M31 (안드로메다 은하 / 녹색계곡 나선 Sb)", aliases: ["m31", "ngc224", "ngc 224", "안드로메다", "안드로메다은하", "andromeda"], z: 0.0010, dist_mpc: 0.80, log_mstar: 10.804, log_sfr: -0.45, radius_kpc: 12.02, v_rot: 250.0, color_u_r: 2.42, d4000: 1.68, oh: 9.02 },
+    "NGC 5982 (문헌기준)": { name: "NGC 5982 (용자리 삼중은하 / 조기형 타원은하 E2)", aliases: ["ngc5982", "ngc 5982", "용자리타원", "dracotrio"], z: 0.01006, dist_mpc: 44.0, log_mstar: 11.18, log_sfr: -1.42, radius_kpc: 6.80, v_rot: 340.0, color_u_r: 2.70, d4000: 1.93, oh: 9.10 },
     "NGC 4472 (문헌기준)": { name: "NGC 4472 (M49 / 거대 타원은하 E2)", aliases: ["ngc4472", "ngc 4472", "m49", "메시에49"], z: 0.0033, dist_mpc: 16.7, log_mstar: 11.62, log_sfr: -1.55, radius_kpc: 16.20, v_rot: 410.0, color_u_r: 2.78, d4000: 1.94, oh: 9.15 },
     "M87 (문헌기준)": { name: "M87 (처녀자리 A / 초거대 타원은하 cD)", aliases: ["m87", "ngc4486", "ngc 4486", "처녀자리a", "처녀자리 a", "virgo a", "virgoa"], z: 0.0043, dist_mpc: 16.4, log_mstar: 11.78, log_sfr: -1.85, radius_kpc: 18.50, v_rot: 480.0, color_u_r: 2.88, d4000: 1.98, oh: 9.18 }
 };
@@ -856,15 +866,28 @@ const GALAXY_CATALOG_DB = [
     { name: "M74 (NGC 628 / 정면 주계열 나선은하 Sc)", aliases: ["m74", "ngc628", "ngc 628", "팬텀은하"], z: 0.0022, dist_mpc: 9.77, log_mstar: 10.38, log_sfr: 0.24, radius_kpc: 10.5, v_rot: 175.0, color_u_r: 1.74, d4000: 1.29, oh: 8.84 },
     { name: "M83 (NGC 5236 / 남쪽 바람개비 나선은하 SABc)", aliases: ["m83", "ngc5236", "ngc 5236", "남쪽바람개비"], z: 0.0017, dist_mpc: 4.61, log_mstar: 10.55, log_sfr: 0.48, radius_kpc: 9.2, v_rot: 190.0, color_u_r: 1.68, d4000: 1.26, oh: 8.95 },
     { name: "NGC 253 (조각가자리 은하 / 폭발 별생성 나선 Sc)", aliases: ["ngc253", "ngc 253", "조각가자리은하", "sculptor"], z: 0.0008, dist_mpc: 3.50, log_mstar: 10.52, log_sfr: 0.62, radius_kpc: 11.0, v_rot: 195.0, color_u_r: 1.72, d4000: 1.25, oh: 8.90 },
+    { name: "NGC 891 (안드로메다자리 옆면 나선은하 Sb)", aliases: ["ngc891", "ngc 891", "caldwell23"], z: 0.00176, dist_mpc: 9.80, log_mstar: 10.72, log_sfr: 0.28, radius_kpc: 14.2, v_rot: 225.0, color_u_r: 2.04, d4000: 1.42, oh: 8.98 },
+    { name: "NGC 5985 (용자리 삼중은하 정면 나선은하 SABb)", aliases: ["ngc5985", "ngc 5985"], z: 0.00840, dist_mpc: 39.2, log_mstar: 10.94, log_sfr: 0.42, radius_kpc: 17.8, v_rot: 255.0, color_u_r: 1.96, d4000: 1.40, oh: 9.03 },
+    { name: "NGC 5981 (용자리 삼중은하 옆면 나선은하 Sc)", aliases: ["ngc5981", "ngc 5981"], z: 0.00588, dist_mpc: 36.5, log_mstar: 10.38, log_sfr: -0.05, radius_kpc: 11.4, v_rot: 185.0, color_u_r: 2.02, d4000: 1.43, oh: 8.90 },
     { name: "NGC 1300 (전형적 막대나선은하 SBbc)", aliases: ["ngc1300", "ngc 1300"], z: 0.0053, dist_mpc: 20.7, log_mstar: 10.58, log_sfr: 0.15, radius_kpc: 13.8, v_rot: 200.0, color_u_r: 1.92, d4000: 1.38, oh: 8.94 },
     { name: "NGC 4565 (바늘 은하 / 옆면 나선은하 Sb)", aliases: ["ngc4565", "ngc 4565", "바늘은하", "needle"], z: 0.0041, dist_mpc: 13.1, log_mstar: 10.75, log_sfr: -0.05, radius_kpc: 15.6, v_rot: 245.0, color_u_r: 2.15, d4000: 1.50, oh: 8.99 },
     { name: "M64 (NGC 4826 / 검은눈 은하 Sab)", aliases: ["m64", "ngc4826", "ngc 4826", "검은눈은하", "검은눈 은하", "black eye"], z: 0.0014, dist_mpc: 5.30, log_mstar: 10.48, log_sfr: -0.35, radius_kpc: 6.8, v_rot: 190.0, color_u_r: 2.24, d4000: 1.56, oh: 8.96 },
     { name: "M94 (NGC 4736 / 고리형 조기 나선은하 Sab)", aliases: ["m94", "ngc4736", "ngc 4736"], z: 0.0010, dist_mpc: 4.66, log_mstar: 10.42, log_sfr: -0.28, radius_kpc: 5.5, v_rot: 180.0, color_u_r: 2.18, d4000: 1.52, oh: 8.93 },
     { name: "M106 (NGC 4258 / 활동은하핵 나선은하 Sbc)", aliases: ["m106", "ngc4258", "ngc 4258"], z: 0.0015, dist_mpc: 7.58, log_mstar: 10.68, log_sfr: 0.05, radius_kpc: 13.5, v_rot: 208.0, color_u_r: 2.08, d4000: 1.46, oh: 8.97 },
     { name: "M104 (NGC 4594 / 솜브레로 은하 Sa/S0)", aliases: ["m104", "ngc4594", "ngc 4594", "솜브레로", "솜브레로은하", "sombrero"], z: 0.0034, dist_mpc: 9.55, log_mstar: 11.12, log_sfr: -0.78, radius_kpc: 9.8, v_rot: 320.0, color_u_r: 2.55, d4000: 1.78, oh: 9.08 },
+    { name: "M32 (NGC 221 / 안드로메다 위성 조밀 타원은하 cE2)", aliases: ["m32", "ngc221", "ngc 221", "메시에32"], z: 0.0007, dist_mpc: 0.79, log_mstar: 9.02, log_sfr: -2.95, radius_kpc: 0.25, v_rot: 110.0, color_u_r: 2.52, d4000: 1.84, oh: 8.92 },
+    { name: "M110 (NGC 205 / 안드로메다 위성 왜소 타원은하 dE5)", aliases: ["m110", "ngc205", "ngc 205", "메시에110"], z: 0.0008, dist_mpc: 0.82, log_mstar: 8.95, log_sfr: -2.45, radius_kpc: 1.15, v_rot: 68.0, color_u_r: 2.26, d4000: 1.66, oh: 8.70 },
+    { name: "M105 (NGC 3379 / 사자자리 표준 타원은하 E1)", aliases: ["m105", "ngc3379", "ngc 3379", "메시에105"], z: 0.00304, dist_mpc: 10.7, log_mstar: 11.04, log_sfr: -1.62, radius_kpc: 4.5, v_rot: 295.0, color_u_r: 2.68, d4000: 1.91, oh: 9.09 },
+    { name: "M59 (NGC 4621 / 처녀자리 편평 타원은하 E5)", aliases: ["m59", "ngc4621", "ngc 4621", "메시에59"], z: 0.00156, dist_mpc: 14.9, log_mstar: 11.16, log_sfr: -1.52, radius_kpc: 6.2, v_rot: 320.0, color_u_r: 2.71, d4000: 1.92, oh: 9.11 },
+    { name: "M89 (NGC 4552 / 처녀자리 구형 타원은하 E0)", aliases: ["m89", "ngc4552", "ngc 4552", "메시에89"], z: 0.00113, dist_mpc: 15.4, log_mstar: 11.18, log_sfr: -1.58, radius_kpc: 5.8, v_rot: 345.0, color_u_r: 2.73, d4000: 1.93, oh: 9.12 },
     { name: "M60 (NGC 4649 / 처녀자리 거대 타원은하 E2)", aliases: ["m60", "ngc4649", "ngc 4649"], z: 0.0037, dist_mpc: 16.5, log_mstar: 11.48, log_sfr: -1.45, radius_kpc: 13.4, v_rot: 385.0, color_u_r: 2.75, d4000: 1.92, oh: 9.14 },
     { name: "M84 (NGC 4374 / 처녀자리 타원은하 E1)", aliases: ["m84", "ngc4374", "ngc 4374"], z: 0.0034, dist_mpc: 16.8, log_mstar: 11.35, log_sfr: -1.40, radius_kpc: 11.8, v_rot: 350.0, color_u_r: 2.72, d4000: 1.90, oh: 9.12 },
     { name: "M86 (NGC 4406 / 처녀자리 타원은하 E3)", aliases: ["m86", "ngc4406", "ngc 4406"], z: 0.0008, dist_mpc: 16.8, log_mstar: 11.40, log_sfr: -1.50, radius_kpc: 14.0, v_rot: 360.0, color_u_r: 2.74, d4000: 1.91, oh: 9.13 },
+    { name: "NGC 5128 (센타우루스자리 A / 전파 거대 타원은하 E0p)", aliases: ["ngc5128", "ngc 5128", "centaurusa", "centaurus a", "센타우루스a", "센타우루스자리a"], z: 0.00183, dist_mpc: 3.80, log_mstar: 11.22, log_sfr: -0.75, radius_kpc: 8.5, v_rot: 315.0, color_u_r: 2.62, d4000: 1.85, oh: 9.10 },
+    { name: "NGC 1399 (화로자리 은하단 중심 거대 타원은하 cD/E1)", aliases: ["ngc1399", "ngc 1399"], z: 0.00475, dist_mpc: 20.0, log_mstar: 11.56, log_sfr: -1.65, radius_kpc: 14.8, v_rot: 440.0, color_u_r: 2.82, d4000: 1.96, oh: 9.16 },
+    { name: "NGC 4636 (처녀자리 남부 거대 타원은하 E0)", aliases: ["ngc4636", "ngc 4636"], z: 0.00313, dist_mpc: 14.7, log_mstar: 11.15, log_sfr: -1.50, radius_kpc: 9.4, v_rot: 290.0, color_u_r: 2.69, d4000: 1.91, oh: 9.10 },
+    { name: "NGC 4697 (처녀자리 편평 타원은하 E6)", aliases: ["ngc4697", "ngc 4697", "caldwell52"], z: 0.00414, dist_mpc: 11.8, log_mstar: 11.05, log_sfr: -1.48, radius_kpc: 6.5, v_rot: 260.0, color_u_r: 2.66, d4000: 1.89, oh: 9.08 },
+    { name: "NGC 3377 (사자자리 편평 타원은하 E5)", aliases: ["ngc3377", "ngc 3377"], z: 0.00222, dist_mpc: 10.9, log_mstar: 10.52, log_sfr: -1.60, radius_kpc: 3.6, v_rot: 205.0, color_u_r: 2.58, d4000: 1.85, oh: 9.01 },
     { name: "NGC 4889 (머리털자리 은하단 초거대 타원은하 E4/cD)", aliases: ["ngc4889", "ngc 4889", "caldwell35"], z: 0.0216, dist_mpc: 94.0, log_mstar: 11.92, log_sfr: -1.95, radius_kpc: 24.5, v_rot: 520.0, color_u_r: 2.92, d4000: 2.02, oh: 9.20 },
     { name: "IC 1101 (Abell 2029 중심 초거대 타원은하 cD)", aliases: ["ic1101", "ic 1101"], z: 0.0779, dist_mpc: 320.0, log_mstar: 12.15, log_sfr: -2.10, radius_kpc: 45.0, v_rot: 580.0, color_u_r: 2.98, d4000: 2.06, oh: 9.22 }
 ];
@@ -923,6 +946,31 @@ function generateCatalogClouds() {
 const CLOUDS = generateCatalogClouds();
 let myObservedGalaxies = [];
 
+// SDSS DR18 이중분포(청색구름 vs 적색계열, Strateva+2001 / Schawinski+2014) 기반 비별생성률(log sSFR) 추정
+function estimateBimodalSSFR(colorUR, d4000Val, logMstar, zVal = 0.0, morphHint = "auto") {
+    const mRef = isNaN(logMstar) ? 10.5 : logMstar;
+    const zTerm = 0.35 * Math.log10(1.0 + Math.max(0, zVal || 0));
+    if (morphHint === "elliptical") {
+        const urE = !isNaN(colorUR) ? Math.max(2.42, colorUR) : 2.68;
+        return clip(-11.88 - 0.55 * (urE - 2.60) - 0.14 * (mRef - 11.0) + zTerm, -12.85, -11.35);
+    }
+    if (morphHint === "irregular") {
+        const urI = !isNaN(colorUR) ? Math.min(1.65, colorUR) : 1.32;
+        return clip(-9.35 - 0.65 * (urI - 1.35) + zTerm, -10.15, -8.45);
+    }
+    const hasUR = !isNaN(colorUR);
+    const hasD4 = !isNaN(d4000Val) && d4000Val > 0.8;
+    const ur = hasUR ? colorUR : (hasD4 ? (1.95 + (d4000Val - 1.45) / 0.30) : 1.95);
+    // 질량 의존 적색계열 경계선 (Baldry+2004): (u-r)_div ≈ 2.18 + 0.08*(log M* - 10)
+    const urDiv = 2.18 + 0.08 * (mRef - 10.0);
+    let redExcess = ur - urDiv;
+    if (hasD4) redExcess = Math.max(redExcess, (d4000Val - 1.66) * 1.15);
+    const quenchFrac = morphHint === "spiral" ? 0.0 : (1.0 / (1.0 + Math.exp(-redExcess / 0.13)));
+    const ssfrBlue = -10.02 - 0.85 * (ur - 1.85) - 0.10 * Math.max(0, mRef - 10.2) + zTerm;
+    const ssfrRed = -11.92 - 0.55 * Math.max(0, ur - 2.55) - 0.14 * Math.max(0, mRef - 10.8) + zTerm;
+    return clip((1.0 - quenchFrac) * ssfrBlue + quenchFrac * ssfrRed, -12.85, -8.45);
+}
+
 function computeUnifiedGEI(raw) {
     let z = parseFloat(raw.z);
     let dist_mpc = parseFloat(raw.dist_mpc);
@@ -944,6 +992,11 @@ function computeUnifiedGEI(raw) {
     radius_kpc = clip(radius_kpc, 0.1, 80.0);
 
     let v_rot = parseFloat(raw.v_rot);
+    const sigma_v = parseFloat(raw.sigma_v);
+    if ((isNaN(v_rot) || v_rot <= 0) && !isNaN(sigma_v) && sigma_v > 0) {
+        // 등온 구형체(타원은하) 동역학 환산: V_circ = √2 · σ_v (Binney & Tremaine 2008)
+        v_rot = Math.SQRT2 * sigma_v;
+    }
     if (isNaN(v_rot) || v_rot <= 0) {
         const v_tf = Math.pow(10, 2.15 + 0.275 * (log_mstar - 10.0));
         const v_bar = Math.sqrt(G_ASTRO * mstar / Math.max(radius_kpc, 0.1));
@@ -951,20 +1004,22 @@ function computeUnifiedGEI(raw) {
     }
     v_rot = clip(v_rot, 15.0, 700.0);
 
-    let m_dyn = (v_rot * v_rot) * radius_kpc / G_ASTRO;
-    if (m_dyn < mstar * 1.05) m_dyn = mstar * 1.08;
-    let m_dm = Math.max(0.15 * mstar, m_dyn - mstar);
-    let f_dm = (m_dm / (m_dm + mstar)) * 100.0;
-    if (!isNaN(raw.f_dm_percent)) {
-        f_dm = clip(parseFloat(raw.f_dm_percent), 2.0, 96.0);
+    // GEI v3: log_mdm 직접 입력 > f_dm_percent 지정(궤적 시뮬레이션 보존) > NED Mass–DM 추세선(0.88·log M* + 1.35) 순 적용
+    const ldmIn = parseFloat(raw.log_mdm);
+    const fdmIn = parseFloat(raw.f_dm_percent);
+    let log_mdm, m_dm, m_dyn, f_dm;
+    if (!isNaN(ldmIn)) {
+        log_mdm = clip(ldmIn, 4.0, 13.5);
+        m_dm = Math.pow(10, log_mdm);
+    } else if (!isNaN(fdmIn)) {
+        f_dm = clip(fdmIn, 2.0, 96.0);
         m_dyn = mstar / Math.max(1.0 - f_dm / 100.0, 0.03);
         m_dm = Math.max(0.15 * mstar, m_dyn - mstar);
+        log_mdm = Math.log10(m_dm);
+    } else {
+        log_mdm = 0.88 * log_mstar + 1.35;
+        m_dm = Math.pow(10, log_mdm);
     }
-    // GEI v3: 암흑물질 질량은 우리가 분석한 log M_DM 값을 그대로 사용.
-    // 입력이 없으면 NED Mass–DM 도표(r=0.90)의 추세선 log M_DM ≈ 0.88·log M* + 1.35 로 추정
-    const ldmIn = parseFloat(raw.log_mdm);
-    const log_mdm = !isNaN(ldmIn) ? clip(ldmIn, 4.0, 13.5) : 0.88 * log_mstar + 1.35;
-    m_dm = Math.pow(10, log_mdm);
     m_dyn = m_dm + mstar;
     f_dm = (m_dm / m_dyn) * 100.0;
     const log_mdyn = Math.log10(m_dyn);
@@ -981,8 +1036,9 @@ function computeUnifiedGEI(raw) {
             const l_ha = 4.0 * Math.PI * dl_cm * dl_cm * (ha * 1e-17);
             log_sfr = Math.log10(Math.max(1e-4, 7.9e-42 * l_ha));
         } else {
-            const c_tmp = !isNaN(parseFloat(raw.color_u_r)) ? parseFloat(raw.color_u_r) : 2.0;
-            const ssfr_est = -10.1 - 1.15 * (c_tmp - 1.95) + 0.35 * Math.log10(1 + z);
+            const c_tmp = parseFloat(raw.color_u_r);
+            const d4_tmp = parseFloat(raw.d4000);
+            const ssfr_est = estimateBimodalSSFR(c_tmp, d4_tmp, log_mstar, z, raw.morph_hint || "auto");
             log_sfr = log_mstar + ssfr_est;
         }
     }
@@ -1100,11 +1156,26 @@ function simulateTrajectory(obs) {
             m_t = m_now + dm_sf + dm_merg;
         } else {
             const abs_dt = Math.abs(dt);
-            const t_ratio = Math.pow(t_c / t_now, 0.55);
-            const boost = Math.exp(Math.min(abs_dt / (tau_quench * 1.25), 2.2));
-            m_t = Math.max(1e7, m_now * Math.pow(t_c / t_now, 0.85));
-            const min_sfr = Math.max(1e-4, Math.min(sfr_now * 0.2, m_t * 1e-14));
-            sfr_t = clip(sfr_now * t_ratio * boost * Math.pow(m_t / m_now, 0.65), min_sfr, m_t * Math.pow(10, -8.15));
+            if (cur.log_ssfr < -10.85) {
+                // 소광 타원은하·조기형 은하의 과거 다운사이징(Downsizing, Thomas+2005 / Behroozi+2019) 별생성·병합 조립 역사 복원:
+                // 질량이 큰 타원은하일수록 초기 우주(t_quench ≈ 4.2~7.5 Gyr)에서 폭발적 별생성을 마치고 조기 소광됨
+                const t_quench = clip(7.8 - 1.55 * (cur.log_mstar - 10.8), 3.6, 9.2);
+                const assemblyAlpha = clip(0.52 + 0.14 * (11.5 - cur.log_mstar), 0.38, 0.82);
+                m_t = Math.max(1e7, m_now * Math.pow(t_c / t_now, assemblyAlpha));
+                const log_m_tmp = Math.log10(m_t);
+                // 해당 우주 나이(t_c)에서의 고적색편이 별생성 주계열(SFMS) 비별생성률
+                const ssfr_ms_past = -9.85 - 0.16 * (log_m_tmp - 10.3) + 1.15 * Math.log10(Math.max(1.0, t_now / t_c));
+                // t_c < t_quench 이전으로 거슬러 올라갈수록 소광 상태에서 초기 폭발 별생성 주계열로 연속 복원
+                const activeFrac = 1.0 / (1.0 + Math.exp((t_c - (t_quench + 0.6)) / 1.35));
+                const log_ssfr_past = clip((1.0 - activeFrac) * (cur.log_ssfr + 0.12 * abs_dt) + activeFrac * ssfr_ms_past, cur.log_ssfr, -8.35);
+                sfr_t = Math.max(1e-4, m_t * Math.pow(10, log_ssfr_past));
+            } else {
+                const t_ratio = Math.pow(t_c / t_now, 0.55);
+                const boost = Math.exp(Math.min(abs_dt / (tau_quench * 1.25), 2.3));
+                m_t = Math.max(1e7, m_now * Math.pow(t_c / t_now, 0.85));
+                const min_sfr = Math.max(1e-4, Math.min(sfr_now * 0.2, m_t * 1e-14));
+                sfr_t = clip(sfr_now * t_ratio * boost * Math.pow(m_t / m_now, 0.65), min_sfr, m_t * Math.pow(10, -8.15));
+            }
         }
         const log_m_t = Math.log10(m_t);
         const log_sfr_t = Math.log10(sfr_t);
@@ -1479,7 +1550,7 @@ if (catalogDatalist) {
     });
 }
 
-function findCatalogGalaxy(rawQuery) {
+function findCatalogGalaxy(rawQuery, allowFuzzyFile = false) {
     if (!rawQuery) return null;
     const qTrim = String(rawQuery).trim();
     const qNorm = qTrim.toLowerCase().replace(/\s+/g, "");
@@ -1488,13 +1559,23 @@ function findCatalogGalaxy(rawQuery) {
         if (item.name.toLowerCase() === qTrim.toLowerCase()) return item;
         if (item.aliases && item.aliases.some(a => a.toLowerCase().replace(/\s+/g, "") === qNorm)) return item;
     }
+    if (allowFuzzyFile) {
+        // FITS OBJECT / 파일명(예: "NGC 5982_denoised.fit", "M101 L_denoised")에서 카탈로그 ID 추출
+        const mCat = qTrim.match(/\b(NGC|IC|UGC|ESO|M)\s*[-_]?\s*(\d{1,4}[A-Za-z]?)\b/i);
+        if (mCat) {
+            const keyNorm = (mCat[1] + mCat[2]).toLowerCase();
+            for (const item of GALAXY_CATALOG_DB) {
+                if (item.aliases && item.aliases.some(a => a.toLowerCase().replace(/\s+/g, "") === keyNorm)) return item;
+            }
+        }
+    }
     return null;
 }
 
 const inNameEl = document.getElementById("in-name");
 ["input", "change"].forEach(evtName => {
     inNameEl.addEventListener(evtName, (e) => {
-        const matched = findCatalogGalaxy(e.target.value);
+        const matched = findCatalogGalaxy(e.target.value, false);
         if (matched) {
             fillFormFromCatalogEntry(matched, evtName === "input");
             showUploadStatus(`🔎 <b>카탈로그 자동 인식 완료 (${matched.name})</b> — 항성질량(log M*=${matched.log_mstar}), 별생성률(log SFR=${matched.log_sfr}), 암흑물질·방출선 광도가 자동으로 입력되었습니다!`);
@@ -1508,6 +1589,8 @@ document.getElementById("btn-convert-raw").addEventListener("click", () => {
     const angArcsec = parseFloat(document.getElementById("raw-ang-rad").value);
     const velKms = parseFloat(document.getElementById("raw-vel-kms").value);
     const colorUR = parseFloat(document.getElementById("raw-color-ur").value);
+    const morphHintEl = document.getElementById("raw-morph-hint");
+    const morphHint = morphHintEl ? morphHintEl.value : "auto";
 
     let distMpc = parseFloat(document.getElementById("in-dist").value);
     let zVal = parseFloat(document.getElementById("in-z").value);
@@ -1523,17 +1606,25 @@ document.getElementById("btn-convert-raw").addEventListener("click", () => {
     const distMod = 5.0 * Math.log10(Math.max(distMpc, 0.05)) + 25.0;
     const absMag = (!isNaN(appMag) ? appMag : 10.5) - distMod;
     const logL = -0.4 * (absMag - 4.64);
-    const ur = !isNaN(colorUR) ? colorUR : 1.85;
-    // Bell+2003 색지수 기반 질량대광도비 log(M*/L_r) ≈ -0.42 + 0.35*(u-r)
-    const logML = -0.42 + 0.35 * clip(ur, 0.6, 3.2);
-    const logMstar = clip(logL + logML, 7.2, 12.1);
+    let ur = !isNaN(colorUR) ? colorUR : (morphHint === "elliptical" ? 2.68 : (morphHint === "irregular" ? 1.32 : 1.85));
+    if (morphHint === "elliptical" && (isNaN(colorUR) || Math.abs(colorUR - 1.82) < 0.01)) ur = 2.68;
+    if (morphHint === "irregular" && (isNaN(colorUR) || Math.abs(colorUR - 1.82) < 0.01)) ur = 1.32;
+
+    // Bell+2003 색지수 기반 질량대광도비 log(M*/L_r) ≈ -0.42 + 0.35*(u-r) (+ 조기형 타원은하 노령 항성종족 보정)
+    const earlyMLBoost = (morphHint === "elliptical" || ur >= 2.40) ? 0.10 : 0.0;
+    const logML = -0.42 + 0.35 * clip(ur, 0.6, 3.2) + earlyMLBoost;
+    const logMstar = clip(logL + logML, 7.2, 12.2);
 
     // 각반경(arcsec) -> 물리적 반경 R_kpc = D_Mpc * θ_arcsec / 206.265
     const rKpc = !isNaN(angArcsec) && angArcsec > 0 ? clip((distMpc * angArcsec) / 206.265, 0.3, 65.0) : clip(4.5 * Math.pow(Math.pow(10, logMstar - 10), 0.25), 0.5, 45.0);
-    const vRot = clip(Math.pow(10, 2.14 + 0.275 * (logMstar - 10.0)), 30.0, 480.0);
-    const logSSFR = clip(-10.12 - 1.15 * (ur - 1.95), -12.4, -8.5);
+    const isEll = (morphHint === "elliptical" || (morphHint === "auto" && ur >= 2.38));
+    // 타원은하는 Faber-Jackson 속도분산(V_circ = √2·σ_v), 원반은하는 Tully-Fisher 회전속도 적용
+    const vRot = isEll
+        ? clip(Math.SQRT2 * Math.pow(10, 2.22 + 0.26 * (logMstar - 11.0)), 65.0, 560.0)
+        : clip(Math.pow(10, 2.14 + 0.275 * (logMstar - 10.0)), 30.0, 480.0);
+    const d4000 = clip(1.45 + 0.34 * (ur - 1.95) + (isEll ? 0.10 : 0.0), 1.0, 2.25);
+    const logSSFR = estimateBimodalSSFR(ur, d4000, logMstar, zVal, morphHint);
     const logSFR = logMstar + logSSFR;
-    const d4000 = clip(1.45 + 0.32 * (ur - 1.95), 1.0, 2.2);
     const oh = clip(8.88 + 0.30 * (logMstar - 10.0), 7.8, 9.25);
 
     document.getElementById("in-mstar").value = logMstar.toFixed(3);
@@ -1550,7 +1641,8 @@ document.getElementById("btn-convert-raw").addEventListener("click", () => {
     document.getElementById("in-d4000").value = d4000.toFixed(2);
     document.getElementById("in-oh").value = oh.toFixed(2);
     runFormAnalysis();
-    showUploadStatus(`⚡ <b>원시 관측값 자동 환산 완료!</b> (절대등급 M_r=${absMag.toFixed(2)} → log M*=${logMstar.toFixed(2)}, 물리반경 R=${rKpc.toFixed(2)} kpc)`);
+    const typeTag = isEll ? "적색계열 타원/조기형" : (ur < 1.55 ? "청색 별생성형" : "주계열 원반형");
+    showUploadStatus(`⚡ <b>원시 관측값 자동 환산 완료 (${typeTag})!</b> (절대등급 M_r=${absMag.toFixed(2)} → log M*=${logMstar.toFixed(2)}, log sSFR=${logSSFR.toFixed(2)}, 물리반경 R=${rKpc.toFixed(2)} kpc)`);
 });
 
 // My Observation Log (Add & Export CSV)
@@ -1688,12 +1780,14 @@ function normalizeColumnRow(rawObj, fallbackName) {
     if (z === "") z = (dist_mpc * 70.0) / 299792.458;
 
     let color_u_r = pickNum(["color_u_r", "u_r", "ur", "color", "색지수"], "");
+    let d4000_in = pickNum(["d4000", "d4000_n", "dn4000"], "");
     if (mstar === "" && m_r_app !== "") {
         const distMod = 5.0 * Math.log10(Math.max(dist_mpc, 0.05)) + 25.0;
         const absMag = m_r_app - distMod;
         const logL = -0.4 * (absMag - 4.64);
-        const urTmp = color_u_r !== "" ? color_u_r : 1.85;
-        mstar = clip(logL + (-0.42 + 0.35 * clip(urTmp, 0.6, 3.2)), 7.2, 12.1);
+        const urTmp = color_u_r !== "" ? color_u_r : (d4000_in !== "" && d4000_in >= 1.68 ? 2.65 : 1.85);
+        const earlyBoost = (urTmp >= 2.40 || (d4000_in !== "" && d4000_in >= 1.68)) ? 0.10 : 0.0;
+        mstar = clip(logL + (-0.42 + 0.35 * clip(urTmp, 0.6, 3.2) + earlyBoost), 7.2, 12.2);
     }
 
     let radius_kpc = pickNum(["radius_kpc", "r_e_kpc", "rkpc", "radius", "re_kpc", "반경", "물리반경"], "");
@@ -1706,6 +1800,11 @@ function normalizeColumnRow(rawObj, fallbackName) {
     let lha = pickNum(["log_lha", "loglha", "lha"], "");
     let lsii = pickNum(["log_lsii", "loglsii", "lsii"], "");
     let loiii = pickNum(["log_loiii", "logloiii", "loiii"], "");
+    let v_rot_in = pickNum(["v_rot", "vrot", "v_max", "vmax", "회전속도"], "");
+    const sigma_in = pickNum(["vel_disp", "sigma", "sigma_v", "속도분산"], "");
+    if (v_rot_in === "" && sigma_in !== "" && sigma_in > 0) {
+        v_rot_in = Number((Math.SQRT2 * sigma_in).toFixed(1));
+    }
 
     return {
         name: pick(["name", "galaxy", "id", "objid", "target", "object", "은하이름", "은하명", "천체명"], fallbackName),
@@ -1718,104 +1817,875 @@ function normalizeColumnRow(rawObj, fallbackName) {
         dist_mpc: dist_mpc,
         z: z,
         radius_kpc: radius_kpc,
-        v_rot: pickNum(["v_rot", "vrot", "v_max", "vmax", "vel_disp", "sigma", "회전속도"], ""),
+        v_rot: v_rot_in,
         color_u_r: color_u_r,
-        d4000: pickNum(["d4000", "d4000_n", "dn4000"], ""),
+        d4000: d4000_in,
         oh: pickNum(["oh", "oh_p50", "metallicity", "금속량"], ""),
         ha_flux: pickNum(["ha_flux", "ha", "halpha", "h_alpha_flux"], "")
     };
 }
+
+// ── Shared Astronomical FITS (1D/2D/3D RGB) + Star-Masked Elliptical Photometry & 1D Spectrum Engine ──
+function obsMedianAbs(arr, med) {
+    if (!arr.length) return 0;
+    const d = new Float32Array(arr.length);
+    for (let i = 0; i < arr.length; i++) d[i] = Math.abs(arr[i] - med);
+    d.sort();
+    return d[Math.floor(d.length * 0.5)];
+}
+
+function estimateObsSpectrumRedshift(wave, flux) {
+    const n = wave.length;
+    if (n < 40) return 0;
+    const wMin = wave[0], wMax = wave[n - 1];
+    if (wMin < 2500 || wMax > 13000) return 0;
+    const cont = new Float64Array(n);
+    const hw = Math.max(8, Math.floor(n * 0.04));
+    for (let i = 0; i < n; i++) {
+        const sub = [];
+        for (let j = Math.max(0, i - hw); j <= Math.min(n - 1, i + hw); j += 2) sub.push(flux[j]);
+        sub.sort((a, b) => a - b);
+        cont[i] = Math.max(1e-9, sub[Math.floor(sub.length * 0.5)]);
+    }
+    const norm = new Float64Array(n);
+    for (let i = 0; i < n; i++) norm[i] = (flux[i] - cont[i]) / cont[i];
+    const interpAt = (arr, lam) => {
+        if (lam < wMin || lam > wMax) return null;
+        let lo = 0, hi = n - 1;
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (wave[mid] <= lam) lo = mid; else hi = mid; }
+        const t = (lam - wave[lo]) / Math.max(1e-9, wave[hi] - wave[lo]);
+        return arr[lo] * (1 - t) + arr[hi] * t;
+    };
+    const emLines = [[6562.8, 1.5], [5006.8, 1.1], [4861.3, 0.9], [6583.5, 0.8], [3727.4, 0.8]];
+    const absLines = [[3933.7, 1.5], [3968.5, 1.3], [4304.4, 0.9], [5175.4, 1.2], [5892.9, 1.0], [4861.3, 0.7]];
+    let bestZ = 0, bestScore = 0;
+    for (let z = 0; z <= 0.35; z += 0.0005) {
+        let emS = 0, absS = 0;
+        for (const [l0, wgt] of emLines) { const v = interpAt(norm, l0 * (1 + z)); if (v !== null && v > 0.08) emS += wgt * Math.min(4.0, v); }
+        for (const [l0, wgt] of absLines) { const v = interpAt(norm, l0 * (1 + z)); if (v !== null && v < -0.05) absS += wgt * Math.min(1.5, -v); }
+        const b39 = interpAt(cont, 3900 * (1 + z)), r40 = interpAt(cont, 4050 * (1 + z));
+        if (b39 && r40 && b39 > 0 && r40 / b39 > 1.28) absS += 0.8 * Math.min(1.5, r40 / b39 - 1.15);
+        const sc = Math.max(emS, absS * 1.35);
+        if (sc > bestScore) { bestScore = sc; bestZ = z; }
+    }
+    return bestScore > 0.32 ? Math.round(bestZ * 10000) / 10000 : 0;
+}
+
+function analyzeObs1DSpectrum(wave, flux, zIn, labelName) {
+    const z = (Number.isFinite(zIn) && zIn > 0) ? zIn : estimateObsSpectrumRedshift(wave, flux);
+    const restW = Array.from(wave, w => w / (1 + z));
+    const meanBand = (w0, w1) => {
+        let s = 0, n = 0;
+        for (let i = 0; i < restW.length; i++) if (restW[i] >= w0 && restW[i] <= w1 && Number.isFinite(flux[i])) { s += flux[i]; n++; }
+        return n >= 2 ? s / n : null;
+    };
+    const b4 = meanBand(3850, 3950), r4 = meanBand(4000, 4100);
+    const d4000 = (b4 !== null && r4 !== null && b4 > 1e-6) ? clip(r4 / b4, 0.90, 2.35) : 1.50;
+    const measEW = (c, hw, sb1, sb2) => {
+        const cL = meanBand(c - sb2, c - sb1), cR = meanBand(c + sb1, c + sb2);
+        const cont = (cL !== null && cR !== null) ? 0.5 * (cL + cR) : (cL ?? cR);
+        if (!cont || cont <= 0) return { ew: 0, flux: 0 };
+        let ew = 0, flx = 0;
+        for (let i = 0; i < restW.length; i++) {
+            if (Math.abs(restW[i] - c) <= hw && Number.isFinite(flux[i])) {
+                const dw = i > 0 ? Math.abs(restW[i] - restW[i - 1]) : 2.0;
+                ew += ((flux[i] - cont) / cont) * dw;
+                flx += (flux[i] - cont) * dw;
+            }
+        }
+        return { ew, flux: flx };
+    };
+    const ha = measEW(6562.8, 13, 38, 75), nii = measEW(6583.5, 11, 35, 75);
+    const caK = measEW(3933.7, 13, 25, 60), caH = measEW(3968.5, 13, 25, 60), mgb = measEW(5175.4, 18, 28, 65), nad = measEW(5892.9, 15, 25, 60);
+    const absEW = Math.max(0, -caK.ew) + Math.max(0, -caH.ew) + Math.max(0, -mgb.ew) + Math.max(0, -nad.ew);
+    const isQuiescentE = (ha.ew < 2.2) && (d4000 >= 1.52 || absEW >= 6.5);
+    const dist_mpc = z > 0.0002 ? Math.max(0.5, (299792.458 * z / 70.0) * (1 + 0.5 * z)) : 25.0;
+    let log_mstar, log_sfr, color_u_r, oh, v_rot, radius_kpc, specTag;
+    if (isQuiescentE) {
+        color_u_r = clip(2.48 + 0.42 * (d4000 - 1.65), 2.38, 2.96);
+        log_mstar = clip(11.05 + 0.55 * (d4000 - 1.75), 10.60, 11.85);
+        const log_ssfr = estimateBimodalSSFR(color_u_r, d4000, log_mstar, z, "elliptical");
+        log_sfr = log_mstar + log_ssfr;
+        oh = clip(9.05 + 0.12 * (log_mstar - 11.0), 8.95, 9.22);
+        v_rot = clip(Math.SQRT2 * Math.pow(10, 2.24 + 0.26 * (log_mstar - 11.0)), 180.0, 520.0);
+        radius_kpc = clip(6.5 * Math.pow(Math.pow(10, log_mstar - 11.0), 0.56), 2.5, 26.0);
+        specTag = `소광 타원은하 흡수선 분광 (Dn4000=${d4000.toFixed(2)}, 흡수선EW=${absEW.toFixed(1)}Å)`;
+    } else {
+        const n2 = (ha.flux > 0 && nii.flux > 0) ? Math.log10(nii.flux / ha.flux) : -0.45;
+        oh = clip(8.90 + 0.57 * n2, 8.05, 9.18);
+        color_u_r = clip(1.45 + 1.05 * (d4000 - 1.15), 1.05, 2.45);
+        log_mstar = clip(10.15 + 1.15 * (oh - 8.75), 8.80, 11.20);
+        const log_ssfr = clip(-9.95 - 0.85 * (d4000 - 1.25) + 0.25 * Math.log10(Math.max(1, ha.ew) / 18.0), -11.4, -8.5);
+        log_sfr = log_mstar + log_ssfr;
+        v_rot = clip(Math.pow(10, 2.14 + 0.27 * (log_mstar - 10.0)), 60.0, 360.0);
+        radius_kpc = clip(5.8 * Math.pow(Math.pow(10, log_mstar - 10.2), 0.26), 1.8, 22.0);
+        specTag = `방출선 분광 (Dn4000=${d4000.toFixed(2)}, Hα EW=${ha.ew.toFixed(1)}Å)`;
+    }
+    return {
+        row: {
+            name: `${labelName} (${isQuiescentE ? '소광타원 분광' : '방출선 분광'})`,
+            log_mstar, log_sfr, log_mdm: 0.88 * log_mstar + 1.35,
+            dist_mpc, z: z || 0.0058, radius_kpc, v_rot, color_u_r, d4000, oh
+        },
+        isQuiescentE, d4000, absEW, z, specTag
+    };
+}
+
+function tryParseObs1DSpectrumText(text, fallbackName) {
+    const lines = text.split(/\r?\n/);
+    const wave = [], flux = [];
+    for (const raw of lines) {
+        const s = raw.trim();
+        if (!s || s.startsWith("#") || s.startsWith("//")) continue;
+        const parts = s.split(/[,\t; ]+/).filter(Boolean);
+        if (parts.length < 2 || parts.length > 5) continue;
+        const wv = parseFloat(parts[0]), fv = parseFloat(parts[1]);
+        if (Number.isFinite(wv) && Number.isFinite(fv) && wv >= 1000 && wv <= 30000) {
+            wave.push(wv); flux.push(fv);
+        }
+    }
+    if (wave.length < 40) return null;
+    // Check strictly monotonic/distinct wavelengths so normal multi-row galaxy catalogs are never confused with spectra
+    const pairs = wave.map((w, i) => [w, flux[i]]).sort((a, b) => a[0] - b[0]);
+    if (pairs[pairs.length - 1][0] - pairs[0][0] < 400) return null;
+    return analyzeObs1DSpectrum(
+        Float64Array.from(pairs.map(p => p[0])),
+        Float64Array.from(pairs.map(p => p[1])),
+        NaN,
+        fallbackName
+    );
+}
+
+function parseObservatoryFITS(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const hdr = {};
+    let offset = 0, ended = false;
+    while (!ended && offset + 2880 <= bytes.length) {
+        for (let c = 0; c < 36; c++) {
+            let card = "";
+            for (let i = 0; i < 80; i++) card += String.fromCharCode(bytes[offset + c * 80 + i]);
+            const key = card.slice(0, 8).trim();
+            if (key === "END") { ended = true; break; }
+            if (card[8] === "=") {
+                let val = card.slice(10).split("/")[0].trim();
+                if (val.startsWith("'")) val = (card.slice(10).match(/'([^']*)'/) || [, ""])[1].trim();
+                hdr[key] = val;
+            }
+        }
+        offset += 2880;
+    }
+    if (!ended) throw new Error("FITS 헤더 END 카드를 찾지 못했습니다.");
+    const bitpix = parseInt(hdr.BITPIX, 10);
+    const naxis = parseInt(hdr.NAXIS, 10);
+    const W = parseInt(hdr.NAXIS1 || "0", 10);
+    const H = naxis >= 2 ? parseInt(hdr.NAXIS2 || "1", 10) : 1;
+    const D = naxis >= 3 ? parseInt(hdr.NAXIS3 || "1", 10) : 1;
+    if (!(naxis >= 1) || !(W > 0)) throw new Error("유효한 FITS 축 크기가 없습니다.");
+    const bzero = parseFloat(hdr.BZERO || "0"), bscale = parseFloat(hdr.BSCALE || "1");
+    const bpp = Math.abs(bitpix) / 8;
+    const planePixels = W * H;
+    const planesToRead = (naxis >= 3 && D >= 3 && offset + 3 * planePixels * bpp <= bytes.length) ? 3 : 1;
+    if (offset + planesToRead * planePixels * bpp > bytes.length) throw new Error("FITS 데이터 크기가 헤더보다 작습니다.");
+    const dv = new DataView(buffer, offset);
+    const read = {
+        8: i => dv.getUint8(i), 16: i => dv.getInt16(i * 2), 32: i => dv.getInt32(i * 4),
+        "-32": i => dv.getFloat32(i * 4), "-64": i => dv.getFloat64(i * 8)
+    }[bitpix];
+    if (!read) throw new Error(`지원하지 않는 BITPIX=${bitpix}`);
+
+    const zHdr = parseFloat(hdr.REDSHIFT || hdr.Z || "NaN");
+    if (naxis === 1 || (H <= 6 && W >= 60)) {
+        const crval1 = parseFloat(hdr.CRVAL1 ?? hdr.COEFF0 ?? "3800");
+        const cdelt1 = parseFloat(hdr.CDELT1 ?? hdr.CD1_1 ?? hdr.COEFF1 ?? "1");
+        const crpix1 = parseFloat(hdr.CRPIX1 ?? "1");
+        const isLogW = (hdr.CTYPE1 && /LOG/i.test(hdr.CTYPE1)) || (hdr.COEFF0 !== undefined) || (crval1 > 3.0 && crval1 < 5.0 && cdelt1 < 0.01);
+        const wave = new Float64Array(W), flux = new Float64Array(W);
+        for (let i = 0; i < W; i++) {
+            const rw = crval1 + (i + 1 - crpix1) * cdelt1;
+            wave[i] = isLogW ? Math.pow(10, rw) : rw;
+            const v = bzero + bscale * read(i);
+            flux[i] = Number.isFinite(v) ? v : 0;
+        }
+        return { is1DSpectrum: true, wave, flux, zHdr, object: hdr.OBJECT, origW: W, origH: H, bitpix };
+    }
+
+    const maxSide = 760;
+    const f = Math.max(1, Math.ceil(Math.max(W, H) / maxSide));
+    const w = Math.floor(W / f), h = Math.floor(H / f);
+    const data = new Float32Array(w * h);
+    const rPlane = planesToRead === 3 ? new Float32Array(w * h) : null;
+    const bPlane = planesToRead === 3 ? new Float32Array(w * h) : null;
+    const subStep = f >= 4 ? Math.max(1, Math.floor(f / 2)) : 1;
+    let minFinite = Infinity, maxFinite = -Infinity;
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            if (planesToRead === 3) {
+                let sr = 0, sg = 0, sb = 0, n = 0;
+                for (let dy = 0; dy < f; dy += subStep) {
+                    const rb = (y * f + dy) * W;
+                    for (let dx = 0; dx < f; dx += subStep) {
+                        const p0 = rb + (x * f + dx);
+                        const vr = read(p0), vg = read(planePixels + p0), vb = read(2 * planePixels + p0);
+                        if (Number.isFinite(vr) && Number.isFinite(vg) && Number.isFinite(vb)) { sr += vr; sg += vg; sb += vb; n++; }
+                    }
+                }
+                const rV = n ? bzero + bscale * sr / n : NaN;
+                const gV = n ? bzero + bscale * sg / n : NaN;
+                const bV = n ? bzero + bscale * sb / n : NaN;
+                const val = 0.2126 * rV + 0.7152 * gV + 0.0722 * bV;
+                data[y * w + x] = val; rPlane[y * w + x] = rV; bPlane[y * w + x] = bV;
+                if (Number.isFinite(val)) { if (val < minFinite) minFinite = val; if (val > maxFinite) maxFinite = val; }
+            } else {
+                let s = 0, n = 0;
+                for (let dy = 0; dy < f; dy += subStep) {
+                    const rb = (y * f + dy) * W;
+                    for (let dx = 0; dx < f; dx += subStep) {
+                        const v = read(rb + (x * f + dx));
+                        if (Number.isFinite(v)) { s += v; n++; }
+                    }
+                }
+                const val = n ? bzero + bscale * s / n : NaN;
+                data[y * w + x] = val;
+                if (Number.isFinite(val)) { if (val < minFinite) minFinite = val; if (val > maxFinite) maxFinite = val; }
+            }
+        }
+    }
+    if (!Number.isFinite(minFinite)) minFinite = 0;
+    const out = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const v = data[(h - 1 - y) * w + x];
+            out[y * w + x] = Number.isFinite(v) ? v : minFinite;
+        }
+    }
+    let rbRatio = null;
+    const isMonoFilter = /^(L|LUM|LUMINANCE|CLEAR|MONO)$/i.test(String(hdr.FILTER || "").trim());
+    if (rPlane && bPlane && !isMonoFilter) {
+        const sL = Float32Array.from(out).sort();
+        const bgR = Float32Array.from(rPlane).sort()[Math.floor(rPlane.length * 0.25)];
+        const bgB = Float32Array.from(bPlane).sort()[Math.floor(bPlane.length * 0.25)];
+        const thr = sL[Math.floor(sL.length * 0.92)];
+        let sumR = 0, sumB = 0;
+        for (let i = 0; i < rPlane.length; i++) {
+            if (Number.isFinite(data[i]) && data[i] > thr) { sumR += Math.max(0, rPlane[i] - bgR); sumB += Math.max(0, bPlane[i] - bgB); }
+        }
+        if (sumB > 1e-5 && Math.abs(sumR / sumB - 1.0) > 0.12) rbRatio = sumR / sumB;
+    }
+    const sOut = Float32Array.from(out).sort();
+    const bgEst = sOut[Math.floor(sOut.length * 0.25)];
+    const p55 = sOut[Math.floor(sOut.length * 0.55)];
+    let madS = 0, madN = 0;
+    for (let i = 0; i < sOut.length; i += 8) if (sOut[i] <= p55) { madS += Math.abs(sOut[i] - bgEst); madN++; }
+    const skyS = Math.max(1e-7, 1.4826 * (madS / Math.max(1, madN)));
+    const sigPix = [];
+    for (let i = 0; i < sOut.length; i++) if (sOut[i] - bgEst > 4.0 * skyS) sigPix.push(sOut[i] - bgEst);
+    const p85 = sigPix.length >= 20 ? sigPix[Math.floor(sigPix.length * 0.85)] : Math.max(1e-9, sOut[Math.floor(sOut.length * 0.985)] - bgEst);
+    const pMx = sigPix.length >= 20 ? sigPix[Math.floor(sigPix.length * 0.996)] : Math.max(1e-9, sOut[Math.floor(sOut.length * 0.999)] - bgEst);
+    const isAstroStretched = Boolean(minFinite >= -0.25 && maxFinite <= 2.05 && (pMx / Math.max(1e-9, p85) < 3.8));
+    return {
+        is1DSpectrum: false, width: w, height: h, data: out, origW: W, origH: H, origPlanes: planesToRead,
+        bitpix, object: hdr.OBJECT, filter: hdr.FILTER, zHdr, rbRatio,
+        isLinear: !isAstroStretched, isAstroStretched
+    };
+}
+
+function detectObsExtendedGalaxies(imgObj) {
+    const W = imgObj.width, H = imgObj.height;
+    const cs = Math.max(1, Math.round(Math.max(W, H) / 260));
+    const wc = Math.floor(W / cs), hc = Math.floor(H / cs);
+    if (wc < 32 || hc < 32) return [];
+    const lc = new Float32Array(wc * hc);
+    for (let yc = 0; yc < hc; yc++) {
+        for (let xc = 0; xc < wc; xc++) {
+            let s = 0, n = 0;
+            for (let dy = 0; dy < cs; dy++) for (let dx = 0; dx < cs; dx++) { s += imgObj.data[(yc * cs + dy) * W + (xc * cs + dx)]; n++; }
+            lc[yc * wc + xc] = s / Math.max(1, n);
+        }
+    }
+    const sorted = Float32Array.from(lc).sort();
+    const bg = sorted[Math.floor(sorted.length * 0.25)];
+    const p55 = sorted[Math.floor(sorted.length * 0.55)];
+    const devs = [];
+    for (let i = 0; i < lc.length; i++) if (lc[i] <= p55) devs.push(Math.abs(lc[i] - bg));
+    devs.sort((a, b) => a - b);
+    const sig = Math.max(1e-6 * (sorted[sorted.length - 1] - sorted[0]), 1.4826 * (devs[Math.floor(devs.length * 0.5)] || 0));
+    const sm = new Float32Array(wc * hc);
+    for (let y = 0; y < hc; y++) {
+        for (let x = 0; x < wc; x++) {
+            let s = 0, wgt = 0;
+            for (let dy = -2; dy <= 2; dy++) {
+                const yy = Math.min(hc - 1, Math.max(0, y + dy));
+                for (let dx = -2; dx <= 2; dx++) {
+                    const xx = Math.min(wc - 1, Math.max(0, x + dx));
+                    const k = Math.exp(-(dx * dx + dy * dy) / 4.5);
+                    s += Math.max(0, lc[yy * wc + xx] - bg) * k; wgt += k;
+                }
+            }
+            sm[y * wc + x] = s / wgt;
+        }
+    }
+    const thr = 3.2 * sig;
+    const visited = new Uint8Array(wc * hc);
+    const qx = new Int32Array(wc * hc), qy = new Int32Array(wc * hc);
+    const cands = [];
+    for (let y0 = 3; y0 < hc - 3; y0++) {
+        for (let x0 = 3; x0 < wc - 3; x0++) {
+            const idx0 = y0 * wc + x0;
+            if (visited[idx0] || sm[idx0] <= thr) continue;
+            let head = 0, tail = 0;
+            qx[tail] = x0; qy[tail] = y0; tail++; visited[idx0] = 1;
+            let area = 0, flx = 0, pk = -1, px = x0, py = y0, minX = x0, maxX = x0, minY = y0, maxY = y0, sx = 0, sy = 0;
+            while (head < tail) {
+                const cx = qx[head], cy = qy[head]; head++;
+                const id = cy * wc + cx;
+                const v = Math.max(0, lc[id] - bg);
+                area++; flx += v; sx += cx * v; sy += cy * v;
+                if (sm[id] > pk) { pk = sm[id]; px = cx; py = cy; }
+                if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+                if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                    if (!dx && !dy) continue;
+                    const nx = cx + dx, ny = cy + dy;
+                    if (nx < 1 || nx >= wc - 1 || ny < 1 || ny >= hc - 1) continue;
+                    const nid = ny * wc + nx;
+                    if (!visited[nid] && sm[nid] > thr) { visited[nid] = 1; qx[tail] = nx; qy[tail] = ny; tail++; }
+                }
+            }
+            if (area < 18) continue;
+            if ((minX <= 2 || maxX >= wc - 3 || minY <= 2 || maxY >= hc - 3) && area < 160) continue;
+            let coreS = 0, coreN = 0, ringS = 0, ringN = 0, wingS = 0, wingN = 0, fwhmA = 0, mxx = 0, myy = 0, mxy = 0, mf = 0;
+            for (let dy = -13; dy <= 13; dy++) {
+                const yy = py + dy; if (yy < 0 || yy >= hc) continue;
+                for (let dx = -13; dx <= 13; dx++) {
+                    const xx = px + dx; if (xx < 0 || xx >= wc) continue;
+                    const rr = Math.hypot(dx, dy), v = Math.max(0, lc[yy * wc + xx] - bg);
+                    if (rr <= 1.8) { coreS += v; coreN++; }
+                    else if (rr > 3.2 && rr <= 6.8) { ringS += v; ringN++; }
+                    else if (rr > 6.8 && rr <= 12.5) { wingS += v; wingN++; }
+                    if (rr <= 9.0 && v > 0.35 * pk) fwhmA++;
+                    if (rr <= 10.0 && v > 2.5 * sig) { mxx += v * dx * dx; myy += v * dy * dy; mxy += v * dx * dy; mf += v; }
+                }
+            }
+            const coreM = coreS / Math.max(1, coreN);
+            const ringR = (ringS / Math.max(1, ringN)) / Math.max(1e-6, coreM);
+            const wingR = (wingS / Math.max(1, wingN)) / Math.max(1e-6, coreM);
+            mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
+            const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) ** 2 / 4 + mxy * mxy));
+            const ba = Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det));
+            if ((ba > 0.70 && ringR < 0.175 && wingR < 0.105) || (fwhmA <= 14 && ringR < 0.15) || (area < 45 && wingR < 0.06)) continue;
+            const mx = flx > 0 ? (0.65 * px + 0.35 * (sx / flx)) : px;
+            const my = flx > 0 ? (0.65 * py + 0.35 * (sy / flx)) : py;
+            const distC = Math.hypot(mx - wc / 2, my - hc / 2) / Math.min(wc, hc);
+            const extSpan = Math.max(maxX - minX + 1, maxY - minY + 1) * cs;
+            const rCut = Math.max(54, Math.min(0.44 * Math.max(W, H), 1.48 * extSpan));
+            const score = flx * Math.exp(-0.5 * Math.pow(distC / 0.24, 2)) * (1.0 + 2.0 * Math.min(0.5, wingR));
+            cands.push({ cx: mx * cs, cy: my * cs, rCut, areaFrac: (area * cs * cs) / (W * H), score });
+        }
+    }
+    cands.sort((a, b) => b.score - a.score);
+    const kept = [];
+    for (const c of cands) {
+        if (kept.some(k => Math.hypot(c.cx - k.cx, c.cy - k.cy) < 0.55 * Math.min(c.rCut, k.rCut))) continue;
+        kept.push(c);
+        if (kept.length >= 4) break;
+    }
+    return kept;
+}
+
+function renderObsPreviewCanvas(imgObj, activeTgt = null) {
+    if (!obsPreviewCanvas || !obsPreviewCanvas.getContext) return;
+    const CW = 120, CH = 120;
+    const ctx = obsPreviewCanvas.getContext("2d");
+    const imgData = ctx.createImageData(CW, CH);
+    const src = imgObj.data, w = imgObj.width, h = imgObj.height;
+    const step = Math.max(1, Math.floor(src.length / 25000));
+    const sample = [];
+    for (let i = 0; i < src.length; i += step) sample.push(src[i]);
+    sample.sort((a, b) => a - b);
+    const mn = sample[Math.floor(sample.length * 0.01)] || 0;
+    const mx = sample[Math.min(sample.length - 1, Math.floor(sample.length * 0.995))] || 1;
+    const rng = Math.max(mx - mn, 1e-6);
+    for (let py = 0; py < CH; py++) {
+        const sy = Math.min(h - 1, Math.floor((py / CH) * h));
+        for (let px = 0; px < CW; px++) {
+            const sx = Math.min(w - 1, Math.floor((px / CW) * w));
+            const norm = clip((src[sy * w + sx] - mn) / rng, 0, 1);
+            const val = Math.asinh(norm * 10.0) / Math.asinh(10.0);
+            const idx = (py * CW + px) * 4;
+            imgData.data[idx] = Math.min(255, Math.floor(Math.pow(val, 0.72) * 255));
+            imgData.data[idx + 1] = Math.min(255, Math.floor(Math.pow(val, 1.35) * 235));
+            imgData.data[idx + 2] = Math.min(255, Math.floor(Math.sin(val * Math.PI) * 165 + val * 115));
+            imgData.data[idx + 3] = 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    if (activeTgt && ctx.beginPath && ctx.arc) {
+        ctx.save && ctx.save();
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc((activeTgt.cx / w) * CW, (activeTgt.cy / h) * CH, Math.max(6, (activeTgt.rCut / Math.max(w, h)) * CW), 0, 2 * Math.PI);
+        ctx.stroke && ctx.stroke();
+        ctx.restore && ctx.restore();
+    }
+}
+
+function analyzeObservatoryImageBuffer(imgObj, baseName) {
+    const w = imgObj.width, h = imgObj.height, disp = imgObj.data;
+    const targets = detectObsExtendedGalaxies(imgObj);
+    const isWide = targets.length >= 2 || (targets.length === 1 && Math.max(w, h) >= 600 && targets[0].areaFrac < 0.045);
+    const catMatch = (baseName ? findCatalogGalaxy(baseName, true) : null) || (imgObj.objectName ? findCatalogGalaxy(imgObj.objectName, true) : null);
+
+    const evaluateTarget = (tIdx) => {
+        let rx0 = 0, ry0 = 0, rx1 = w, ry1 = h;
+        const excl = new Uint8Array(w * h);
+        const activeT = (isWide && tIdx >= 0 && targets[tIdx]) ? targets[tIdx] : null;
+        if (activeT) {
+            rx0 = Math.max(0, Math.floor(activeT.cx - activeT.rCut));
+            ry0 = Math.max(0, Math.floor(activeT.cy - activeT.rCut));
+            rx1 = Math.min(w, Math.ceil(activeT.cx + activeT.rCut));
+            ry1 = Math.min(h, Math.ceil(activeT.cy + activeT.rCut));
+            if (targets.length >= 2) {
+                for (let y = ry0; y < ry1; y++) {
+                    for (let x = rx0; x < rx1; x++) {
+                        const d0 = Math.hypot(x - activeT.cx, y - activeT.cy);
+                        for (let j = 0; j < targets.length; j++) {
+                            if (j === tIdx) continue;
+                            const dj = Math.hypot(x - targets[j].cx, y - targets[j].cy);
+                            if (dj < 0.85 * d0 || dj < 0.55 * targets[j].rCut) { excl[y * w + x] = 1; break; }
+                        }
+                    }
+                }
+            }
+        }
+        const rw = Math.max(8, rx1 - rx0), rh = Math.max(8, ry1 - ry0);
+        const segBins = Array.from({ length: 16 }, () => []);
+        const bThick = Math.max(2, Math.min(10, Math.floor(Math.min(rw, rh) * 0.04)));
+        for (let y = ry0; y < ry1; y++) {
+            const isT = (y - ry0) < bThick, isB = (ry1 - 1 - y) < bThick;
+            for (let x = rx0; x < rx1; x++) {
+                const isL = (x - rx0) < bThick, isR = (rx1 - 1 - x) < bThick;
+                if (!(isT || isB || isL || isR) || excl[y * w + x]) continue;
+                const ang = Math.atan2(y - (ry0 + ry1) / 2, x - (rx0 + rx1) / 2);
+                segBins[Math.min(15, Math.max(0, Math.floor(((ang + Math.PI) / (2 * Math.PI)) * 16)))].push(disp[y * w + x]);
+            }
+        }
+        const segMeds = [], allBorder = [];
+        for (const sb of segBins) if (sb.length >= 3) { sb.sort((a, b) => a - b); segMeds.push(sb[Math.floor(sb.length * 0.5)]); for (const v of sb) allBorder.push(v); }
+        segMeds.sort((a, b) => a - b); allBorder.sort((a, b) => a - b);
+        const bgDisp = segMeds.length ? segMeds[Math.floor(segMeds.length * 0.25)] : (allBorder[Math.floor(allBorder.length * 0.25)] || 0);
+        const lowB = allBorder.filter(v => v <= (segMeds[Math.floor(segMeds.length * 0.65)] ?? bgDisp + 1));
+        const skySigmaDisp = Math.max(1e-7, 1.4826 * obsMedianAbs(lowB.length >= 8 ? lowB : allBorder, bgDisp));
+
+        const netDisp = new Float32Array(w * h);
+        let peakDisp = 0;
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            const idx = y * w + x; if (excl[idx]) continue;
+            const v = Math.max(0, disp[idx] - bgDisp); netDisp[idx] = v; if (v > peakDisp) peakDisp = v;
+        }
+        const dirs8 = [[1,0],[-1,0],[0,1],[0,-1],[0.7071,0.7071],[-0.7071,0.7071],[0.7071,-0.7071],[-0.7071,-0.7071]];
+        let gx0 = activeT ? activeT.cx : (rx0 + rx1) / 2, gy0 = activeT ? activeT.cy : (ry0 + ry1) / 2;
+        if (rw >= 24 && rh >= 24) {
+            let bestHalo = -1;
+            const stepC = Math.max(2, Math.floor(Math.min(rw, rh) / 110));
+            const ringBuf = new Float32Array(16);
+            for (let y = ry0 + 9; y < ry1 - 9; y += stepC) {
+                for (let x = rx0 + 9; x < rx1 - 9; x += stepC) {
+                    if (excl[y * w + x]) continue;
+                    let k = 0;
+                    for (const [ux, uy] of dirs8) {
+                        ringBuf[k++] = netDisp[Math.round(y + 5 * uy) * w + Math.round(x + 5 * ux)];
+                        ringBuf[k++] = netDisp[Math.round(y + 8 * uy) * w + Math.round(x + 8 * ux)];
+                    }
+                    ringBuf.sort();
+                    const haloMed = ringBuf[8];
+                    if (haloMed <= 1.8 * skySigmaDisp) continue;
+                    const cw = activeT
+                        ? Math.exp(-0.5 * Math.pow(Math.hypot(x - activeT.cx, y - activeT.cy) / Math.max(18, 0.35 * activeT.rCut), 2))
+                        : Math.exp(-0.5 * Math.pow(Math.hypot(x - (rx0 + rx1) / 2, y - (ry0 + ry1) / 2) / Math.max(24, 0.55 * Math.min(rw, rh)), 2));
+                    if (haloMed * cw > bestHalo) { bestHalo = haloMed * cw; gx0 = x; gy0 = y; }
+                }
+            }
+            let bestCusp = -1, fx0 = gx0, fy0 = gy0;
+            for (let y = Math.max(ry0 + 2, Math.round(gy0 - 6)); y <= Math.min(ry1 - 3, Math.round(gy0 + 6)); y++) {
+                for (let x = Math.max(rx0 + 2, Math.round(gx0 - 6)); x <= Math.min(rx1 - 3, Math.round(gx0 + 6)); x++) {
+                    let s3 = 0;
+                    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s3 += netDisp[(y + dy) * w + (x + dx)];
+                    if (s3 > bestCusp) { bestCusp = s3; fx0 = x; fy0 = y; }
+                }
+            }
+            gx0 = fx0; gy0 = fy0;
+        }
+        const coreProtectR = Math.max(6.5, 0.055 * Math.min(rw, rh));
+        const starPeaks = [];
+        for (let y = ry0 + 3; y < ry1 - 3; y++) {
+            for (let x = rx0 + 3; x < rx1 - 3; x++) {
+                const idx = y * w + x;
+                if (excl[idx] || Math.hypot(x - gx0, y - gy0) <= coreProtectR) continue;
+                const v0 = netDisp[idx];
+                if (v0 < 5.5 * skySigmaDisp) continue;
+                let isMax = true, m3 = 0;
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nv = netDisp[(y + dy) * w + (x + dx)]; if (nv > v0) isMax = false; m3 += nv; }
+                if (!isMax) continue;
+                m3 /= 9.0;
+                const midV = [], ringV = [];
+                for (const [ux, uy] of dirs8) {
+                    const xm = Math.round(x + 4 * ux), ym = Math.round(y + 4 * uy);
+                    if (xm >= rx0 && xm < rx1 && ym >= ry0 && ym < ry1) midV.push(netDisp[ym * w + xm]);
+                    for (const rad of [7.5, 10.5]) {
+                        const xr = Math.round(x + rad * ux), yr = Math.round(y + rad * uy);
+                        if (xr >= rx0 && xr < rx1 && yr >= ry0 && yr < ry1 && !excl[yr * w + xr]) ringV.push(netDisp[yr * w + xr]);
+                    }
+                }
+                if (ringV.length < 6 || midV.length < 6) continue;
+                ringV.sort((a, b) => a - b); midV.sort((a, b) => a - b);
+                const ringMed = ringV[Math.floor(ringV.length * 0.45)];
+                const prom = m3 - ringMed;
+                if (prom > Math.max(5.5 * skySigmaDisp, 0.35 * ringMed + 3.0 * skySigmaDisp)
+                    && (midV[Math.floor(midV.length * 0.5)] - ringMed) < 0.38 * prom
+                    && (midV[Math.floor(midV.length * 0.75)] - ringMed) < 0.52 * prom) {
+                    const rad = Math.min(9, Math.max(5, Math.ceil(2.15 * Math.sqrt(2.0 * Math.log(Math.max(2, (v0 - ringMed) / Math.max(skySigmaDisp, 1e-6)))))));
+                    starPeaks.push({ x, y, rad, ringMed });
+                }
+            }
+        }
+        const cleanDisp = Float32Array.from(netDisp);
+        for (const st of starPeaks) {
+            const oR = [];
+            for (const [ux, uy] of dirs8) {
+                const xo = Math.round(st.x + (st.rad + 1.5) * ux), yo = Math.round(st.y + (st.rad + 1.5) * uy);
+                if (xo >= rx0 && xo < rx1 && yo >= ry0 && yo < ry1 && !excl[yo * w + xo]) oR.push(netDisp[yo * w + xo]);
+            }
+            oR.sort((a, b) => a - b);
+            const fillV = oR.length >= 3 ? oR[Math.floor(oR.length * 0.45)] : st.ringMed;
+            for (let dy = -st.rad; dy <= st.rad; dy++) {
+                const yy = st.y + dy; if (yy < ry0 || yy >= ry1) continue;
+                for (let dx = -st.rad; dx <= st.rad; dx++) {
+                    if (dx * dx + dy * dy > st.rad * st.rad) continue;
+                    const xx = st.x + dx; if (xx < rx0 || xx >= rx1 || Math.hypot(xx - gx0, yy - gy0) <= coreProtectR * 0.85) continue;
+                    if (cleanDisp[yy * w + xx] > fillV + 0.5 * skySigmaDisp) cleanDisp[yy * w + xx] = fillV;
+                }
+            }
+        }
+        const roiS = [], sigS = [], stepS = Math.max(1, Math.floor((rw * rh) / 40000));
+        for (let y = ry0; y < ry1; y += stepS) for (let x = rx0; x < rx1; x += stepS) {
+            if (excl[y * w + x]) continue;
+            const v = cleanDisp[y * w + x]; roiS.push(v); if (v > 3.5 * skySigmaDisp) sigS.push(v);
+        }
+        roiS.sort((a, b) => a - b); sigS.sort((a, b) => a - b);
+        const p998 = Math.max(1e-6, roiS[Math.min(roiS.length - 1, Math.floor(roiS.length * 0.998))] || peakDisp || 1);
+        const p85Sig = sigS.length >= 12 ? sigS[Math.floor(sigS.length * 0.85)] : 0.35 * p998;
+        const compRatio = p998 / Math.max(1e-9, p85Sig);
+        const isTrueLinear = Boolean(imgObj.isLinear && !imgObj.isAstroStretched && compRatio >= 4.2);
+        const src = new Float32Array(w * h);
+        if (isTrueLinear) {
+            const sf = 1000.0 / p998;
+            for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) src[y * w + x] = cleanDisp[y * w + x] * sf;
+        } else {
+            const kA = compRatio < 2.8 ? 4.6 : 3.7, dS = Math.sinh(kA);
+            for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) src[y * w + x] = (Math.sinh(kA * Math.min(1.18, cleanDisp[y * w + x] / p998)) / dS) * 1000.0;
+        }
+        const normB = [];
+        for (let y = ry0; y < ry1; y++) {
+            const isT = (y - ry0) < bThick, isB = (ry1 - 1 - y) < bThick;
+            for (let x = rx0; x < rx1; x++) {
+                if (!(isT || isB || (x - rx0) < bThick || (rx1 - 1 - x) < bThick) || excl[y * w + x]) continue;
+                normB.push(src[y * w + x]);
+            }
+        }
+        normB.sort((a, b) => a - b);
+        const bgMed = normB.length ? normB[Math.floor(normB.length * 0.25)] : 0;
+        const skySigma = Math.max(0.03, 1.4826 * obsMedianAbs(normB.slice(0, Math.max(8, Math.floor(normB.length * 0.65))), bgMed));
+
+        let cx = gx0, cy = gy0;
+        const sR1 = Math.max(18, 0.42 * Math.min(rw, rh));
+        for (const rf of [1.0, 0.45]) {
+            let tf = 0, sx = 0, sy = 0, rL = sR1 * rf;
+            for (let y = Math.max(ry0, Math.floor(cy - rL)); y < Math.min(ry1, Math.ceil(cy + rL)); y++) {
+                for (let x = Math.max(rx0, Math.floor(cx - rL)); x < Math.min(rx1, Math.ceil(cx + rL)); x++) {
+                    if (excl[y * w + x] || (x - cx) ** 2 + (y - cy) ** 2 > rL * rL) continue;
+                    const f = Math.max(0, src[y * w + x] - bgMed); tf += f; sx += x * f; sy += y * f;
+                }
+            }
+            if (tf > 0) { cx = sx / tf; cy = sy / tf; }
+        }
+        const maxR = Math.max(12, Math.min(cx - rx0, rx1 - cx, cy - ry0, ry1 - cy, 0.48 * Math.max(rw, rh)));
+        let peakF = 0;
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) if (!excl[y * w + x]) peakF = Math.max(peakF, src[y * w + x] - bgMed);
+        const isoT = Math.max(3.0 * skySigma, 0.035 * peakF);
+        let mxx = 0, myy = 0, mxy = 0, mf = 0;
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            if (excl[y * w + x]) continue;
+            const dx = x - cx, dy = y - cy;
+            if (dx * dx + dy * dy > (0.85 * maxR) ** 2) continue;
+            const f = Math.max(0, src[y * w + x] - bgMed);
+            if (f >= isoT) { mxx += f * dx * dx; myy += f * dy * dy; mxy += f * dx * dy; mf += f; }
+        }
+        mxx /= mf || 1; myy /= mf || 1; mxy /= mf || 1;
+        const tr = mxx + myy, det = Math.sqrt(Math.max(0, (mxx - myy) ** 2 / 4 + mxy * mxy));
+        const axisQ = mf > 0 ? Math.sqrt(Math.max(0, tr / 2 - det) / Math.max(1e-9, tr / 2 + det)) : 0.85;
+        const pa = 0.5 * Math.atan2(2 * mxy, mxx - myy), cosP = Math.cos(pa), sinP = Math.sin(pa), qUse = Math.max(0.20, axisQ);
+        const ellR = (x, y) => Math.hypot((x - cx) * cosP + (y - cy) * sinP, (-(x - cx) * sinP + (y - cy) * cosP) / qUse);
+
+        const nBins = Math.min(96, Math.max(32, Math.round(maxR / 1.5)));
+        const binW = Math.max(maxR / nBins, 0.5);
+        const binL = Array.from({ length: nBins }, () => []);
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            if (excl[y * w + x]) continue;
+            const bi = Math.floor(ellR(x, y) / binW);
+            if (bi >= 0 && bi < nBins) binL[bi].push(Math.max(0, src[y * w + x] - bgMed));
+        }
+        const profR = [], profI = [], cumF = [];
+        let cF = 0;
+        for (let b = 0; b < nBins; b++) {
+            const rMid = (b + 0.5) * binW, arr = binL[b];
+            let sb = 0;
+            if (arr.length) {
+                arr.sort((a, z) => a - z);
+                const hi = b >= 2 ? Math.max(1, Math.floor(arr.length * 0.92)) : arr.length;
+                let s = 0; for (let i = 0; i < hi; i++) s += arr[i];
+                const rm = s / hi;
+                sb = Math.max(0, rm - (b >= 3 ? 0.42 * skySigma * Math.exp(-rm / Math.max(1.8 * skySigma, 1e-6)) : 0));
+            }
+            profR.push(rMid); profI.push(sb);
+            cF += sb * 2 * Math.PI * rMid * binW * qUse; cumF.push(cF);
+        }
+        const maxC = cumF[cumF.length - 1] || 1;
+        const radAt = (fr) => {
+            const tg = fr * maxC; let pv = 0;
+            for (let b = 0; b < nBins; b++) { if (cumF[b] >= tg) return (b + (tg - pv) / Math.max(cumF[b] - pv, 1e-9)) * binW; pv = cumF[b]; }
+            return nBins * binW;
+        };
+        const r20 = Math.max(0.5, radAt(0.20)), r50 = Math.max(1.0, radAt(0.50)), r80 = Math.max(1.2, radAt(0.80)), r90 = Math.max(1.5, radAt(0.90));
+        let C = 5 * Math.log10(Math.max(1.1, r80 / r20));
+        const apR = Math.min(maxR, Math.max(r90, 4));
+
+        // Asymmetry A & Clumpiness S & Spiral Winding W
+        let diff = 0, denom = 0, nAp = 0;
+        const cxi = Math.round(cx), cyi = Math.round(cy);
+        for (let y = Math.max(ry0, Math.floor(cyi - apR)); y < Math.min(ry1, Math.ceil(cyi + apR)); y++) {
+            for (let x = Math.max(rx0, Math.floor(cxi - apR)); x < Math.min(rx1, Math.ceil(cxi + apR)); x++) {
+                if (Math.hypot(x - cxi, y - cyi) > apR) continue;
+                const ox = 2 * cxi - x, oy = 2 * cyi - y;
+                if (ox < rx0 || ox >= rx1 || oy < ry0 || oy >= ry1 || excl[y * w + x] || excl[oy * w + ox]) continue;
+                const i1 = src[y * w + x] - bgMed, i2 = src[oy * w + ox] - bgMed;
+                diff += Math.abs(i1 - i2); denom += Math.abs(i1); nAp++;
+            }
+        }
+        const A = denom > 0 ? clip((diff - nAp * 2 * skySigma / Math.sqrt(Math.PI)) / denom, 0, 1) : 0;
+
+        const sk = Math.max(1, Math.round(0.15 * r50));
+        const iw = rx1 - rx0, ih = ry1 - ry0, integ = new Float64Array((iw + 1) * (ih + 1));
+        for (let y = 0; y < ih; y++) {
+            let row = 0;
+            for (let x = 0; x < iw; x++) {
+                const idx = (y + ry0) * w + (x + rx0);
+                row += excl[idx] ? 0 : (src[idx] - bgMed);
+                integ[(y + 1) * (iw + 1) + (x + 1)] = integ[y * (iw + 1) + (x + 1)] + row;
+            }
+        }
+        let sNum = 0, sDen = 0, sN = 0;
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            if (excl[y * w + x]) continue;
+            const rr = ellR(x, y); if (rr > apR || rr < 0.28 * r50) continue;
+            const x0 = Math.max(rx0, x - sk) - rx0, x1 = Math.min(rx1 - 1, x + sk) - rx0 + 1;
+            const y0 = Math.max(ry0, y - sk) - ry0, y1 = Math.min(ry1 - 1, y + sk) - ry0 + 1;
+            const sm = (integ[y1 * (iw + 1) + x1] - integ[y0 * (iw + 1) + x1] - integ[y1 * (iw + 1) + x0] + integ[y0 * (iw + 1) + x0]) / ((x1 - x0) * (y1 - y0));
+            const v = src[y * w + x] - bgMed; sNum += Math.max(0, v - sm); sDen += Math.abs(v); sN++;
+        }
+        const S = sDen > 0 ? Math.max(0, (sNum - sN * skySigma / Math.sqrt(2 * Math.PI)) / sDen) : 0;
+
+        const rIn = Math.max(3.0, 1.15 * r20), rOut = Math.min(maxR, 1.35 * r80), nRing = 18;
+        const rMean = new Float64Array(nRing), rCnt = new Int32Array(nRing);
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            if (excl[y * w + x]) continue;
+            const re = ellR(x, y); if (re < rIn || re >= rOut) continue;
+            const rb = Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing));
+            rMean[rb] += Math.max(0, src[y * w + x] - bgMed); rCnt[rb]++;
+        }
+        for (let b = 0; b < nRing; b++) rMean[b] = rCnt[b] > 0 ? rMean[b] / rCnt[b] : 0;
+        const alphas = [-4.5, -3.2, -2.2, -1.4, 1.4, 2.2, 3.2, 4.5];
+        let spiralW = 0;
+        for (const mSym of [2, 3]) {
+            let c0 = 0, s0 = 0, wSum = 0;
+            const cA = new Float64Array(alphas.length), sA = new Float64Array(alphas.length);
+            for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+                if (excl[y * w + x]) continue;
+                const dx = x - cx, dy = y - cy, xr = dx * cosP + dy * sinP, yr = (-dx * sinP + dy * cosP) / qUse, re = Math.hypot(xr, yr);
+                if (re < rIn || re >= rOut) continue;
+                const meanI = rMean[Math.min(nRing - 1, Math.floor(((re - rIn) / Math.max(rOut - rIn, 1e-6)) * nRing))];
+                if (meanI <= 2.0 * skySigma) continue;
+                const resI = clip((Math.max(0, src[y * w + x] - bgMed) - meanI) / meanI, -1.5, 2.0);
+                const th = Math.atan2(yr, xr), lnr = Math.log(Math.max(re, 1.0) / r50);
+                c0 += resI * Math.cos(mSym * th); s0 += resI * Math.sin(mSym * th); wSum++;
+                for (let k = 0; k < alphas.length; k++) { const ph = mSym * th - alphas[k] * lnr; cA[k] += resI * Math.cos(ph); sA[k] += resI * Math.sin(ph); }
+            }
+            if (wSum > 30) {
+                const barA = Math.hypot(c0, s0) / wSum;
+                for (let k = 0; k < alphas.length; k++) spiralW = Math.max(spiralW, Math.max(0, Math.hypot(cA[k], sA[k]) / wSum - 0.65 * barA));
+            }
+        }
+
+        // M20 & Sérsic n
+        const roiPix = [];
+        for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+            if (!excl[y * w + x] && ellR(x, y) <= apR) roiPix.push([Math.max(0, src[y * w + x] - bgMed), (x - cx) ** 2 + (y - cy) ** 2]);
+        }
+        let mTot = 0, fTot = 0;
+        for (const [f, r2] of roiPix) { mTot += f * r2; fTot += f; }
+        roiPix.sort((a, b) => b[0] - a[0]);
+        let fAcc = 0, mAcc = 0;
+        for (const [f, r2] of roiPix) { if (fAcc >= 0.2 * fTot) break; fAcc += f; mAcc += f * r2; }
+        const M20 = (mTot > 0 && mAcc > 0) ? Math.log10(mAcc / mTot) : -1.8;
+
+        const maxPI = Math.max(...profI, 1e-6);
+        let fitB = [];
+        for (let b = 0; b < nBins; b++) if (profR[b] >= 1.2 && profI[b] > 2.0 * skySigma && profI[b] < 0.96 * maxPI) fitB.push(b);
+        if (fitB.length < 5) for (let b = 0; b < nBins; b++) if (profI[b] > skySigma) fitB.push(b);
+        let bestN = 1.5, minChi = Infinity;
+        for (let n = 0.5; n <= 6.001; n += 0.1) {
+            if (fitB.length < 3) break;
+            const bn = 1.9992 * n - 0.3271;
+            const xs = fitB.map(b => Math.pow(profR[b] / r50, 1 / n) - 1), ys = fitB.map(b => Math.log(Math.max(profI[b], 1e-6)));
+            const mx = xs.reduce((a, v) => a + v, 0) / xs.length, my = ys.reduce((a, v) => a + v, 0) / ys.length;
+            let sxx = 0, sxy = 0;
+            for (let i = 0; i < xs.length; i++) { sxx += (xs[i] - mx) ** 2; sxy += (xs[i] - mx) * (ys[i] - my); }
+            const sl = sxx > 1e-9 ? Math.min(-0.35, sxy / sxx) : -bn, ic = my - sl * mx;
+            let c2 = 0; for (let i = 0; i < xs.length; i++) c2 += (ys[i] - (ic + sl * xs[i])) ** 2;
+            const sc = (c2 / xs.length) + 0.14 * Math.pow((-sl - bn) / (0.60 * bn), 2);
+            if (sc < minChi) { minChi = sc; bestN = Math.round(n * 10) / 10; }
+        }
+        if (!isTrueLinear && spiralW < 0.017 && S < 0.024 && A < 0.13 && axisQ >= 0.28 && bestN >= 1.85 && C >= 3.0) {
+            const smS = (1 - spiralW / 0.017) * (1 - S / 0.024) * (r80 > 0.5 * maxR ? 1.0 : 0.65);
+            C = Math.min(4.85, C + 0.50 * smS);
+            bestN = Math.min(5.2, Math.round((bestN + 1.15 * smS) * 10) / 10);
+        }
+
+        const sig = z => 1 / (1 + Math.exp(-z));
+        const colBonusE = (imgObj.rbRatio && imgObj.rbRatio >= 1.24) ? 0.32 * Math.min(1, (imgObj.rbRatio - 1.20) / 0.35) : 0;
+        let lE = 2.15 * Math.tanh((bestN - 2.05) / 0.80) + 2.05 * Math.tanh((C - 3.12) / 0.42) + 1.75 * Math.tanh((0.017 - spiralW) / 0.007)
+               + 1.45 * Math.tanh((0.026 - S) / 0.013) + 1.25 * Math.tanh((0.14 - A) / 0.06) + 0.65 * Math.tanh((-1.75 - M20) / 0.32) + colBonusE;
+        if (axisQ < 0.28) lE -= 4.5 * ((0.28 - axisQ) / 0.08);
+        let lS = 1.45 * Math.exp(-Math.pow((bestN - 1.25) / 0.85, 2)) + 1.15 * Math.exp(-Math.pow((C - 2.68) / 0.55, 2))
+               + 2.85 * Math.tanh((spiralW - 0.016) / 0.0075) + 1.20 * Math.tanh((S - 0.024) / 0.014) * sig((0.34 - A) / 0.07) + 0.45;
+        if (axisQ < 0.28 && A < 0.28) lS += 2.75;
+        let lI = 2.65 * Math.tanh((A - 0.27) / 0.11) + 1.75 * Math.tanh((S - 0.045) / 0.028) + 1.35 * Math.tanh((2.35 - C) / 0.35) + 1.10 * Math.tanh((M20 + 1.42) / 0.30) - 0.35;
+        if (axisQ < 0.45 && C > 3.2 && A > 0.35) { lS += 1.75; lI -= 1.40; }
+        const mL = Math.max(lE, lS, lI), eE = Math.exp(lE - mL), eS = Math.exp(lS - mL), eI = Math.exp(lI - mL), sumP = eE + eS + eI;
+        const pE = (eE / sumP) * 100, pS = (eS / sumP) * 100, pI = (eI / sumP) * 100;
+        const cls = (pE >= pS && pE >= pI) ? "elliptical" : ((pS >= pI) ? "spiral" : "irregular");
+        const conf = Math.max(pE, pS, pI);
+        const eSub = Math.min(7, Math.max(0, Math.round(10 * (1 - Math.min(1, axisQ)))));
+        const morphLabel = cls === "elliptical" ? `타원은하 (E${eSub}, ${conf.toFixed(0)}%)`
+                         : (cls === "spiral" ? `나선은하 (${conf.toFixed(0)}%)` : `불규칙은하 (${conf.toFixed(0)}%)`);
+
+        // Convert morphology & photometry to Unified GEI v3 physical parameters
+        const useCatDist = (tIdx === 0 && catMatch);
+        const z = (Number.isFinite(imgObj.zHdr) && imgObj.zHdr > 0) ? imgObj.zHdr : (useCatDist ? catMatch.z : (cls === "elliptical" ? 0.0065 : 0.0034));
+        const dist_mpc = useCatDist ? catMatch.dist_mpc : Math.max(1.5, (299792.458 * z / 70.0) * (1 + 0.5 * z));
+        const rbTerm = (imgObj.rbRatio && imgObj.rbRatio > 0.4) ? 0.35 * Math.log10(imgObj.rbRatio) : 0.0;
+
+        let color_u_r, log_mstar, log_ssfr, d4000, oh, v_rot, radius_kpc;
+        if (cls === "elliptical") {
+            color_u_r = clip(2.68 + 0.14 * (C - 3.5) + rbTerm, 2.45, 2.96);
+            log_mstar = clip(11.18 + 0.28 * (C - 3.5) + 0.08 * (bestN - 3.2), 10.65, 11.88);
+            d4000 = clip(1.90 + 0.18 * (color_u_r - 2.68), 1.76, 2.08);
+            log_ssfr = estimateBimodalSSFR(color_u_r, d4000, log_mstar, z, "elliptical");
+            oh = clip(9.08 + 0.12 * (log_mstar - 11.1), 8.95, 9.22);
+            v_rot = clip(Math.SQRT2 * Math.pow(10, 2.24 + 0.27 * (log_mstar - 11.0)), 220.0, 540.0);
+            radius_kpc = useCatDist ? catMatch.radius_kpc : clip(7.2 * Math.pow(Math.pow(10, log_mstar - 11.0), 0.52), 3.0, 28.0);
+        } else if (cls === "irregular") {
+            color_u_r = clip(1.30 + rbTerm - 0.15 * (A - 0.35), 0.95, 1.65);
+            log_mstar = clip(9.35 + 0.30 * (C - 2.1), 8.55, 10.05);
+            d4000 = clip(1.14 + 0.22 * (color_u_r - 1.30), 1.00, 1.30);
+            log_ssfr = estimateBimodalSSFR(color_u_r, d4000, log_mstar, z, "irregular");
+            oh = clip(8.42 + 0.28 * (log_mstar - 9.3), 7.95, 8.80);
+            v_rot = clip(Math.pow(10, 1.92 + 0.26 * (log_mstar - 9.3)), 45.0, 145.0);
+            radius_kpc = useCatDist ? catMatch.radius_kpc : clip(3.4 * Math.pow(Math.pow(10, log_mstar - 9.3), 0.28), 1.2, 9.5);
+        } else {
+            color_u_r = clip(1.82 + 0.18 * (C - 2.9) + rbTerm, 1.35, 2.34);
+            log_mstar = clip(10.48 + 0.34 * (C - 2.9) + 0.08 * (bestN - 1.5), 9.45, 11.15);
+            d4000 = clip(1.36 + 0.30 * (color_u_r - 1.82), 1.12, 1.66);
+            log_ssfr = estimateBimodalSSFR(color_u_r, d4000, log_mstar, z, "spiral");
+            oh = clip(8.88 + 0.26 * (log_mstar - 10.4), 8.35, 9.10);
+            v_rot = clip(Math.pow(10, 2.16 + 0.27 * (log_mstar - 10.0)), 85.0, 320.0);
+            radius_kpc = useCatDist ? catMatch.radius_kpc : clip(9.5 * Math.pow(Math.pow(10, log_mstar - 10.5), 0.26), 2.5, 24.0);
+        }
+        const log_sfr = log_mstar + log_ssfr;
+        const log_mdm = 0.88 * log_mstar + 1.35;
+        const tagSuffix = targets.length >= 2 ? (tIdx === 0 ? ` · 주타겟 ${morphLabel}` : ` · 동반은하 #${tIdx + 1} ${morphLabel}`) : ` · ${morphLabel}`;
+        return {
+            row: {
+                name: `${baseName}${tagSuffix}`,
+                log_mstar, log_sfr, log_mdm, dist_mpc, z, radius_kpc, v_rot, color_u_r, d4000, oh,
+                _target: activeT, _metrics: { cls, morphLabel, conf, C, bestN, A, S, spiralW, axisQ, r20, r50, r80 }
+            }
+        };
+    };
+
+    const indices = isWide && targets.length >= 2 ? targets.map((_, i) => i) : [0];
+    return { results: indices.map(i => evaluateTarget(i).row), targets, isWide };
+}
+
+function presentObsPhotometryRows(imgObj, rows, fileLabel, extraHeaderInfo = "") {
+    uploadedGalaxyRows = rows;
+    const primary = rows[0];
+    const m = primary._metrics;
+    renderObsPreviewCanvas(imgObj, primary._target);
+    obsPreviewWrap.style.display = "flex";
+    obsPreviewInfo.innerHTML =
+        `<strong style="color:#38bdf8;">[${extraHeaderInfo || "천체 영상 정밀 측광 완료"}]</strong> ${fileLabel}<br>` +
+        `• 형태 판정: <b style="color:${m.cls === 'elliptical' ? '#fda4af' : '#6ee7b7'};">${m.morphLabel}</b> | C=${m.C.toFixed(2)}, n=${m.bestN.toFixed(1)}, A=${m.A.toFixed(2)}, W=${m.spiralW.toFixed(3)}, q=${m.axisQ.toFixed(2)}<br>` +
+        `• 유도 물리량: (u−r)=${primary.color_u_r.toFixed(2)} | log M*=${primary.log_mstar.toFixed(2)} | log sSFR=${(primary.log_sfr - primary.log_mstar).toFixed(2)}`;
+    if (rows.length > 1) {
+        multiRowWrap.style.display = "block";
+        multiRowSelect.innerHTML = "";
+        rows.forEach((r, idx) => {
+            const opt = document.createElement("option");
+            opt.value = idx;
+            opt.textContent = `[#${idx + 1}] ${r.name} (C=${r._metrics.C.toFixed(2)}, log M*=${r.log_mstar.toFixed(2)})`;
+            multiRowSelect.appendChild(opt);
+        });
+    } else {
+        multiRowWrap.style.display = "none";
+    }
+    obsLastImageObj = imgObj;
+    applyParsedGalaxyToForm(primary);
+}
+let obsLastImageObj = null;
 
 function handleImageUploadForObservatory(file) {
     const reader = new FileReader();
     reader.onload = (ev) => {
         const img = new Image();
         img.onload = () => {
-            const W = 120, H = 120;
-            const ctx = obsPreviewCanvas.getContext("2d");
-            ctx.clearRect(0, 0, W, H);
-            ctx.drawImage(img, 0, 0, W, H);
-            const imgData = ctx.getImageData(0, 0, W, H).data;
-
-            // 역-감마 선형화(Inverse Astro-Stretch) 및 중심·색상비 추출
-            const disp = new Float32Array(W * H);
+            const maxDim = 640;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w >= h) { h = Math.max(16, Math.round((h * maxDim) / w)); w = maxDim; }
+                else { w = Math.max(16, Math.round((w * maxDim) / h)); h = maxDim; }
+            }
+            const tmpC = document.createElement("canvas");
+            tmpC.width = w; tmpC.height = h;
+            const tCtx = tmpC.getContext("2d");
+            tCtx.drawImage(img, 0, 0, w, h);
+            const px = tCtx.getImageData(0, 0, w, h).data;
+            const data = new Float32Array(w * h);
             let sumR = 0, sumB = 0;
-            for (let i = 0; i < W * H; i++) {
-                const idx = i * 4;
-                const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
-                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                disp[i] = lum;
-                if (lum > 18) { sumR += r; sumB += b; }
+            for (let i = 0; i < w * h; i++) {
+                const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                data[i] = lum;
+                if (lum > 24) { sumR += r; sumB += b; }
             }
-            const sortedDisp = Float32Array.from(disp).sort();
-            const bg0 = sortedDisp[Math.floor(sortedDisp.length * 0.15)];
-            const p99 = Math.max(15.0, sortedDisp[Math.floor(sortedDisp.length * 0.995)] - bg0);
-            const gray = new Float32Array(W * H);
-            let totalFlux = 0, sumX = 0, sumY = 0;
-            for (let y = 0; y < H; y++) {
-                for (let x = 0; x < W; x++) {
-                    const u = Math.min(1.25, Math.max(0, disp[y * W + x] - bg0) / p99);
-                    const f = ((Math.exp(4.2 * u) - 1) / (Math.exp(4.2) - 1)) * 255.0;
-                    gray[y * W + x] = f;
-                    totalFlux += f;
-                    sumX += x * f;
-                    sumY += y * f;
-                }
-            }
-            const cx = totalFlux > 0 ? sumX / totalFlux : W / 2;
-            const cy = totalFlux > 0 ? sumY / totalFlux : H / 2;
-
-            // Radial cumulative flux -> R20, R50, R80, Concentration C = 5 log10(R80/R20)
-            const maxRad = 55;
-            const bins = new Float32Array(maxRad);
-            for (let y = 0; y < H; y++) {
-                for (let x = 0; x < W; x++) {
-                    const rad = Math.min(maxRad - 1, Math.floor(Math.hypot(x - cx, y - cy)));
-                    bins[rad] += gray[y * W + x];
-                }
-            }
-            let cum = 0, r20 = 3, r50 = 10, r80 = 24;
-            const totB = bins.reduce((a, b) => a + b, 0) || 1;
-            for (let r = 0; r < maxRad; r++) {
-                cum += bins[r];
-                if (cum / totB >= 0.20 && r20 === 3) r20 = Math.max(1.5, r);
-                if (cum / totB >= 0.50 && r50 === 10) r50 = Math.max(r20 + 1, r);
-                if (cum / totB >= 0.80 && r80 === 24) { r80 = Math.max(r50 + 2, r); break; }
-            }
-            const C = clip(5.0 * Math.log10(r80 / r20), 1.8, 4.6);
-
-            const rbRatio = sumB > 50 ? (sumR + 10) / (sumB + 10) : 1.15;
-            const isEllipticalLike = (C >= 3.45 && rbRatio >= 1.12);
-            const color_u_r = isEllipticalLike
-                ? clip(2.48 + 0.15 * (C - 3.5) + 0.45 * Math.log10(rbRatio), 2.25, 2.95)
-                : clip(1.75 + 0.55 * Math.log10(rbRatio) + 0.20 * (C - 2.8), 1.10, 2.35);
-            const log_mstar = isEllipticalLike
-                ? clip(10.95 + 0.30 * (C - 3.6), 10.45, 11.75)
-                : clip(10.25 + 0.35 * (C - 2.8), 9.10, 11.15);
-            const log_ssfr = isEllipticalLike
-                ? clip(-11.80 - 0.35 * (color_u_r - 2.50), -12.50, -11.20)
-                : clip(-10.08 - 0.65 * (color_u_r - 1.80), -11.00, -8.80);
-            const log_sfr = log_mstar + log_ssfr;
-            const log_mdm = 0.88 * log_mstar + 1.35;
-            const radius_kpc = clip((r50 / 14.0) * 8.5, 1.8, 28.0);
-            const v_rot = clip(Math.pow(10, 2.12 + 0.27 * (log_mstar - 10.0)), 55.0, 460.0);
-            const d4000 = clip(1.42 + 0.35 * (color_u_r - 1.9), 1.02, 2.15);
-            const oh = clip(8.85 + 0.30 * (log_mstar - 10.0), 8.0, 9.25);
-
+            let rbRatio = null;
+            if (sumB > 100 && Math.abs(sumR / sumB - 1.0) > 0.10) rbRatio = sumR / sumB;
             const cleanName = file.name.replace(/\.[^/.]+$/, "");
-            obsPreviewWrap.style.display = "flex";
-            obsPreviewInfo.innerHTML =
-                `<strong style="color:#38bdf8;">[이미지 자동 측광 완료]</strong> ${file.name}<br>` +
-                `• 집중도 C = ${C.toFixed(2)} (R₂₀=${r20}px, R₅₀=${r50}px, R₈₀=${r80}px)<br>` +
-                `• 추정 색지수 (u-r) = ${color_u_r.toFixed(2)} mag | log M* = ${log_mstar.toFixed(2)} | log sSFR = ${log_ssfr.toFixed(2)}`;
-            multiRowWrap.style.display = "none";
-
-            applyParsedGalaxyToForm({
-                name: `${cleanName} (이미지 측광 관측)`,
-                log_mstar, log_sfr, log_mdm, dist_mpc: 14.5, z: 0.0034,
-                radius_kpc, v_rot, color_u_r, d4000, oh
-            });
-            showUploadStatus(`✅ <b>${file.name}</b> 은하 이미지 업로드 및 표면밝기·색지수 자동 측광 완료!`);
+            const imgObj = { width: w, height: h, data, isLinear: false, isAstroStretched: true, rbRatio, objectName: cleanName };
+            const { results } = analyzeObservatoryImageBuffer(imgObj, cleanName);
+            presentObsPhotometryRows(imgObj, results, file.name, "이미지 형태·표면밝기 정밀 측광");
+            showUploadStatus(`✅ <b>${file.name}</b> 은하 이미지 정밀 형태 분류(<b>${results[0]._metrics.morphLabel}</b>) 및 GEI v3 물리량 자동 환산 완료!`);
         };
         img.onerror = () => showUploadStatus(`❌ 이미지 파일을 읽을 수 없습니다: ${file.name}`, true);
         img.src = ev.target.result;
@@ -1827,61 +2697,26 @@ function handleFITSFileUpload(file) {
     const reader = new FileReader();
     reader.onload = (ev) => {
         try {
-            const buf = ev.target.result;
-            const bytes = new Uint8Array(buf);
-            let headerStr = "";
-            const maxHeaderBytes = Math.min(bytes.length, 2880 * 4);
-            for (let i = 0; i < maxHeaderBytes; i++) {
-                const c = bytes[i];
-                headerStr += (c >= 32 && c <= 126) ? String.fromCharCode(c) : " ";
+            const fits = parseObservatoryFITS(ev.target.result);
+            const objName = (fits.object && fits.object.trim()) ? fits.object.trim() : file.name.replace(/\.[^/.]+$/, "");
+            if (fits.is1DSpectrum) {
+                const sp = analyzeObs1DSpectrum(fits.wave, fits.flux, fits.zHdr, objName);
+                uploadedGalaxyRows = [sp.row];
+                obsPreviewWrap.style.display = "none";
+                multiRowWrap.style.display = "none";
+                applyParsedGalaxyToForm(sp.row);
+                showUploadStatus(`✅ <b>${file.name}</b> 1D FITS 분광 파싱 완료! — <b>${sp.specTag}</b> (z=${sp.row.z.toFixed(4)})`);
+                return;
             }
-            const getCard = (key) => {
-                const re = new RegExp(key + "\\s*=\\s*([^/]+)", "i");
-                const m = headerStr.match(re);
-                return m ? m[1].replace(/'/g, "").trim() : "";
+            const imgObj = {
+                width: fits.width, height: fits.height, data: fits.data,
+                isLinear: fits.isLinear, isAstroStretched: fits.isAstroStretched,
+                rbRatio: fits.rbRatio, zHdr: fits.zHdr, objectName: objName
             };
-            const objName = getCard("OBJECT") || file.name.replace(/\.[^/.]+$/, "");
-            const naxis1 = parseInt(getCard("NAXIS1")) || 120;
-            const naxis2 = parseInt(getCard("NAXIS2")) || 120;
-            const bitpix = parseInt(getCard("BITPIX")) || 16;
-            const zHdr = parseFloat(getCard("REDSHIFT") || getCard("Z")) || 0.0045;
-
-            const dataOffset = Math.min(2880, Math.floor(bytes.length / 2));
-            let sumVal = 0, count = 0;
-            for (let i = dataOffset; i < Math.min(bytes.length, dataOffset + 40000); i += 2) {
-                sumVal += bytes[i];
-                count++;
-            }
-            const normSignal = count > 0 ? (sumVal / count) / 255.0 : 0.5;
-            const log_mstar = clip(9.8 + 1.5 * normSignal, 8.5, 11.6);
-            const log_sfr = clip(-0.6 + 1.4 * (0.6 - normSignal), -2.2, 1.4);
-            const radius_kpc = clip(6.5 + 10.0 * normSignal, 2.0, 24.0);
-            const v_rot = clip(Math.pow(10, 2.14 + 0.27 * (log_mstar - 10.0)), 70.0, 380.0);
-
-            const ctx = obsPreviewCanvas.getContext("2d");
-            const imgData = ctx.createImageData(120, 120);
-            for (let y = 0; y < 120; y++) {
-                for (let x = 0; x < 120; x++) {
-                    const r = Math.hypot(x - 60, y - 60);
-                    const v = Math.min(255, Math.floor(245 * Math.exp(-r / 24) + (bytes[(dataOffset + y * 120 + x) % bytes.length] || 0) * 0.15));
-                    const idx = (y * 120 + x) * 4;
-                    imgData.data[idx] = v; imgData.data[idx + 1] = Math.floor(v * 0.85); imgData.data[idx + 2] = Math.min(255, Math.floor(v * 1.15)); imgData.data[idx + 3] = 255;
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-            obsPreviewWrap.style.display = "flex";
-            obsPreviewInfo.innerHTML =
-                `<strong style="color:#34d399;">[FITS 헤더·배열 파싱 완료]</strong><br>` +
-                `• OBJECT: ${objName} (${naxis1}×${naxis2}, BITPIX=${bitpix})<br>` +
-                `• 추정 log M* = ${log_mstar.toFixed(2)} | z = ${zHdr.toFixed(4)}`;
-            multiRowWrap.style.display = "none";
-
-            applyParsedGalaxyToForm({
-                name: `${objName} (FITS 관측 데이터)`,
-                log_mstar, log_sfr, dist_mpc: (299792.458 * zHdr / 70.0), z: zHdr,
-                radius_kpc, v_rot, color_u_r: 2.05, d4000: 1.48, oh: 8.92
-            });
-            showUploadStatus(`✅ <b>${file.name}</b> FITS 천문 파일 헤더 및 데이터 로드 완료!`);
+            const { results } = analyzeObservatoryImageBuffer(imgObj, objName);
+            const hdrMeta = `FITS ${fits.origPlanes === 3 ? '3D RGB' : '2D'} (${fits.origW}×${fits.origH}, BITPIX=${fits.bitpix}${fits.filter ? ', ' + fits.filter + '필터' : ''})`;
+            presentObsPhotometryRows(imgObj, results, objName, hdrMeta);
+            showUploadStatus(`✅ <b>${file.name}</b> FITS 실측 배열 측광 완료! — <b>${results[0]._metrics.morphLabel}</b>${results.length > 1 ? ` 외 동반은하 ${results.length - 1}개 검출` : ''}`);
         } catch (err) {
             showUploadStatus(`❌ FITS 파일 파싱 중 오류 발생: ${err.message}`, true);
         }
@@ -1894,6 +2729,19 @@ function handleTableFileUpload(file) {
     reader.onload = (ev) => {
         try {
             const text = ev.target.result.trim();
+            const baseName = file.name.replace(/\.[^/.]+$/, "");
+            // 1D (wavelength, flux) 분광 CSV/TXT 자동 감지 (타원은하 흡수선 스펙트럼 포함!)
+            if (!text.startsWith("{") && !text.startsWith("[")) {
+                const sp1d = tryParseObs1DSpectrumText(text, baseName);
+                if (sp1d) {
+                    uploadedGalaxyRows = [sp1d.row];
+                    obsPreviewWrap.style.display = "none";
+                    multiRowWrap.style.display = "none";
+                    applyParsedGalaxyToForm(sp1d.row);
+                    showUploadStatus(`✅ <b>${file.name}</b> 1D 분광 스펙트럼 인식 완료! — <b>${sp1d.specTag}</b> (추정 z=${sp1d.row.z.toFixed(4)})`);
+                    return;
+                }
+            }
             let rows = [];
             if (file.name.toLowerCase().endsWith(".json") || text.startsWith("{") || text.startsWith("[")) {
                 const parsed = JSON.parse(text);
@@ -1916,7 +2764,7 @@ function handleTableFileUpload(file) {
                         const parts = l.split(/[:=,\t]/);
                         if (parts.length >= 2) obj[parts[0].trim()] = parts.slice(1).join(":").trim();
                     });
-                    rows.push(normalizeColumnRow(obj, file.name.replace(/\.[^/.]+$/, "")));
+                    rows.push(normalizeColumnRow(obj, baseName));
                 }
             }
 
@@ -2006,7 +2854,15 @@ obsDropzone.addEventListener("drop", (e) => {
 multiRowSelect.addEventListener("change", (e) => {
     const idx = parseInt(e.target.value);
     if (!isNaN(idx) && uploadedGalaxyRows[idx]) {
-        applyParsedGalaxyToForm(uploadedGalaxyRows[idx]);
+        const g = uploadedGalaxyRows[idx];
+        if (obsLastImageObj && g._metrics) {
+            renderObsPreviewCanvas(obsLastImageObj, g._target);
+            obsPreviewInfo.innerHTML =
+                `<strong style="color:#38bdf8;">[다중 타겟 선택 #${idx + 1}]</strong> ${g.name}<br>` +
+                `• 형태 판정: <b style="color:${g._metrics.cls === 'elliptical' ? '#fda4af' : '#6ee7b7'};">${g._metrics.morphLabel}</b> | C=${g._metrics.C.toFixed(2)}, n=${g._metrics.bestN.toFixed(1)}, A=${g._metrics.A.toFixed(2)}, W=${g._metrics.spiralW.toFixed(3)}<br>` +
+                `• 유도 물리량: (u−r)=${g.color_u_r.toFixed(2)} | log M*=${g.log_mstar.toFixed(2)} | log sSFR=${(g.log_sfr - g.log_mstar).toFixed(2)}`;
+        }
+        applyParsedGalaxyToForm(g);
     }
 });
 
@@ -2037,13 +2893,19 @@ document.getElementById("btn-download-sample-csv").addEventListener("click", (e)
         if (params.get("log_mstar")) document.getElementById("in-mstar").value = params.get("log_mstar");
         if (params.get("log_sfr")) document.getElementById("in-sfr").value = params.get("log_sfr");
         if (params.get("log_mdm")) document.getElementById("in-ldm").value = params.get("log_mdm");
+        if (params.get("dist_mpc")) document.getElementById("in-dist").value = params.get("dist_mpc");
+        if (params.get("z")) document.getElementById("in-z").value = params.get("z");
         if (params.get("radius_kpc")) document.getElementById("in-rkpc").value = params.get("radius_kpc");
+        if (params.get("v_rot")) document.getElementById("in-vrot").value = params.get("v_rot");
         if (params.get("color_u_r")) document.getElementById("in-color").value = params.get("color_u_r");
+        if (params.get("d4000")) document.getElementById("in-d4000").value = params.get("d4000");
         if (params.get("oh")) document.getElementById("in-oh").value = params.get("oh");
-        const cInfo = params.get("photo_c") ? ` (사진 측광 C=${params.get("photo_c")}, n=${params.get("photo_n")}, A=${params.get("photo_a")}, W_spiral=${params.get("photo_w")})` : "";
+        const cInfo = params.get("photo_c")
+            ? ` (사진 측광 C=${params.get("photo_c")}, n=${params.get("photo_n")}, A=${params.get("photo_a")}, W_spiral=${params.get("photo_w")})`
+            : (params.get("d4000") ? ` (분광 진단 Dn4000=${params.get("d4000")})` : "");
         showUploadStatus(
-            `🔗 <b>천체사진 분석기에서 사진 측광 기반 물리량이 자동 환산·전달되었습니다!</b>${cInfo}<br>` +
-            `<span style="font-size:0.74rem; color:#cbd5e1;">• <b>자동 환산 원리</b>: 사진에서 직접 측정한 형태·집중도(C)·Sérsic(n)·색상비(R/B)로부터 ① 색지수(u−r) 및 질량대광도비(M*/L, Bell+2003) → ② 항성질량(log M*=${params.get("log_mstar")}) → ③ 형태별 비별생성률(log sSFR) 기반 별생성률(log SFR=${params.get("log_sfr")}) → ④ 우리 연구 추세선 기반 암흑물질(log M_DM) 및 방출선 광도(Hα, [S II], [O III])를 순차 유도함.</span>`
+            `🔗 <b>천체사진·분광 분석기에서 관측 물리량이 자동 환산·전달되었습니다!</b>${cInfo}<br>` +
+            `<span style="font-size:0.74rem; color:#cbd5e1;">• <b>자동 환산 원리</b>: 사진(형태·집중도 C·Sérsic n·색상비 R/B) 또는 분광(Dn4000·흡수선/방출선)으로부터 ① 색지수(u−r) 및 질량대광도비(M*/L, Bell+2003) → ② 항성질량(log M*=${params.get("log_mstar")}) → ③ 이중분포(적색계열/청색구름) 비별생성률(log sSFR) 기반 별생성률(log SFR=${params.get("log_sfr")}) → ④ 우리 연구 추세선 기반 암흑물질(log M_DM) 및 방출선 광도를 순차 유도함.</span>`
         );
     }
 })();

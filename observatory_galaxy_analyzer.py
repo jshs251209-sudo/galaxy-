@@ -268,8 +268,11 @@ def run_interactive_cli():
     log_mstar = ask_float("7. 항성 질량 log10(M*/M_sun) (원시 등급으로 자동 환산하려면 Enter): ")
     if radius_kpc is None:
         radius_kpc = ask_float("8. 물리적 반경 R [kpc] (예: 6.8, 모르면 Enter): ")
-    v_rot = ask_float("9. 회전 속도 V_rot [km/s] (예: 175.0, 모르면 Enter): ")
-    log_sfr = ask_float("10. 별생성률 log10(SFR [M_sun/yr]) (자동 환산하려면 Enter): ")
+    v_rot = ask_float("9. 회전 속도 V_rot [km/s] (타원은하일 경우 Enter 후 다음 항목에 속도분산 입력): ")
+    vel_disp = ask_float("   -> 중심 항성 속도분산 σ_v [km/s] (타원은하 예: 220.0, 모르면 Enter): ")
+    morph_hint = input("10. 은하 형태 힌트 (elliptical / spiral / irregular, 자동 판별은 Enter): ").strip() or None
+    d4000 = ask_float("11. 4000Å 단절 지수 D4000 (타원은하 예: 1.90, 모르면 Enter): ")
+    log_sfr = ask_float("12. 별생성률 log10(SFR [M_sun/yr]) (자동 환산하려면 Enter): ")
     ha_flux = None
     if log_sfr is None:
         ha_flux = ask_float("    -> H-alpha 관측 플럭스 [10^-17 erg/s/cm^2] (모르면 Enter): ")
@@ -282,6 +285,9 @@ def run_interactive_cli():
         "abs_mag_r": abs_mag_r,
         "radius_kpc": radius_kpc,
         "v_rot": v_rot,
+        "vel_disp": vel_disp,
+        "morph_hint": morph_hint,
+        "d4000": d4000,
         "log_sfr": log_sfr,
         "h_alpha_flux": ha_flux,
         "color_u_r": color_u_r,
@@ -309,6 +315,10 @@ def main():
     parser.add_argument("--abs_mag_r", type=float, default=None, help="r밴드 절대등급 M_r")
     parser.add_argument("--radius_kpc", type=float, default=None, help="은하 물리적 반경 R [kpc]")
     parser.add_argument("--v_rot", type=float, default=None, help="회전 속도 V_rot [km/s]")
+    parser.add_argument("--vel_disp", type=float, default=None, help="타원은하 항성 속도분산 sigma_v [km/s]")
+    parser.add_argument("--d4000", type=float, default=None, help="4000A 단절 지수 D4000")
+    parser.add_argument("--morph", type=str, default=None, help="형태 힌트 (elliptical / spiral / irregular)")
+    parser.add_argument("--fits", type=str, default=None, help="직접 관측 FITS 영상 파일 경로 (타원/나선/불규칙 자동 형태·진화 분석)")
     parser.add_argument("--log_sfr", type=float, default=None, help="별생성률 log10(SFR [M_sun/yr])")
     parser.add_argument("--h_alpha_flux", type=float, default=None, help="H-alpha 플럭스 [10^-17 erg/s/cm^2]")
     parser.add_argument("--color_u_r", type=float, default=None, help="광학 색지수 (u - r)")
@@ -318,7 +328,43 @@ def main():
         run_interactive_cli()
         return
 
-    if any(v is not None for v in [args.name, args.log_mstar, args.m_r, args.theta_arcsec, args.v_rec]):
+    if args.fits:
+        from astropy.io import fits as astro_fits
+        from modules.image_analyzer import GalaxyImageAnalyzer
+        with astro_fits.open(args.fits, memmap=False) as hdul:
+            hdu = next((h for h in hdul if h.data is not None and h.data.ndim >= 2), hdul[0])
+            arr = GalaxyImageAnalyzer._normalize_channels(np.asarray(hdu.data, dtype=float))
+            hdr = hdu.header
+        max_s = max(arr.shape[:2])
+        if max_s > 1000:
+            step = max(1, int(round(max_s / 800)))
+            arr = arr[::step, ::step]
+        res = GalaxyImageAnalyzer().analyze(arr, mask=None, linearize='auto')
+        ep = res.get("estimated_physics", {})
+        morph_cls = res.get("morphology", {}).get("class_en", "Unknown")
+        obj_name = args.name or str(hdr.get("OBJECT", "")).strip() or os.path.splitext(os.path.basename(args.fits))[0]
+        obs_in = {
+            "name": obj_name,
+            "dist_mpc": args.dist_mpc,
+            "z": args.z if args.z is not None else ((args.v_rec / 299792.458) if args.v_rec else None),
+            "log_mstar": args.log_mstar if args.log_mstar is not None else ep.get("log_mass"),
+            "radius_kpc": args.radius_kpc,
+            "v_rot": args.v_rot,
+            "vel_disp": args.vel_disp if args.vel_disp is not None else ep.get("velDisp"),
+            "log_sfr": args.log_sfr if args.log_sfr is not None else ep.get("log_sfr"),
+            "color_u_r": args.color_u_r if args.color_u_r is not None else ep.get("color_ur"),
+            "d4000": args.d4000 if args.d4000 is not None else ep.get("d4000_n"),
+            "morph_hint": args.morph or ("elliptical" if morph_cls == "Early-type" else morph_cls),
+        }
+        sim = simulate_galaxy_evolution_trajectory(obs_in)
+        print_detailed_console_report(sim)
+        safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in obs_in["name"])
+        out_png = os.path.join(REPORT_DIR, f"관측은하_진단리포트_{safe_name}.png")
+        generate_single_galaxy_diagnostic_chart(sim, out_png)
+        print(f"[+] FITS 관측 은하 진단 리포트 차트 저장 완료: {out_png}")
+        return
+
+    if any(v is not None for v in [args.name, args.log_mstar, args.m_r, args.theta_arcsec, args.v_rec, args.vel_disp, args.d4000, args.morph]):
         dist_mpc = args.dist_mpc
         if dist_mpc is None and args.v_rec is not None and args.v_rec > 0:
             dist_mpc = args.v_rec / 70.0
@@ -337,6 +383,9 @@ def main():
             "abs_mag_r": abs_mag_r,
             "radius_kpc": radius_kpc,
             "v_rot": args.v_rot,
+            "vel_disp": args.vel_disp,
+            "d4000": args.d4000,
+            "morph_hint": args.morph,
             "log_sfr": args.log_sfr,
             "h_alpha_flux": args.h_alpha_flux,
             "color_u_r": args.color_u_r,
